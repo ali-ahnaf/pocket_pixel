@@ -2,6 +2,11 @@ import "reflect-metadata";
 import express from "express";
 import cors from "cors";
 import { AppDataSource } from "./data-source";
+import usersRouter from "./routes/users.routes";
+import transactionsRouter from "./routes/transactions.routes";
+import recurringRouter from "./routes/recurring.routes";
+import analyticsRouter from "./routes/analytics.routes";
+import vaultsRouter from "./routes/vaults.routes";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -12,6 +17,12 @@ app.use(express.json());
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
+
+app.use("/api/users", usersRouter);
+app.use("/api/users/:userId/transactions", transactionsRouter);
+app.use("/api/users/:userId/recurring", recurringRouter);
+app.use("/api/users/:userId/analytics", analyticsRouter);
+app.use("/api/users/:userId/vaults", vaultsRouter);
 
 AppDataSource.initialize()
   .then(() => {

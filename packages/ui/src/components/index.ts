@@ -12,3 +12,7 @@ export type { ProgressBarProps, ProgressVariant } from "./ProgressBar";
 
 export { Badge } from "./Badge";
 export type { BadgeProps, BadgeVariant } from "./Badge";
+
+export { LogResourceModal } from "./LogResourceModal";
+export { AddVaultModal } from "./AddVaultModal";
+export { AddRecurringQuestModal } from "./AddRecurringQuestModal";

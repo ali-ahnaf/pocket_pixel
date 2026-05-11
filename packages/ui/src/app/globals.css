@@ -42,6 +42,19 @@
     background-color: #a5d655;
     color: #223600;
   }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #1c1b1e; 
+    border-left: 2px solid black;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #a5d655; 
+    border: 2px solid black;
+  }
 }
 
 @layer components {

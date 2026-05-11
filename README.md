@@ -1,3 +1,18 @@
+the app will be used to track my expenses. There should be a profile page. In that page, i can add a recurring expense or income with a tag. The recurrence interval should be monthly or weekly.
+
+Then in the home page, i have option to choose month (by default it should select the current month) and year but i should have the option to choose any future or past months. 
+
+In each month, i can add expenses or additional income where i can add the value and an optional tag and select whether its an expense or income (default = expense). and also choose the vaul. 
+
+The app should also have a page to view my analytics based on tags, monthly or yearly.
+
+
+Make all these context into a query i can give to claude code to design the app in a modern futuristic cyberpunk theme.
+
+
+
+
+
 1. vaults
 Stores your different storage chests (Main Stash, Savings, etc.).
 

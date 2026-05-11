@@ -4,42 +4,53 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
-  CreateDateColumn,
-} from "typeorm";
-import { User } from "./User.entity";
+} from 'typeorm';
+import { User } from './User.entity';
+import { Vault } from './Vault.entity';
 
-export type ExpenseCategory =
-  | "food"
-  | "transport"
-  | "housing"
-  | "entertainment"
-  | "health"
-  | "other";
+export type RecurrenceInterval = 'weekly' | 'monthly' | 'daily' | 'yearly';
+export type TransactionType = 'expense' | 'income';
 
-@Entity("expenses")
+@Entity('expenses')
 export class Expense {
-  @PrimaryGeneratedColumn("uuid")
+  @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: "varchar" })
+  @Column({ type: 'varchar' })
   userId: string;
 
-  @Column({ type: "varchar", length: 200 })
-  title: string;
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  title: string | null;
 
-  @Column({ type: "decimal", precision: 10, scale: 2 })
+  @Column({ type: 'decimal', precision: 10, scale: 2 , default: 0})
   amount: number;
 
-  @Column({
-    type: "varchar",
-    enum: ["food", "transport", "housing", "entertainment", "health", "other"],
-  })
-  category: ExpenseCategory;
+  @Column({ type: 'varchar', default: 'expense' })
+  type: TransactionType;
 
-  @Column({ type: "date" })
+  @Column({ type: 'varchar', nullable: true })
+  tag: string | null;
+
+  @Column({ type: 'date', nullable: true })
   date: string;
 
-  @ManyToOne(() => User, (user) => user.expenses, { onDelete: "CASCADE" })
-  @JoinColumn({ name: "userId" })
+  @Column({ type: 'varchar', nullable: true })
+  interval: RecurrenceInterval;
+
+  @Column({ type: 'date', nullable: true })
+  startDate: string;
+
+  @Column({ type: 'date', nullable: true })
+  endDate: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  vaultId: string | null;
+
+  @ManyToOne(() => User, (user) => user.expenses, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'userId' })
   user: User;
+
+  @ManyToOne(() => Vault, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'vaultId' })
+  vault: Vault | null;
 }
