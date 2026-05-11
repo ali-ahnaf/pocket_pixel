@@ -1,0 +1,228 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    border-radius: 0 !important;
+  }
+
+  body {
+    background-color: #141315;
+    color: #e5e1e5;
+    font-family: var(--font-inter), sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: none;
+    font-smooth: never;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-anybody), sans-serif;
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+
+  /* Block cursor for inputs */
+  input,
+  textarea {
+    caret-color: #a5d655;
+  }
+
+  ::selection {
+    background-color: #a5d655;
+    color: #223600;
+  }
+}
+
+@layer components {
+  /* ── Buttons ── */
+  .btn {
+    @apply relative inline-flex items-center justify-center font-anybody font-extrabold uppercase tracking-wider border-4 border-black select-none cursor-pointer;
+    transition: transform 75ms, box-shadow 75ms;
+    image-rendering: pixelated;
+  }
+
+  .btn:disabled {
+    @apply opacity-40 cursor-not-allowed;
+  }
+
+  .btn-sm {
+    @apply text-xs px-3 py-1;
+  }
+
+  .btn-md {
+    @apply text-sm px-4 py-2;
+  }
+
+  .btn-lg {
+    @apply text-base px-6 py-3;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-on-primary;
+    box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.3),
+      inset -2px -2px 0 rgba(0, 0, 0, 0.4), 0 4px 0 #344e00;
+  }
+
+  .btn-primary:not(:disabled):active {
+    box-shadow: inset -2px -2px 0 rgba(255, 255, 255, 0.1),
+      inset 2px 2px 0 rgba(0, 0, 0, 0.4);
+    transform: translateY(2px);
+  }
+
+  .btn-secondary {
+    @apply bg-secondary-container text-on-secondary-container;
+    box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.15),
+      inset -2px -2px 0 rgba(0, 0, 0, 0.4), 0 4px 0 #2a1500;
+  }
+
+  .btn-secondary:not(:disabled):active {
+    box-shadow: inset -2px -2px 0 rgba(255, 255, 255, 0.05),
+      inset 2px 2px 0 rgba(0, 0, 0, 0.4);
+    transform: translateY(2px);
+  }
+
+  .btn-tertiary {
+    @apply bg-tertiary-container text-on-tertiary-container;
+    box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.2),
+      inset -2px -2px 0 rgba(0, 0, 0, 0.4), 0 4px 0 #003a82;
+  }
+
+  .btn-tertiary:not(:disabled):active {
+    box-shadow: inset -2px -2px 0 rgba(255, 255, 255, 0.05),
+      inset 2px 2px 0 rgba(0, 0, 0, 0.4);
+    transform: translateY(2px);
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-on-surface border-outline;
+    box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.08),
+      inset -2px -2px 0 rgba(0, 0, 0, 0.3);
+  }
+
+  .btn-ghost:not(:disabled):active {
+    box-shadow: inset -2px -2px 0 rgba(255, 255, 255, 0.03),
+      inset 2px 2px 0 rgba(0, 0, 0, 0.3);
+    transform: translateY(2px);
+  }
+
+  .btn-danger {
+    @apply bg-error-container text-on-error-container;
+    box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.2),
+      inset -2px -2px 0 rgba(0, 0, 0, 0.4), 0 4px 0 #400003;
+  }
+
+  .btn-danger:not(:disabled):active {
+    box-shadow: inset -2px -2px 0 rgba(255, 255, 255, 0.05),
+      inset 2px 2px 0 rgba(0, 0, 0, 0.4);
+    transform: translateY(2px);
+  }
+
+  /* ── Cards ── */
+  .card {
+    @apply bg-surface-container-high border-4 border-black p-5;
+    box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.08),
+      inset -2px -2px 0 rgba(0, 0, 0, 0.5);
+  }
+
+  /* Wooden/elevated card — dirt brown border */
+  .card-elevated {
+    @apply bg-surface-container-high border-4 border-secondary-container p-5;
+    box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.1),
+      inset -2px -2px 0 rgba(0, 0, 0, 0.5), 4px 4px 0 #000;
+  }
+
+  /* ── Inputs ── */
+  .pixel-input {
+    @apply w-full bg-surface-container-lowest text-on-surface border-4 border-black font-inter text-base px-3 py-2 outline-none;
+    box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.9),
+      inset 2px 0 0 rgba(0, 0, 0, 0.4);
+  }
+
+  .pixel-input:focus {
+    border-color: #a5d655;
+  }
+
+  .pixel-input::placeholder {
+    color: #8d937f;
+  }
+
+  .pixel-input-label {
+    @apply block font-mono text-label-caps text-on-surface-variant uppercase mb-1;
+  }
+
+  /* ── Progress Bar ── */
+  .progress-track {
+    @apply w-full bg-surface-container-lowest border-4 border-black flex items-center;
+    padding: 3px;
+    gap: 2px;
+    height: 28px;
+  }
+
+  .progress-block {
+    flex: none;
+    width: 14px;
+    height: 100%;
+  }
+
+  /* ── Badge / Label ── */
+  .pixel-badge {
+    @apply inline-flex items-center font-mono text-label-caps font-bold uppercase px-2 py-1 border-2 border-black;
+  }
+
+  .pixel-badge-primary {
+    @apply pixel-badge bg-primary text-on-primary;
+  }
+
+  .pixel-badge-secondary {
+    @apply pixel-badge bg-secondary-container text-on-secondary-container;
+  }
+
+  .pixel-badge-tertiary {
+    @apply pixel-badge bg-tertiary-container text-on-tertiary-container;
+  }
+
+  .pixel-badge-error {
+    @apply pixel-badge bg-error-container text-on-error-container;
+  }
+
+  .pixel-badge-outline {
+    @apply pixel-badge bg-transparent text-on-surface-variant border-outline;
+  }
+
+  /* ── Divider ── */
+  .pixel-divider {
+    @apply w-full border-0 border-t-4 border-solid border-outline-variant;
+  }
+
+  /* ── Window / Modal ── */
+  .pixel-window {
+    @apply bg-surface-container border-4 border-black;
+    box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.08),
+      inset -2px -2px 0 rgba(0, 0, 0, 0.5), 6px 6px 0 #000;
+  }
+
+  .pixel-window-header {
+    @apply bg-surface-container-high border-b-4 border-black px-4 py-2 font-anybody font-bold text-on-surface;
+  }
+
+  .pixel-window-body {
+    @apply p-5;
+  }
+
+  /* ── Overlay ── */
+  .pixel-overlay {
+    @apply fixed inset-0;
+    background: rgba(0, 0, 0, 0.7);
+  }
+}

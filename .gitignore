@@ -1,0 +1,7 @@
+**/node_modules
+**/dist
+**/out
+**/coverage
+**/.next
+.env
+.env.local
