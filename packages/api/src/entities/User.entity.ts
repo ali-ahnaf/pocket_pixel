@@ -1,7 +1,8 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from "typeorm";
 import { Expense } from "./Expense.entity";
-import { RecurringTransaction } from "./RecurringTransaction.entity";
+
 import { Vault } from "./Vault.entity";
+import { Tag } from "./Tag.entity";
 
 @Entity("users")
 export class User {
@@ -17,9 +18,9 @@ export class User {
   @OneToMany(() => Expense, (expense) => expense.user)
   expenses: Expense[];
 
-  @OneToMany(() => RecurringTransaction, (r) => r.user)
-  recurringTransactions: RecurringTransaction[];
-
   @OneToMany(() => Vault, (v) => v.user)
   vaults: Vault[];
+
+  @OneToMany(() => Tag, (t) => t.user)
+  tags: Tag[];
 }

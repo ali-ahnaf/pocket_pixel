@@ -1,40 +1,37 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Briefcase, Plus, Save, Pencil } from 'lucide-react';
+import { X, Tag as TagIcon, Plus, Save, Pencil } from 'lucide-react';
 import { Button } from './Button';
 import { Input } from './Input';
 import { iconMapper } from '../lib/iconMapper';
 import { AVAILABLE_COLORS, AVAILABLE_ICONS } from '@/lib/helpers/static';
 
-interface AddVaultModalProps {
+interface AddTagModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
-  initialData?: { id?: string; name: string; description: string; icon?: string; color?: string };
-  onSave?: (data: { id?: string; name: string; description: string; icon: string; color: string }) => void;
+  initialData?: { id?: string; name: string; color: string; icon: string };
+  onSave?: (data: { id?: string; name: string; color: string; icon: string }) => void;
 }
 
-export function AddVaultModal({ isOpen, onClose, title, initialData, onSave }: AddVaultModalProps) {
+export function AddTagModal({ isOpen, onClose, title, initialData, onSave }: AddTagModalProps) {
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isVisible, setIsVisible] = useState(false);
   const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
   const [color, setColor] = useState('#3b82f6');
-  const [icon, setIcon] = useState('Briefcase');
+  const [icon, setIcon] = useState('Tag');
 
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
         setName(initialData.name);
-        setDescription(initialData.description);
-        setColor(initialData.color || '#3b82f6');
-        setIcon(initialData.icon || 'Briefcase');
+        setColor(initialData.color);
+        setIcon(initialData.icon);
       } else {
         setName('');
-        setDescription('');
         setColor('#3b82f6');
-        setIcon('Briefcase');
+        setIcon('Tag');
       }
       setShouldRender(true);
       const timer = setTimeout(() => setIsVisible(true), 20);
@@ -86,7 +83,7 @@ export function AddVaultModal({ isOpen, onClose, title, initialData, onSave }: A
         <main className="px-6 py-6 pt-0 space-y-6">
           <div className="space-y-4">
             <label className="pixel-input-label ml-1">NAME</label>
-            <Input placeholder="e.g. Secret Stash" value={name} onChange={(e) => setName(e.target.value)} className="w-full" />
+            <Input placeholder="e.g. Groceries" value={name} onChange={(e) => setName(e.target.value)} className="w-full" />
 
             <div className="space-y-2">
               <label className="pixel-input-label ml-1">COLOR</label>
@@ -130,16 +127,6 @@ export function AddVaultModal({ isOpen, onClose, title, initialData, onSave }: A
                 })}
               </div>
             </div>
-
-            <div className="space-y-2">
-              <label className="pixel-input-label ml-1">DESCRIPTION</label>
-              <textarea
-                className="w-full min-h-[120px] p-3 bg-surface-container-lowest text-on-surface border-4 border-black font-inter text-base outline-none focus:border-primary transition-colors resize-none shadow-[inset_0_2px_0_rgba(0,0,0,0.9),inset_2px_0_0_rgba(0,0,0,0.4)]"
-                placeholder="What is this vault for?"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-            </div>
           </div>
 
           <div className="pt-2">
@@ -147,12 +134,12 @@ export function AddVaultModal({ isOpen, onClose, title, initialData, onSave }: A
               variant="primary"
               className="w-full py-3 flex items-center justify-center gap-2 group"
               onClick={() => {
-                onSave?.({ id: initialData?.id, name, description, icon, color });
+                onSave?.({ id: initialData?.id, name, color, icon });
                 onClose();
               }}
             >
               <Save className="w-5 h-5 group-active:scale-90 transition-transform" />
-              <span className="font-headline-sm uppercase tracking-wider">{isEditing ? 'Save Changes' : 'Create Record'}</span>
+              <span className="font-headline-sm uppercase tracking-wider">{isEditing ? 'Save Changes' : 'Create Tag'}</span>
             </Button>
           </div>
         </main>
@@ -164,7 +151,7 @@ export function AddVaultModal({ isOpen, onClose, title, initialData, onSave }: A
             <div className="w-3 h-3 bg-secondary border-2 border-black"></div>
             <div className="w-3 h-3 bg-tertiary border-2 border-black"></div>
           </div>
-          <p className="font-label-caps text-[10px]">{isEditing ? 'EDIT_RECORD_INTERFACE' : 'NEW_RECORD_INTERFACE'}</p>
+          <p className="font-label-caps text-[10px]">{isEditing ? 'EDIT_TAG_INTERFACE' : 'NEW_TAG_INTERFACE'}</p>
         </div>
       </div>
     </>

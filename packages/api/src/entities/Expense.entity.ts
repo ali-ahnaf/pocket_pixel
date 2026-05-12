@@ -1,12 +1,7 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  ManyToOne,
-  JoinColumn,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, DeleteDateColumn } from 'typeorm';
 import { User } from './User.entity';
 import { Vault } from './Vault.entity';
+import { Tag } from './Tag.entity';
 
 export type RecurrenceInterval = 'weekly' | 'monthly' | 'daily' | 'yearly';
 export type TransactionType = 'expense' | 'income';
@@ -22,14 +17,18 @@ export class Expense {
   @Column({ type: 'varchar', length: 200, nullable: true })
   title: string | null;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 , default: 0})
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   amount: number;
 
   @Column({ type: 'varchar', default: 'expense' })
   type: TransactionType;
 
   @Column({ type: 'varchar', nullable: true })
-  tag: string | null;
+  tagId: string | null;
+
+  @ManyToOne(() => Tag, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'tagId' })
+  tag: Tag | null;
 
   @Column({ type: 'date', nullable: true })
   date: string;
@@ -42,6 +41,9 @@ export class Expense {
 
   @Column({ type: 'date', nullable: true })
   endDate: string;
+
+  @DeleteDateColumn({ type: 'datetime', nullable: true })
+  deletedAt: Date;
 
   @Column({ type: 'varchar', nullable: true })
   vaultId: string | null;

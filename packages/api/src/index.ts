@@ -4,7 +4,7 @@ import cors from "cors";
 import { AppDataSource } from "./data-source";
 import usersRouter from "./routes/users.routes";
 import transactionsRouter from "./routes/transactions.routes";
-import recurringRouter from "./routes/recurring.routes";
+
 import analyticsRouter from "./routes/analytics.routes";
 import vaultsRouter from "./routes/vaults.routes";
 
@@ -20,7 +20,6 @@ app.get("/health", (_req, res) => {
 
 app.use("/api/users", usersRouter);
 app.use("/api/users/:userId/transactions", transactionsRouter);
-app.use("/api/users/:userId/recurring", recurringRouter);
 app.use("/api/users/:userId/analytics", analyticsRouter);
 app.use("/api/users/:userId/vaults", vaultsRouter);
 

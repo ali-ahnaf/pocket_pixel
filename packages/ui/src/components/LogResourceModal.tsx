@@ -9,16 +9,22 @@ interface LogResourceModalProps {
   onClose: () => void;
 }
 
+interface Tag {
+  name: string;
+  icon: string;
+  backgroundColor: string;
+}
+
 export function LogResourceModal({ isOpen, onClose }: LogResourceModalProps) {
   const [isExpense, setIsExpense] = useState(true);
   const [amount, setAmount] = useState('');
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isVisible, setIsVisible] = useState(false);
-  
+
   // Tag state
   const [tagInput, setTagInput] = useState('');
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
+
   const VAULTS = [
     { id: '1', name: 'Main Stash', logo: 'Wallet', color: 'text-secondary' },
     { id: '2', name: 'Gold Reserve', logo: 'Gem', color: 'text-primary' },
@@ -28,20 +34,28 @@ export function LogResourceModal({ isOpen, onClose }: LogResourceModalProps) {
 
   const [selectedVaultId, setSelectedVaultId] = useState(VAULTS[0].id);
   const [isVaultDropdownOpen, setIsVaultDropdownOpen] = useState(false);
-  
-  const selectedVault = VAULTS.find(v => v.id === selectedVaultId) || VAULTS[0];
-  const SelectedVaultIcon = iconMapper(selectedVault.logo);
-  const DUMMY_TAGS = ['POTIONS', 'GEAR', 'TAVERN', 'QUEST', 'LOOT', 'SCROLLS', 'FOOD', 'ARMOR', 'WEAPONS', 'MAPS'];
-  
-  const suggestions = DUMMY_TAGS.filter(
-    tag => 
-      !selectedTags.includes(tag) && 
-      tag.toLowerCase().includes(tagInput.toLowerCase())
-  ).slice(0, 3);
 
-  const toggleTag = (tag: string) => {
-    if (selectedTags.includes(tag)) {
-      setSelectedTags(selectedTags.filter(t => t !== tag));
+  const selectedVault = VAULTS.find((v) => v.id === selectedVaultId) || VAULTS[0];
+  const SelectedVaultIcon = iconMapper(selectedVault.logo);
+
+  const DUMMY_TAGS = [
+    { name: 'POTIONS', icon: 'FlaskConical', backgroundColor: '#D946EF' },
+    { name: 'GEAR', icon: 'Shield', backgroundColor: '#3B82F6' },
+    { name: 'TAVERN', icon: 'Beer', backgroundColor: '#F59E0B' },
+    { name: 'QUEST', icon: 'Map', backgroundColor: '#10B981' },
+    { name: 'LOOT', icon: 'Gem', backgroundColor: '#EAB308' },
+    { name: 'SCROLLS', icon: 'Scroll', backgroundColor: '#8B5CF6' },
+    { name: 'FOOD', icon: 'Apple', backgroundColor: '#EF4444' },
+    { name: 'ARMOR', icon: 'Shirt', backgroundColor: '#64748B' },
+    { name: 'WEAPONS', icon: 'Sword', backgroundColor: '#F43F5E' },
+    { name: 'MAPS', icon: 'Compass', backgroundColor: '#14B8A6' },
+  ];
+
+  const suggestions = DUMMY_TAGS.filter((tag) => !selectedTags.some((t) => t.name === tag.name) && tag.name.toLowerCase().includes(tagInput.toLowerCase())).slice(0, 3);
+
+  const toggleTag = (tag: Tag) => {
+    if (selectedTags.some((t) => t.name === tag.name)) {
+      setSelectedTags(selectedTags.filter((t) => t.name !== tag.name));
     } else {
       setSelectedTags([...selectedTags, tag]);
       setTagInput('');
@@ -50,8 +64,11 @@ export function LogResourceModal({ isOpen, onClose }: LogResourceModalProps) {
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && tagInput.trim()) {
-      const newTag = tagInput.trim().toUpperCase();
-      if (newTag && !selectedTags.includes(newTag)) {
+      const tagName = tagInput.trim().toUpperCase();
+      if (tagName && !selectedTags.some((t) => t.name === tagName)) {
+        // Try to find if it exists in DUMMY_TAGS to get its icon/color
+        const existingTag = DUMMY_TAGS.find((t) => t.name === tagName);
+        const newTag = existingTag || { name: tagName, icon: 'Package', backgroundColor: '#64748B' };
         setSelectedTags([...selectedTags, newTag]);
         setTagInput('');
       }
@@ -79,15 +96,10 @@ export function LogResourceModal({ isOpen, onClose }: LogResourceModalProps) {
   return (
     <>
       {/* Backdrop for Bottom Sheet */}
-      <div 
-        className={`fixed inset-0 bg-black/70 z-50 transition-opacity duration-300 ease-in-out ${
-          isVisible ? 'opacity-100' : 'opacity-0'
-        }`}
-        onClick={onClose}
-      />
-      
+      <div className={`fixed inset-0 bg-black/70 z-50 transition-opacity duration-300 ease-in-out ${isVisible ? 'opacity-100' : 'opacity-0'}`} onClick={onClose} />
+
       {/* Main Container (The Bottom Sheet) */}
-      <div 
+      <div
         className={`fixed bottom-0 left-0 right-0 md:left-1/2 md:-translate-x-1/2 z-[60] w-full max-w-md bg-surface-container-high border-4 border-black shadow-[inset_2px_2px_0px_rgba(255,255,255,0.1),_inset_-2px_-2px_0px_rgba(0,0,0,0.4)] flex flex-col mt-auto mx-auto max-h-[90vh] overflow-y-auto rounded-t-lg md:rounded-none transition-transform duration-300 ease-in-out ${
           isVisible ? 'translate-y-0' : 'translate-y-full'
         }`}
@@ -101,10 +113,7 @@ export function LogResourceModal({ isOpen, onClose }: LogResourceModalProps) {
         <header className="px-4 pt-2 pb-5 shrink-0">
           <div className="flex justify-between items-center">
             <h1 className="font-headline-md text-primary uppercase">LOG NEW RESOURCE</h1>
-            <button 
-              onClick={onClose}
-              className="w-10 h-10 bg-surface-container-highest border-4 border-black flex items-center justify-center active:translate-y-0.5 active:shadow-none"
-            >
+            <button onClick={onClose} className="w-10 h-10 bg-surface-container-highest border-4 border-black flex items-center justify-center active:translate-y-0.5 active:shadow-none">
               <X className="text-on-surface" />
             </button>
           </div>
@@ -118,9 +127,9 @@ export function LogResourceModal({ isOpen, onClose }: LogResourceModalProps) {
               <div className="absolute left-4 flex items-center pointer-events-none">
                 <Coins className="text-secondary" />
               </div>
-              <input 
-                className="w-full h-16 pl-14 pr-4 bg-surface-container-lowest border-4 border-black shadow-[inset_4px_4px_0px_rgba(0,0,0,0.6),_inset_-2px_-2px_0px_rgba(255,255,255,0.05)] font-headline-md text-secondary placeholder:text-surface-variant focus:outline-none focus:ring-0" 
-                placeholder="0.00" 
+              <input
+                className="w-full h-16 pl-14 pr-4 bg-surface-container-lowest border-4 border-black shadow-[inset_4px_4px_0px_rgba(0,0,0,0.6),_inset_-2px_-2px_0px_rgba(255,255,255,0.05)] font-headline-md text-secondary placeholder:text-surface-variant focus:outline-none focus:ring-0"
+                placeholder="0.00"
                 type="number"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
@@ -132,11 +141,11 @@ export function LogResourceModal({ isOpen, onClose }: LogResourceModalProps) {
           <div className="space-y-2">
             <div className="grid grid-cols-2 gap-1 bg-black p-1 border-4 border-black">
               {/* Expense Active State */}
-              <button 
+              <button
                 onClick={() => setIsExpense(true)}
                 className={`py-3 px-4 font-label-caps flex items-center justify-center gap-2 ${
-                  isExpense 
-                    ? 'bg-error-container text-on-error-container border-4 border-black shadow-[inset_2px_2px_0px_rgba(255,255,255,0.1),_inset_-2px_-2px_0px_rgba(0,0,0,0.4)]' 
+                  isExpense
+                    ? 'bg-error-container text-on-error-container border-4 border-black shadow-[inset_2px_2px_0px_rgba(255,255,255,0.1),_inset_-2px_-2px_0px_rgba(0,0,0,0.4)]'
                     : 'bg-surface-container-low text-outline hover:bg-surface-container-highest transition-colors'
                 }`}
               >
@@ -144,11 +153,11 @@ export function LogResourceModal({ isOpen, onClose }: LogResourceModalProps) {
                 EXPENSE
               </button>
               {/* Income Inactive State */}
-              <button 
+              <button
                 onClick={() => setIsExpense(false)}
                 className={`py-3 px-4 font-label-caps flex items-center justify-center gap-2 ${
-                  !isExpense 
-                    ? 'bg-primary-container text-on-primary-container border-4 border-black shadow-[inset_2px_2px_0px_rgba(255,255,255,0.1),_inset_-2px_-2px_0px_rgba(0,0,0,0.4)]' 
+                  !isExpense
+                    ? 'bg-primary-container text-on-primary-container border-4 border-black shadow-[inset_2px_2px_0px_rgba(255,255,255,0.1),_inset_-2px_-2px_0px_rgba(0,0,0,0.4)]'
                     : 'bg-surface-container-low text-outline hover:bg-surface-container-highest transition-colors'
                 }`}
               >
@@ -162,7 +171,7 @@ export function LogResourceModal({ isOpen, onClose }: LogResourceModalProps) {
           <div className="space-y-2">
             <div className="relative">
               {/* Dropdown Trigger */}
-              <button 
+              <button
                 onClick={() => setIsVaultDropdownOpen(!isVaultDropdownOpen)}
                 className={`w-full h-14 px-4 border-4 border-black flex items-center justify-between font-body-lg transition-all active:translate-y-0.5 active:shadow-none group bg-surface-container-lowest hover:bg-surface-container-low ${
                   isVaultDropdownOpen ? 'ring-4 ring-primary/20' : ''
@@ -170,16 +179,11 @@ export function LogResourceModal({ isOpen, onClose }: LogResourceModalProps) {
               >
                 <div className="flex items-center gap-3">
                   <SelectedVaultIcon className={selectedVault.color} size={20} />
-                  <span className="text-primary font-bold">
-                    {selectedVault.name}
-                  </span>
+                  <span className="text-primary font-bold">{selectedVault.name}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-1 h-6 bg-black/10 rounded-full" />
-                  <ChevronDown 
-                    className={`text-outline transition-transform duration-300 ${isVaultDropdownOpen ? 'rotate-180' : ''}`} 
-                    size={20} 
-                  />
+                  <ChevronDown className={`text-outline transition-transform duration-300 ${isVaultDropdownOpen ? 'rotate-180' : ''}`} size={20} />
                 </div>
               </button>
 
@@ -187,14 +191,13 @@ export function LogResourceModal({ isOpen, onClose }: LogResourceModalProps) {
               {isVaultDropdownOpen && (
                 <>
                   {/* Invisible backdrop to close dropdown on click outside */}
-                  <div 
-                    className="fixed inset-0 z-[65]" 
-                    onClick={() => setIsVaultDropdownOpen(false)}
-                  />
-                  <div className={`absolute top-[calc(100%+4px)] left-0 right-0 z-[70] bg-surface-container-high border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] transition-all duration-200 ${isVaultDropdownOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}>
+                  <div className="fixed inset-0 z-[65]" onClick={() => setIsVaultDropdownOpen(false)} />
+                  <div
+                    className={`absolute top-[calc(100%+4px)] left-0 right-0 z-[70] bg-surface-container-high border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] transition-all duration-200 ${isVaultDropdownOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
+                  >
                     <div className="max-h-60 overflow-y-auto custom-scrollbar">
                       {VAULTS.map((vault) => (
-                        <button 
+                        <button
                           key={vault.id}
                           onClick={() => {
                             setSelectedVaultId(vault.id);
@@ -209,13 +212,9 @@ export function LogResourceModal({ isOpen, onClose }: LogResourceModalProps) {
                               const VaultIcon = iconMapper(vault.logo);
                               return <VaultIcon className={selectedVaultId === vault.id ? vault.color : 'text-outline'} size={20} />;
                             })()}
-                            <span className={`font-body-lg uppercase ${selectedVaultId === vault.id ? 'text-primary font-bold' : 'text-on-surface'}`}>
-                              {vault.name}
-                            </span>
+                            <span className={`font-body-lg uppercase ${selectedVaultId === vault.id ? 'text-primary font-bold' : 'text-on-surface'}`}>{vault.name}</span>
                           </div>
-                          {selectedVaultId === vault.id && (
-                            <div className="w-4 h-4 bg-primary border-2 border-black" />
-                          )}
+                          {selectedVaultId === vault.id && <div className="w-4 h-4 bg-primary border-2 border-black" />}
                         </button>
                       ))}
                     </div>
@@ -231,22 +230,27 @@ export function LogResourceModal({ isOpen, onClose }: LogResourceModalProps) {
               {/* Selected Tags Display */}
               {selectedTags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-3">
-                  {selectedTags.map(tag => (
-                    <span 
-                      key={tag}
-                      onClick={() => toggleTag(tag)}
-                      className="bg-tertiary-container text-sm text-on-tertiary-container font-bold border-4 border-black px-3 py-1 font-label-caps flex items-center gap-1 active:translate-y-0.5 cursor-pointer shadow-[2px_2px_0px_rgba(0,0,0,1)]"
-                    >
-                      {tag} <X size={14} />
-                    </span>
-                  ))}
+                  {selectedTags.map((tag) => {
+                    const TagIcon = iconMapper(tag.icon || 'Hash');
+                    return (
+                      <span
+                        key={tag.name}
+                        onClick={() => toggleTag(tag)}
+                        style={{ backgroundColor: tag.backgroundColor }}
+                        className="text-sm text-white font-bold border-4 border-black px-2 py-1 font-label-caps flex items-center gap-2 active:translate-y-0.5 cursor-pointer shadow-[2px_2px_0px_rgba(0,0,0,1)]"
+                      >
+                        <TagIcon size={12} strokeWidth={3} />
+                        {tag.name} <X size={12} strokeWidth={3} />
+                      </span>
+                    );
+                  })}
                 </div>
               )}
 
-              <input 
-                className="w-full h-12 px-4 bg-surface-container-lowest border-4 border-black shadow-[inset_4px_4px_0px_rgba(0,0,0,0.6),_inset_-2px_-2px_0px_rgba(255,255,255,0.05)] font-body-lg text-on-surface focus:outline-none placeholder:text-surface-variant" 
-                placeholder="Search or create..." 
-                type="text" 
+              <input
+                className="w-full h-12 px-4 bg-surface-container-lowest border-4 border-black shadow-[inset_4px_4px_0px_rgba(0,0,0,0.6),_inset_-2px_-2px_0px_rgba(255,255,255,0.05)] font-body-lg text-on-surface focus:outline-none placeholder:text-surface-variant"
+                placeholder="Search or create..."
+                type="text"
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -255,23 +259,32 @@ export function LogResourceModal({ isOpen, onClose }: LogResourceModalProps) {
               {/* Suggestions */}
               {suggestions.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-3">
-                  {suggestions.map(tag => (
-                    <span 
-                      key={tag}
-                      onClick={() => toggleTag(tag)}
-                      className="bg-surface-container-highest text-sm border-4 border-black px-3 py-1 font-label-caps font-bold flex items-center gap-1 active:translate-y-0.5 cursor-pointer hover:bg-surface-container-high transition-colors"
-                    >
-                      {tag} <Plus size={14} />
-                    </span>
-                  ))}
+                  {suggestions.map((tag) => {
+                    const SuggestionIcon = iconMapper(tag.icon || 'Hash');
+                    return (
+                      <span
+                        key={tag.name}
+                        onClick={() => toggleTag(tag)}
+                        style={{ backgroundColor: `${tag.backgroundColor}20`, borderColor: tag.backgroundColor }}
+                        className="bg-surface-container-highest text-sm border-4 px-2 py-1 font-label-caps font-bold flex items-center gap-2 active:translate-y-0.5 cursor-pointer hover:bg-surface-container-high transition-colors"
+                      >
+                        <SuggestionIcon size={12} style={{ color: tag.backgroundColor }} strokeWidth={3} />
+                        <span style={{ color: tag.backgroundColor }}>{tag.name}</span>
+                        <Plus size={12} style={{ color: tag.backgroundColor }} strokeWidth={3} />
+                      </span>
+                    );
+                  })}
                 </div>
               )}
-              
-              {tagInput && !suggestions.includes(tagInput.toUpperCase()) && !selectedTags.includes(tagInput.toUpperCase()) && (
+
+              {tagInput && !suggestions.some((t) => t.name === tagInput.toUpperCase()) && !selectedTags.some((t) => t.name === tagInput.toUpperCase()) && (
                 <div className="mt-3">
-                  <span 
+                  <span
                     onClick={() => {
-                      toggleTag(tagInput.toUpperCase());
+                      const tagName = tagInput.toUpperCase();
+                      const existingTag = DUMMY_TAGS.find((t) => t.name === tagName);
+                      const newTag = existingTag || { name: tagName, icon: 'Package', backgroundColor: '#64748B' };
+                      toggleTag(newTag);
                     }}
                     className="bg-surface-container-highest border-4 border-black px-3 py-1 font-label-caps text-primary flex items-center w-fit gap-1 active:translate-y-0.5 cursor-pointer"
                   >

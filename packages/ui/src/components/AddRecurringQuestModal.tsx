@@ -10,22 +10,26 @@ interface AddRecurringQuestModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
+  initialData?: any;
+  onSave?: (data: any) => void;
 }
 
-export function AddRecurringQuestModal({ isOpen, onClose, title }: AddRecurringQuestModalProps) {
+export function AddRecurringQuestModal({ isOpen, onClose, title, initialData, onSave }: AddRecurringQuestModalProps) {
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isVisible, setIsVisible] = useState(false);
-  const [name, setName] = useState('');
-  const [amount, setAmount] = useState('');
-  const [isExpense, setIsExpense] = useState(true);
+  const [name, setName] = useState(initialData?.title || initialData?.name || '');
+  const [amount, setAmount] = useState(initialData?.amount?.toString() || '');
+  const [isExpense, setIsExpense] = useState(initialData ? initialData.type === 'EXPENSE' : true);
   
   // Date states
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(initialData?.startDate || '');
+  const [endDate, setEndDate] = useState(initialData?.endDate || '');
   
   // Tag state
   const [tagInput, setTagInput] = useState('');
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>(
+    initialData?.category ? [initialData.category.toUpperCase()] : (initialData?.tags || [])
+  );
   
   // Vault state
   const VAULTS = [
@@ -41,7 +45,9 @@ export function AddRecurringQuestModal({ isOpen, onClose, title }: AddRecurringQ
 
   // Interval state
   const INTERVALS = ['Daily', 'Weekly', 'Monthly', 'Yearly'];
-  const [selectedInterval, setSelectedInterval] = useState(INTERVALS[2]);
+  const [selectedInterval, setSelectedInterval] = useState(
+    initialData?.frequency && INTERVALS.includes(initialData.frequency) ? initialData.frequency : INTERVALS[2]
+  );
   const [isIntervalDropdownOpen, setIsIntervalDropdownOpen] = useState(false);
 
   const DUMMY_TAGS = ['POTIONS', 'GEAR', 'TAVERN', 'QUEST', 'LOOT', 'SCROLLS', 'FOOD', 'ARMOR', 'WEAPONS', 'MAPS'];
@@ -74,6 +80,28 @@ export function AddRecurringQuestModal({ isOpen, onClose, title }: AddRecurringQ
 
   useEffect(() => {
     if (isOpen) {
+      if (initialData) {
+        setName(initialData.title || initialData.name || '');
+        setAmount(initialData.amount?.toString() || '');
+        setIsExpense(initialData.type === 'EXPENSE');
+        setStartDate(initialData.startDate || '');
+        setEndDate(initialData.endDate || '');
+        setSelectedTags(initialData.category ? [initialData.category.toUpperCase()] : (initialData.tags || []));
+        if (initialData.frequency && INTERVALS.includes(initialData.frequency)) {
+          setSelectedInterval(initialData.frequency);
+        }
+        if (initialData.vaultId) {
+          setSelectedVaultId(initialData.vaultId);
+        }
+      } else {
+        setName('');
+        setAmount('');
+        setIsExpense(true);
+        setStartDate('');
+        setEndDate('');
+        setSelectedTags([]);
+        setSelectedInterval(INTERVALS[2]);
+      }
       setShouldRender(true);
       const timer = setTimeout(() => setIsVisible(true), 20);
       return () => clearTimeout(timer);
@@ -84,7 +112,7 @@ export function AddRecurringQuestModal({ isOpen, onClose, title }: AddRecurringQ
       const timer = setTimeout(() => setShouldRender(false), 300);
       return () => clearTimeout(timer);
     }
-  }, [isOpen]);
+  }, [isOpen, initialData]);
 
   if (!shouldRender) return null;
 
@@ -390,21 +418,31 @@ export function AddRecurringQuestModal({ isOpen, onClose, title }: AddRecurringQ
               variant="primary" 
               className="w-full py-3 flex items-center justify-center gap-2 group"
               onClick={() => {
-                console.log('Saving Recurring Quest:', { 
+                const dataToSave = { 
+                  id: initialData?.id,
+                  title: name,
                   name, 
-                  amount, 
+                  amount: parseFloat(amount) || 0, 
+                  type: isExpense ? 'EXPENSE' : 'INCOME',
                   isExpense, 
+                  category: selectedTags[0] || 'Uncategorized',
                   selectedTags, 
                   startDate, 
                   endDate, 
                   selectedVaultId, 
+                  frequency: selectedInterval,
                   selectedInterval 
-                });
+                };
+                if (onSave) {
+                  onSave(dataToSave);
+                } else {
+                  console.log('Saving Recurring Quest:', dataToSave);
+                }
                 onClose();
               }}
             >
               <Save className="w-5 h-5 group-active:scale-90 transition-transform" />
-              <span className="font-headline-sm uppercase tracking-wider">Create Record</span>
+              <span className="font-headline-sm uppercase tracking-wider">{initialData ? 'Save Changes' : 'Create Record'}</span>
             </Button>
           </div>
         </main>
