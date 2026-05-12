@@ -24,6 +24,9 @@ export class Vault {
   @Column({ type: 'varchar', length: 50, nullable: true })
   backgroundColor: string | null;
 
+  @Column({ type: 'boolean', default: false })
+  isDefault: boolean;
+
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;
