@@ -1,6 +1,7 @@
 import { Request, Response, Router } from "express";
 import Joi from "joi";
 import { buildTransactionDateRange, transactionsRepo } from "./shared";
+import { asyncHandler } from "../../middleware/error-handler";
 
 const router = Router({ mergeParams: true });
 const transactionsQuerySchema = Joi.object({
@@ -8,23 +9,19 @@ const transactionsQuerySchema = Joi.object({
   year: Joi.number().integer().min(2000).max(2100).required(),
 });
 
-router.get("/", async (req: Request, res: Response) => {
+router.get("/", asyncHandler(async (req: Request, res: Response) => {
   const { error, value } = transactionsQuerySchema.validate(req.query);
   if (error) return res.status(400).json({ message: error.message });
 
-  try {
-    const transactions = await transactionsRepo().find({
-      where: {
-        userId: req.params.userId,
-        date: buildTransactionDateRange(value.month, value.year),
-      },
-      order: { date: "DESC" },
-    });
+  const transactions = await transactionsRepo().find({
+    where: {
+      userId: req.params.userId,
+      date: buildTransactionDateRange(value.month, value.year),
+    },
+    order: { date: "DESC" },
+  });
 
-    return res.json(transactions);
-  } catch {
-    return res.status(500).json({ message: "Internal server error" });
-  }
-});
+  return res.json(transactions);
+}));
 
 export default router;

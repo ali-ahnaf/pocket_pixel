@@ -5,6 +5,7 @@ import type { SignInPayload } from '@expense-tracker/shared';
 import { createAuthToken } from './shared';
 import { AppDataSource } from '../../data-source';
 import { User } from '../../entities/User.entity';
+import { asyncHandler } from '../../middleware/error-handler';
 
 const router = Router();
 const signInSchema = Joi.object<SignInPayload>({
@@ -14,13 +15,14 @@ const signInSchema = Joi.object<SignInPayload>({
 
 const authRepo = () => AppDataSource.getRepository(User);
 
-router.post('/sign-in', async (req: Request, res: Response) => {
-  const { error, value } = signInSchema.validate(req.body);
-  if (error) return res.status(400).json({ message: error.message });
+router.post(
+  '/sign-in',
+  asyncHandler(async (req: Request, res: Response) => {
+    const { error, value } = signInSchema.validate(req.body);
+    if (error) return res.status(400).json({ message: error.message });
 
-  const payload = value as SignInPayload;
+    const payload = value as SignInPayload;
 
-  try {
     const user = await authRepo().findOneBy({ email: payload.email });
     if (!user) return res.status(401).json({ message: 'Invalid credentials' });
 
@@ -36,9 +38,7 @@ router.post('/sign-in', async (req: Request, res: Response) => {
       avatar: user.avatar,
       token,
     });
-  } catch {
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
+  }),
+);
 
 export default router;

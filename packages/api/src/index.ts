@@ -10,6 +10,7 @@ import vaultsRouter from './routes/vaults.routes';
 import tagsRouter from './routes/tags.routes';
 import recurringRouter from './routes/recurring.routes';
 import { requireAuth } from './middleware/auth';
+import { errorHandler } from './middleware/error-handler';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -35,6 +36,7 @@ app.use('/api/users/:userId/analytics', analyticsRouter);
 app.use('/api/users/:userId/vaults', vaultsRouter);
 app.use('/api/users/:userId/tags', tagsRouter);
 app.use('/api/users/:userId/recurring', recurringRouter);
+app.use(errorHandler);
 
 AppDataSource.initialize()
   .then(() => {

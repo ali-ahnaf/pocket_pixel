@@ -3,89 +3,113 @@
 import { useState, useEffect } from 'react';
 import { X, Coins, TrendingDown, TrendingUp, ChevronDown, Plus, Package } from 'lucide-react';
 import { iconMapper } from '../lib/iconMapper';
+import { profileApi } from '../lib/api';
+import type { ApiTag, ApiVault } from '../lib/api/ProfileApi';
 
 interface LogResourceModalProps {
   isOpen: boolean;
   onClose: () => void;
+  userId: string | null;
 }
 
-interface Tag {
-  name: string;
-  icon: string;
-  backgroundColor: string;
-}
-
-export function LogResourceModal({ isOpen, onClose }: LogResourceModalProps) {
+export function LogResourceModal({ isOpen, onClose, userId }: LogResourceModalProps) {
   const [isExpense, setIsExpense] = useState(true);
   const [amount, setAmount] = useState('');
+  const [title, setTitle] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isVisible, setIsVisible] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Tag state
+  const [availableTags, setAvailableTags] = useState<ApiTag[]>([]);
   const [tagInput, setTagInput] = useState('');
-  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
+  const [selectedTags, setSelectedTags] = useState<ApiTag[]>([]);
 
-  const VAULTS = [
-    { id: '1', name: 'Main Stash', logo: 'Wallet', color: 'text-secondary' },
-    { id: '2', name: 'Gold Reserve', logo: 'Gem', color: 'text-primary' },
-    { id: '3', name: 'Secret Cache', logo: 'Shield', color: 'text-tertiary' },
-    { id: '4', name: 'Travel Pouch', logo: 'Briefcase', color: 'text-error' },
-  ];
-
-  const [selectedVaultId, setSelectedVaultId] = useState(VAULTS[0].id);
+  // Vault state
+  const [vaults, setVaults] = useState<ApiVault[]>([]);
+  const [selectedVaultId, setSelectedVaultId] = useState<string | null>(null);
   const [isVaultDropdownOpen, setIsVaultDropdownOpen] = useState(false);
 
-  const selectedVault = VAULTS.find((v) => v.id === selectedVaultId) || VAULTS[0];
-  const SelectedVaultIcon = iconMapper(selectedVault.logo);
+  const selectedVault = vaults.find((v) => v.id === selectedVaultId) ?? null;
 
-  const DUMMY_TAGS = [
-    { name: 'POTIONS', icon: 'FlaskConical', backgroundColor: '#D946EF' },
-    { name: 'GEAR', icon: 'Shield', backgroundColor: '#3B82F6' },
-    { name: 'TAVERN', icon: 'Beer', backgroundColor: '#F59E0B' },
-    { name: 'QUEST', icon: 'Map', backgroundColor: '#10B981' },
-    { name: 'LOOT', icon: 'Gem', backgroundColor: '#EAB308' },
-    { name: 'SCROLLS', icon: 'Scroll', backgroundColor: '#8B5CF6' },
-    { name: 'FOOD', icon: 'Apple', backgroundColor: '#EF4444' },
-    { name: 'ARMOR', icon: 'Shirt', backgroundColor: '#64748B' },
-    { name: 'WEAPONS', icon: 'Sword', backgroundColor: '#F43F5E' },
-    { name: 'MAPS', icon: 'Compass', backgroundColor: '#14B8A6' },
-  ];
+  const suggestions = availableTags
+    .filter((tag) => !selectedTags.some((t) => t.id === tag.id) && tag.name.toLowerCase().includes(tagInput.toLowerCase()))
+    .slice(0, 3);
 
-  const suggestions = DUMMY_TAGS.filter((tag) => !selectedTags.some((t) => t.name === tag.name) && tag.name.toLowerCase().includes(tagInput.toLowerCase())).slice(0, 3);
+  useEffect(() => {
+    if (isOpen && userId) {
+      profileApi.getTags(userId).then((res) => {
+        if (res.data) setAvailableTags(res.data);
+      });
+      profileApi.getVaults(userId).then((res) => {
+        if (res.data) {
+          setVaults(res.data);
+          const def = res.data.find((v) => v.isDefault) ?? res.data[0] ?? null;
+          if (def) setSelectedVaultId(def.id);
+        }
+      });
+    }
+  }, [isOpen, userId]);
 
-  const toggleTag = (tag: Tag) => {
-    if (selectedTags.some((t) => t.name === tag.name)) {
-      setSelectedTags(selectedTags.filter((t) => t.name !== tag.name));
+  const toggleTag = (tag: ApiTag) => {
+    if (selectedTags.some((t) => t.id === tag.id)) {
+      setSelectedTags(selectedTags.filter((t) => t.id !== tag.id));
     } else {
       setSelectedTags([...selectedTags, tag]);
       setTagInput('');
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && tagInput.trim()) {
-      const tagName = tagInput.trim().toUpperCase();
-      if (tagName && !selectedTags.some((t) => t.name === tagName)) {
-        // Try to find if it exists in DUMMY_TAGS to get its icon/color
-        const existingTag = DUMMY_TAGS.find((t) => t.name === tagName);
-        const newTag = existingTag || { name: tagName, icon: 'Package', backgroundColor: '#64748B' };
-        setSelectedTags([...selectedTags, newTag]);
-        setTagInput('');
-      }
+  const handleKeyDown = async (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && tagInput.trim() && userId) {
       e.preventDefault();
+      const tagName = tagInput.trim().toUpperCase();
+      if (selectedTags.some((t) => t.name === tagName)) return;
+      const existing = availableTags.find((t) => t.name === tagName);
+      if (existing) {
+        toggleTag(existing);
+      } else {
+        const res = await profileApi.createTag(userId, { name: tagName });
+        if (res.data) {
+          setAvailableTags([...availableTags, res.data]);
+          setSelectedTags([...selectedTags, res.data]);
+          setTagInput('');
+        }
+      }
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!userId || !amount || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await profileApi.createTransaction(userId, {
+        amount: parseFloat(amount),
+        type: isExpense ? 'expense' : 'income',
+        tagIds: selectedTags.map((t) => t.id),
+        title: title || undefined,
+        date,
+        vaultId: selectedVaultId ?? null,
+      });
+      setAmount('');
+      setTitle('');
+      setSelectedTags([]);
+      setTagInput('');
+      onClose();
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   useEffect(() => {
     if (isOpen) {
       setShouldRender(true);
-      // Brief delay to allow the browser to paint before starting the transition
       const timer = setTimeout(() => setIsVisible(true), 20);
       return () => clearTimeout(timer);
     } else {
       setIsVisible(false);
       setIsVaultDropdownOpen(false);
-      // Wait for the animation to complete (300ms) before unmounting
       const timer = setTimeout(() => setShouldRender(false), 300);
       return () => clearTimeout(timer);
     }
@@ -140,7 +164,6 @@ export function LogResourceModal({ isOpen, onClose }: LogResourceModalProps) {
           {/* Transaction Type Toggle */}
           <div className="space-y-2">
             <div className="grid grid-cols-2 gap-1 bg-black p-1 border-4 border-black">
-              {/* Expense Active State */}
               <button
                 onClick={() => setIsExpense(true)}
                 className={`py-3 px-4 font-label-caps flex items-center justify-center gap-2 ${
@@ -152,7 +175,6 @@ export function LogResourceModal({ isOpen, onClose }: LogResourceModalProps) {
                 <TrendingDown size={18} />
                 EXPENSE
               </button>
-              {/* Income Inactive State */}
               <button
                 onClick={() => setIsExpense(false)}
                 className={`py-3 px-4 font-label-caps flex items-center justify-center gap-2 ${
@@ -168,75 +190,71 @@ export function LogResourceModal({ isOpen, onClose }: LogResourceModalProps) {
           </div>
 
           {/* Source Vault Selection */}
-          <div className="space-y-2">
-            <div className="relative">
-              {/* Dropdown Trigger */}
-              <button
-                onClick={() => setIsVaultDropdownOpen(!isVaultDropdownOpen)}
-                className={`w-full h-14 px-4 border-4 border-black flex items-center justify-between font-body-lg transition-all active:translate-y-0.5 active:shadow-none group bg-surface-container-lowest hover:bg-surface-container-low ${
-                  isVaultDropdownOpen ? 'ring-4 ring-primary/20' : ''
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <SelectedVaultIcon className={selectedVault.color} size={20} />
-                  <span className="text-primary font-bold">{selectedVault.name}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-1 h-6 bg-black/10 rounded-full" />
-                  <ChevronDown className={`text-outline transition-transform duration-300 ${isVaultDropdownOpen ? 'rotate-180' : ''}`} size={20} />
-                </div>
-              </button>
-
-              {/* Dropdown Menu */}
-              {isVaultDropdownOpen && (
-                <>
-                  {/* Invisible backdrop to close dropdown on click outside */}
-                  <div className="fixed inset-0 z-[65]" onClick={() => setIsVaultDropdownOpen(false)} />
-                  <div
-                    className={`absolute top-[calc(100%+4px)] left-0 right-0 z-[70] bg-surface-container-high border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] transition-all duration-200 ${isVaultDropdownOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
-                  >
-                    <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                      {VAULTS.map((vault) => (
-                        <button
-                          key={vault.id}
-                          onClick={() => {
-                            setSelectedVaultId(vault.id);
-                            setIsVaultDropdownOpen(false);
-                          }}
-                          className={`w-full h-14 px-4 flex items-center justify-between font-body-lg transition-colors hover:bg-surface-container-highest group ${
-                            selectedVaultId === vault.id ? 'bg-surface-container-highest' : 'bg-surface-container-low'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            {(() => {
-                              const VaultIcon = iconMapper(vault.logo);
-                              return <VaultIcon className={selectedVaultId === vault.id ? vault.color : 'text-outline'} size={20} />;
-                            })()}
-                            <span className={`font-body-lg uppercase ${selectedVaultId === vault.id ? 'text-primary font-bold' : 'text-on-surface'}`}>{vault.name}</span>
-                          </div>
-                          {selectedVaultId === vault.id && <div className="w-4 h-4 bg-primary border-2 border-black" />}
-                        </button>
-                      ))}
-                    </div>
+          {vaults.length > 0 && (
+            <div className="space-y-2">
+              <div className="relative">
+                <button
+                  onClick={() => setIsVaultDropdownOpen(!isVaultDropdownOpen)}
+                  className={`w-full h-14 px-4 border-4 border-black flex items-center justify-between font-body-lg transition-all active:translate-y-0.5 active:shadow-none group bg-surface-container-lowest hover:bg-surface-container-low ${
+                    isVaultDropdownOpen ? 'ring-4 ring-primary/20' : ''
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    {selectedVault && (() => {
+                      const VaultIcon = iconMapper(selectedVault.icon || 'Briefcase');
+                      return <VaultIcon className="text-primary" size={20} />;
+                    })()}
+                    <span className="text-primary font-bold">{selectedVault?.name ?? 'Select vault'}</span>
                   </div>
-                </>
-              )}
+                  <div className="flex items-center gap-2">
+                    <div className="w-1 h-6 bg-black/10 rounded-full" />
+                    <ChevronDown className={`text-outline transition-transform duration-300 ${isVaultDropdownOpen ? 'rotate-180' : ''}`} size={20} />
+                  </div>
+                </button>
+
+                {isVaultDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-[65]" onClick={() => setIsVaultDropdownOpen(false)} />
+                    <div className="absolute top-[calc(100%+4px)] left-0 right-0 z-[70] bg-surface-container-high border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)]">
+                      <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                        {vaults.map((vault) => {
+                          const VaultIcon = iconMapper(vault.icon || 'Briefcase');
+                          return (
+                            <button
+                              key={vault.id}
+                              onClick={() => { setSelectedVaultId(vault.id); setIsVaultDropdownOpen(false); }}
+                              className={`w-full h-14 px-4 flex items-center justify-between font-body-lg transition-colors hover:bg-surface-container-highest group ${
+                                selectedVaultId === vault.id ? 'bg-surface-container-highest' : 'bg-surface-container-low'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <VaultIcon className={selectedVaultId === vault.id ? 'text-primary' : 'text-outline'} size={20} />
+                                <span className={`font-body-lg uppercase ${selectedVaultId === vault.id ? 'text-primary font-bold' : 'text-on-surface'}`}>{vault.name}</span>
+                              </div>
+                              {selectedVaultId === vault.id && <div className="w-4 h-4 bg-primary border-2 border-black" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Tags Autocomplete Section */}
           <div className="space-y-2">
             <div className="relative">
-              {/* Selected Tags Display */}
               {selectedTags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-3">
                   {selectedTags.map((tag) => {
                     const TagIcon = iconMapper(tag.icon || 'Hash');
                     return (
                       <span
-                        key={tag.name}
+                        key={tag.id}
                         onClick={() => toggleTag(tag)}
-                        style={{ backgroundColor: tag.backgroundColor }}
+                        style={{ backgroundColor: tag.backgroundColor ?? '#64748B' }}
                         className="text-sm text-white font-bold border-4 border-black px-2 py-1 font-label-caps flex items-center gap-2 active:translate-y-0.5 cursor-pointer shadow-[2px_2px_0px_rgba(0,0,0,1)]"
                       >
                         <TagIcon size={12} strokeWidth={3} />
@@ -249,28 +267,28 @@ export function LogResourceModal({ isOpen, onClose }: LogResourceModalProps) {
 
               <input
                 className="w-full h-12 px-4 bg-surface-container-lowest border-4 border-black shadow-[inset_4px_4px_0px_rgba(0,0,0,0.6),_inset_-2px_-2px_0px_rgba(255,255,255,0.05)] font-body-lg text-on-surface focus:outline-none placeholder:text-surface-variant"
-                placeholder="Search or create..."
+                placeholder="Search or create tag..."
                 type="text"
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={handleKeyDown}
               />
 
-              {/* Suggestions */}
               {suggestions.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-3">
                   {suggestions.map((tag) => {
                     const SuggestionIcon = iconMapper(tag.icon || 'Hash');
+                    const color = tag.backgroundColor ?? '#64748B';
                     return (
                       <span
-                        key={tag.name}
+                        key={tag.id}
                         onClick={() => toggleTag(tag)}
-                        style={{ backgroundColor: `${tag.backgroundColor}20`, borderColor: tag.backgroundColor }}
+                        style={{ backgroundColor: `${color}20`, borderColor: color }}
                         className="bg-surface-container-highest text-sm border-4 px-2 py-1 font-label-caps font-bold flex items-center gap-2 active:translate-y-0.5 cursor-pointer hover:bg-surface-container-high transition-colors"
                       >
-                        <SuggestionIcon size={12} style={{ color: tag.backgroundColor }} strokeWidth={3} />
-                        <span style={{ color: tag.backgroundColor }}>{tag.name}</span>
-                        <Plus size={12} style={{ color: tag.backgroundColor }} strokeWidth={3} />
+                        <SuggestionIcon size={12} style={{ color }} strokeWidth={3} />
+                        <span style={{ color }}>{tag.name}</span>
+                        <Plus size={12} style={{ color }} strokeWidth={3} />
                       </span>
                     );
                   })}
@@ -280,12 +298,7 @@ export function LogResourceModal({ isOpen, onClose }: LogResourceModalProps) {
               {tagInput && !suggestions.some((t) => t.name === tagInput.toUpperCase()) && !selectedTags.some((t) => t.name === tagInput.toUpperCase()) && (
                 <div className="mt-3">
                   <span
-                    onClick={() => {
-                      const tagName = tagInput.toUpperCase();
-                      const existingTag = DUMMY_TAGS.find((t) => t.name === tagName);
-                      const newTag = existingTag || { name: tagName, icon: 'Package', backgroundColor: '#64748B' };
-                      toggleTag(newTag);
-                    }}
+                    onClick={() => handleKeyDown({ key: 'Enter', preventDefault: () => {} } as React.KeyboardEvent)}
                     className="bg-surface-container-highest border-4 border-black px-3 py-1 font-label-caps text-primary flex items-center w-fit gap-1 active:translate-y-0.5 cursor-pointer"
                   >
                     CREATE: {tagInput.toUpperCase()} <Plus size={14} />
@@ -297,8 +310,12 @@ export function LogResourceModal({ isOpen, onClose }: LogResourceModalProps) {
 
           {/* Action Button */}
           <div className="pt-5">
-            <button className="w-full h-20 bg-primary-container text-on-primary-container border-4 border-black shadow-[inset_2px_2px_0px_rgba(255,255,255,0.1),_inset_-2px_-2px_0px_rgba(0,0,0,0.4)] active:translate-y-0.5 active:shadow-none flex items-center justify-center gap-4 transition-transform group">
-              <span className="font-headline-md font-black uppercase tracking-wider">RECORD</span>
+            <button
+              onClick={handleSubmit}
+              disabled={!amount || isSubmitting}
+              className="w-full h-20 bg-primary-container text-on-primary-container border-4 border-black shadow-[inset_2px_2px_0px_rgba(255,255,255,0.1),_inset_-2px_-2px_0px_rgba(0,0,0,0.4)] active:translate-y-0.5 active:shadow-none flex items-center justify-center gap-4 transition-transform group disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span className="font-headline-md font-black uppercase tracking-wider">{isSubmitting ? 'RECORDING...' : 'RECORD'}</span>
               <Package size={32} />
             </button>
           </div>

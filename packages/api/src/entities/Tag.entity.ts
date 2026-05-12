@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { User } from './User.entity';
+import { TransactionTag } from './TransactionTag.entity';
 
 @Entity('tags')
 export class Tag {
@@ -21,4 +22,7 @@ export class Tag {
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;
+
+  @OneToMany(() => TransactionTag, (transactionTag) => transactionTag.tag)
+  transactionTags: TransactionTag[];
 }

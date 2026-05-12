@@ -34,8 +34,8 @@ export interface ApiRecurringQuest {
   interval: 'daily' | 'weekly' | 'monthly' | 'yearly';
   startDate: string | null;
   endDate: string | null;
-  tagId: string | null;
-  tag: ApiTag | null;
+  tagIds: string[];
+  tags: ApiTag[];
   vaultId: string | null;
 }
 
@@ -90,6 +90,14 @@ export default class ProfileApi extends ApiClient {
     return this.delete<void>(`/users/${userId}/tags/${tagId}`);
   }
 
+  // Transactions
+  createTransaction(
+    userId: string,
+    data: { amount: number; type?: string; tagIds?: string[]; title?: string; date: string; vaultId?: string | null },
+  ): Promise<ForwardResponse<{ id: string }>> {
+    return this.post<{ id: string }>(`/users/${userId}/transactions`, data);
+  }
+
   // Recurring quests
   getRecurringQuests(userId: string): Promise<ForwardResponse<ApiRecurringQuest[]>> {
     return this.get<ApiRecurringQuest[]>(`/users/${userId}/recurring`);
@@ -97,7 +105,7 @@ export default class ProfileApi extends ApiClient {
 
   createRecurringQuest(
     userId: string,
-    data: { title: string; amount: number; type: string; interval: string; startDate?: string | null; endDate?: string | null; tagId?: string | null; vaultId?: string | null },
+    data: { title: string; amount: number; type: string; interval: string; startDate?: string | null; endDate?: string | null; tagIds?: string[]; vaultId?: string | null },
   ): Promise<ForwardResponse<ApiRecurringQuest>> {
     return this.post<ApiRecurringQuest>(`/users/${userId}/recurring`, data);
   }
@@ -105,7 +113,7 @@ export default class ProfileApi extends ApiClient {
   updateRecurringQuest(
     userId: string,
     questId: string,
-    data: { title?: string; amount?: number; type?: string; interval?: string; startDate?: string | null; endDate?: string | null; tagId?: string | null; vaultId?: string | null },
+    data: { title?: string; amount?: number; type?: string; interval?: string; startDate?: string | null; endDate?: string | null; tagIds?: string[]; vaultId?: string | null },
   ): Promise<ForwardResponse<ApiRecurringQuest>> {
     return this.put<ApiRecurringQuest>(`/users/${userId}/recurring/${questId}`, data);
   }

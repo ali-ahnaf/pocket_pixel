@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button, Card, Window, Input, ProgressBar, LogResourceModal, AppBar, BottomNavBar } from '@/components';
 import { iconMapper } from '@/lib/iconMapper';
 import { Package, Award, Settings, HelpCircle, ChevronLeft, ChevronRight, Home, User, BarChart, Plus, ChevronDown } from 'lucide-react';
@@ -58,9 +58,17 @@ const MONTH_NAMES = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JU
 
 export default function DashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+
+  useEffect(() => {
+    const stored = localStorage.getItem('pixel_pocket_profile');
+    if (stored) {
+      try { setUserId(JSON.parse(stored).id); } catch { /* ignore */ }
+    }
+  }, []);
 
   const handlePrevMonth = () => {
     if (selectedMonth === 0) {
@@ -237,7 +245,7 @@ export default function DashboardPage() {
         </Button>
       </div>
 
-      <LogResourceModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <LogResourceModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} userId={userId} />
     </div>
   );
 }

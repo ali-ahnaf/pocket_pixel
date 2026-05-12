@@ -43,7 +43,7 @@ export function AddRecurringQuestModal({
   // Tag state — selectedTagIds stores UUIDs of selected tags
   const [tagInput, setTagInput] = useState('');
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(
-    initialData?.tagId ? [initialData.tagId] : []
+    initialData?.tagIds || []
   );
   const [isCreatingTag, setIsCreatingTag] = useState(false);
 
@@ -110,7 +110,7 @@ export function AddRecurringQuestModal({
         setIsExpense(initialData.type === 'EXPENSE');
         setStartDate(initialData.startDate || '');
         setEndDate(initialData.endDate || '');
-        setSelectedTagIds(initialData.tagId ? [initialData.tagId] : []);
+        setSelectedTagIds(initialData.tagIds || []);
         if (initialData.frequency) {
           const match = INTERVALS.find(i => i.toLowerCase() === initialData.frequency.toLowerCase());
           if (match) setSelectedInterval(match);
@@ -154,7 +154,7 @@ export function AddRecurringQuestModal({
       name,
       amount: parseFloat(amount) || 0,
       type: isExpense ? 'EXPENSE' : 'INCOME',
-      tagId: selectedTagIds[0] || null,
+      tagIds: selectedTagIds,
       vaultId: selectedVaultId || null,
       startDate: startDate || null,
       endDate: endDate || null,

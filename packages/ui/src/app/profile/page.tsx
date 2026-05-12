@@ -34,17 +34,19 @@ function toUiTag(t: ApiTag) {
 }
 
 function toUiQuest(q: ApiRecurringQuest) {
+  const tagNames = (q.tags || []).map((tag) => tag.name);
+
   return {
     id: q.id,
     type: q.type.toUpperCase() as 'EXPENSE' | 'INCOME',
     title: q.title || '',
-    description: q.tag?.name || '',
+    description: tagNames.join(', '),
     amount: Number(q.amount),
     frequency: capitalize(q.interval),
-    category: q.tag?.name || 'Uncategorized',
+    category: tagNames[0] || 'Uncategorized',
     startDate: q.startDate || '',
     endDate: q.endDate || '',
-    tagId: q.tagId || null,
+    tagIds: q.tagIds || [],
     vaultId: q.vaultId || null,
   };
 }
@@ -145,7 +147,7 @@ export default function ProfilePage() {
       interval: (data.frequency || data.selectedInterval || 'monthly').toLowerCase(),
       startDate: data.startDate || null,
       endDate: data.endDate || null,
-      tagId: data.tagId || null,
+      tagIds: data.tagIds || [],
       vaultId: data.vaultId || null,
     };
     if (data.id) {

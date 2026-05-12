@@ -1,8 +1,10 @@
 import { Between } from "typeorm";
 import { AppDataSource } from "../../data-source";
 import { Expense } from "../../entities/Expense.entity";
+import { TransactionTag } from "../../entities/TransactionTag.entity";
 
 export const transactionsRepo = () => AppDataSource.getRepository(Expense);
+export const transactionTagsRepo = () => AppDataSource.getRepository(TransactionTag);
 
 export function buildTransactionDateRange(month: number, year: number) {
   const startDate = `${year}-${String(month).padStart(2, "0")}-01`;

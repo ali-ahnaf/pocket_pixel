@@ -1,6 +1,8 @@
-import { Request, Response, Router } from "express";
-import Joi from "joi";
-import { vaultsRepo } from "./shared";
+import { Request, Response, Router } from 'express';
+import Joi from 'joi';
+import { vaultsRepo } from './shared';
+import { usersRepo } from '../users/shared';
+import { asyncHandler } from '../../middleware/error-handler';
 
 const router = Router({ mergeParams: true });
 const createVaultSchema = Joi.object({
@@ -10,17 +12,16 @@ const createVaultSchema = Joi.object({
   backgroundColor: Joi.string().max(50).optional(),
 });
 
-router.post("/", async (req: Request, res: Response) => {
+router.post('/', asyncHandler(async (req: Request, res: Response) => {
   const { error, value } = createVaultSchema.validate(req.body);
   if (error) return res.status(400).json({ message: error.message });
 
-  try {
-    const vault = vaultsRepo().create({ ...value, userId: req.params.userId, isDefault: false });
-    const saved = await vaultsRepo().save(vault);
-    return res.status(201).json(saved);
-  } catch {
-    return res.status(500).json({ message: "Internal server error" });
-  }
-});
+  const user = await usersRepo().findOneBy({ id: req.params.userId });
+  if (!user) return res.status(404).json({ message: 'User not found' });
+
+  const vault = vaultsRepo().create({ ...value, userId: req.params.userId, isDefault: false });
+  const saved = await vaultsRepo().save(vault);
+  return res.status(201).json(saved);
+}));
 
 export default router;
