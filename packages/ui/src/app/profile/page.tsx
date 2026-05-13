@@ -91,9 +91,9 @@ export default function ProfilePage() {
   const fetchAll = useCallback(async (uid: string) => {
     setLoading(true);
     const [vaultsRes, tagsRes, questsRes] = await Promise.all([profileApi.getVaults(uid), profileApi.getTags(uid), profileApi.getRecurringQuests(uid)]);
-    if (vaultsRes.data) setVaults((vaultsRes.data as ApiVault[]).map(toUiVault));
-    if (tagsRes.data) setTags((tagsRes.data as ApiTag[]).map(toUiTag));
-    if (questsRes.data) setRecurringQuests((questsRes.data as ApiRecurringQuest[]).map(toUiQuest));
+    if (vaultsRes) setVaults(vaultsRes.map(toUiVault));
+    if (tagsRes) setTags(tagsRes.map(toUiTag));
+    if (questsRes) setRecurringQuests(questsRes.map(toUiQuest));
     setLoading(false);
   }, []);
 
@@ -104,8 +104,8 @@ export default function ProfilePage() {
   const handleSaveProfile = async () => {
     if (!userId) return;
     const res = await profileApi.updateUser(userId, { name: playerName, avatar: avatarUrl });
-    if (res.data) {
-      localStorage.setItem('pixel_pocket_profile', JSON.stringify(res.data));
+    if (res) {
+      localStorage.setItem('pixel_pocket_profile', JSON.stringify(res));
     }
   };
 
@@ -114,27 +114,25 @@ export default function ProfilePage() {
     const payload = { name: data.name, description: data.description, icon: data.icon, backgroundColor: data.color };
     if (data.id) {
       const res = await profileApi.updateVault(userId, data.id, payload);
-      if (res.data) setVaults((prev) => prev.map((v) => (v.id === data.id ? toUiVault(res.data as ApiVault) : v)));
+      if (res) setVaults((prev) => prev.map((v) => (v.id === data.id ? toUiVault(res) : v)));
     } else {
       const res = await profileApi.createVault(userId, payload);
-      if (res.data) setVaults((prev) => [...prev, toUiVault(res.data as ApiVault)]);
+      if (res) setVaults((prev) => [...prev, toUiVault(res)]);
     }
   };
 
   const handleSetDefault = async (vaultId: string) => {
     if (!userId) return;
     const res = await profileApi.setDefaultVault(userId, vaultId);
-    if (res.data) {
+    if (res) {
       setVaults((prev) => prev.map((v) => ({ ...v, isDefault: v.id === vaultId })));
     }
   };
 
   const handleDeleteVault = async (_action: 'delete_transactions' | 'move_transactions') => {
     if (!userId || !vaultToDelete) return;
-    const res = await profileApi.deleteVault(userId, vaultToDelete.id);
-    if (res.resultCode === 0 || res.resultCode === 204) {
-      setVaults((prev) => prev.filter((v) => v.id !== vaultToDelete.id));
-    }
+    await profileApi.deleteVault(userId, vaultToDelete.id);
+    setVaults((prev) => prev.filter((v) => v.id !== vaultToDelete.id));
     setVaultToDelete(null);
   };
 
@@ -152,30 +150,27 @@ export default function ProfilePage() {
     };
     if (data.id) {
       const res = await profileApi.updateRecurringQuest(userId, data.id, payload);
-      if (res.data) setRecurringQuests((prev) => prev.map((q) => (q.id === data.id ? toUiQuest(res.data as ApiRecurringQuest) : q)));
+      if (res) setRecurringQuests((prev) => prev.map((q) => (q.id === data.id ? toUiQuest(res) : q)));
     } else {
       const res = await profileApi.createRecurringQuest(userId, payload);
-      if (res.data) setRecurringQuests((prev) => [...prev, toUiQuest(res.data as ApiRecurringQuest)]);
+      if (res) setRecurringQuests((prev) => [...prev, toUiQuest(res)]);
     }
   };
 
   const handleCreateTagForQuest = async (name: string): Promise<ApiTag | null> => {
     if (!userId) return null;
     const res = await profileApi.createTag(userId, { name });
-    if (res.data) {
-      const newTag = res.data as ApiTag;
-      setTags((prev) => [...prev, toUiTag(newTag)]);
-      return newTag;
+    if (res) {
+      setTags((prev) => [...prev, toUiTag(res)]);
+      return res;
     }
     return null;
   };
 
   const handleDeleteQuest = async () => {
     if (!userId || !questToDelete) return;
-    const res = await profileApi.deleteRecurringQuest(userId, questToDelete.id);
-    if (res.resultCode === 0 || res.resultCode === 204) {
-      setRecurringQuests((prev) => prev.filter((q) => q.id !== questToDelete.id));
-    }
+    await profileApi.deleteRecurringQuest(userId, questToDelete.id);
+    setRecurringQuests((prev) => prev.filter((q) => q.id !== questToDelete.id));
     setQuestToDelete(null);
   };
 
@@ -184,25 +179,23 @@ export default function ProfilePage() {
     const payload = { name: data.name, icon: data.icon, backgroundColor: data.color };
     if (data.id) {
       const res = await profileApi.updateTag(userId, data.id, payload);
-      if (res.data) setTags((prev) => prev.map((t) => (t.id === data.id ? toUiTag(res.data as ApiTag) : t)));
+      if (res) setTags((prev) => prev.map((t) => (t.id === data.id ? toUiTag(res) : t)));
     } else {
       const res = await profileApi.createTag(userId, payload);
-      if (res.data) setTags((prev) => [...prev, toUiTag(res.data as ApiTag)]);
+      if (res) setTags((prev) => [...prev, toUiTag(res)]);
     }
   };
 
   const handleDeleteTag = async () => {
     if (!userId || !tagToDelete) return;
-    const res = await profileApi.deleteTag(userId, tagToDelete.id);
-    if (res.resultCode === 0 || res.resultCode === 204) {
-      setTags((prev) => prev.filter((t) => t.id !== tagToDelete.id));
-    }
+    await profileApi.deleteTag(userId, tagToDelete.id);
+    setTags((prev) => prev.filter((t) => t.id !== tagToDelete.id));
     setTagToDelete(null);
   };
 
   return (
     <div className="bg-background px-3 text-on-background font-body-lg min-h-screen flex flex-col md:flex-row overflow-x-hidden selection:bg-primary selection:text-on-primary">
-      <AppBar avatarUrl={avatarUrl} />
+      <AppBar />
 
       <aside className="hidden md:flex flex-col h-screen w-80 border-r-4 border-black bg-surface-container dark:bg-surface-container-high sticky top-0 z-50">
         <div className="p-4 border-b-4 border-black flex items-center gap-4 bg-surface-container-lowest shadow-[inset_2px_2px_0_rgba(255,255,255,0.2),inset_-2px_-2px_0_rgba(0,0,0,0.4)] mb-8">

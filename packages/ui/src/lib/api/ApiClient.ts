@@ -1,11 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, Method } from 'axios';
 
-export interface ForwardResponse<T = any> {
-  resultCode: number;
-  message: string;
-  data?: T;
-}
-
 export const AUTH_TOKEN_STORAGE_KEY = 'auth_token';
 
 export function getStoredAuthToken(): string | null {
@@ -30,7 +24,7 @@ export default class ApiClient {
     return this.axiosInstance;
   }
 
-  private async request<T = any>(method: Method, url: string, config: AxiosRequestConfig = {}): Promise<ForwardResponse<T>> {
+  private async request<T = any>(method: Method, url: string, config: AxiosRequestConfig = {}): Promise<T> {
     try {
       const response: AxiosResponse<T> = await this.axiosInstance.request({
         method,
@@ -42,11 +36,7 @@ export default class ApiClient {
         },
       });
 
-      const raw = response.data as any;
-      if (raw && typeof raw === 'object' && !Array.isArray(raw) && 'resultCode' in raw) {
-        return raw as ForwardResponse<T>;
-      }
-      return { resultCode: response.status, message: 'Success', data: raw as T };
+      return response.data;
     } catch (error: any) {
       console.log('error', error);
       if (error.response?.data instanceof Blob) {
@@ -58,32 +48,27 @@ export default class ApiClient {
         }
       }
 
-      const errorData = error.response?.data;
-      return {
-        resultCode: errorData?.resultCode || error.response?.status || 500,
-        message: this.parseError(error),
-        data: errorData?.data,
-      };
+      throw error.response?.data || error;
     }
   }
 
-  get<T = any>(url: string, config?: AxiosRequestConfig): Promise<ForwardResponse<T>> {
+  get<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
     return this.request<T>('GET', url, config);
   }
 
-  post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ForwardResponse<T>> {
+  post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
     return this.request<T>('POST', url, { ...config, data });
   }
 
-  put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ForwardResponse<T>> {
+  put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
     return this.request<T>('PUT', url, { ...config, data });
   }
 
-  patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ForwardResponse<T>> {
+  patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
     return this.request<T>('PATCH', url, { ...config, data });
   }
 
-  delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<ForwardResponse<T>> {
+  delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
     return this.request<T>('DELETE', url, config);
   }
 

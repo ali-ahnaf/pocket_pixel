@@ -1,4 +1,6 @@
 import 'reflect-metadata';
+import path from 'path';
+import fs from 'fs';
 import express from 'express';
 import cors from 'cors';
 import { AppDataSource } from './data-source';
@@ -11,6 +13,7 @@ import tagsRouter from './routes/tags.routes';
 import recurringRouter from './routes/recurring.routes';
 import { requireAuth } from './middleware/auth';
 import { errorHandler } from './middleware/error-handler';
+import { restoreAllRecurringJobs } from './scheduler/recurring-scheduler';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -38,14 +41,28 @@ app.use('/api/users/:userId/tags', tagsRouter);
 app.use('/api/users/:userId/recurring', recurringRouter);
 app.use(errorHandler);
 
+const uiDir = path.join(__dirname, '../../ui/out');
+if (fs.existsSync(uiDir)) {
+  app.use(express.static(uiDir));
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(uiDir, 'index.html'));
+  });
+}
+
 AppDataSource.initialize()
-  .then(() => {
+  .then(async () => {
     console.log('Database connected');
+    try {
+      await restoreAllRecurringJobs();
+    } catch (err) {
+      console.error('Failed to restore recurring jobs:', err);
+    }
     app.listen(PORT, () => {
       console.log(`API running at http://localhost:${PORT}`);
     });
   })
   .catch((err) => {
-    console.error('Database connection failed:', err);
+    console.error('Database connection failed during initialization:', err);
+    console.error(err.stack);
     process.exit(1);
   });

@@ -40,21 +40,20 @@ export default function SignUpPage() {
     setErrors({});
     setLoading(true);
     try {
-      const res = await authApi.signUp({ name, email, password, avatar: selectedAvatar }) as any;
-      if (res.id && res.token) {
-        localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, res.token);
-        localStorage.setItem('pixel_pocket_profile', JSON.stringify({
+      const res = (await authApi.signUp({ name, email, password, avatar: selectedAvatar })) as any;
+      localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, res.token);
+      localStorage.setItem(
+        'pixel_pocket_profile',
+        JSON.stringify({
           id: res.id,
           name: res.name,
           email: res.email,
           avatar: res.avatar,
-        }));
-        router.push('/');
-      } else {
-        setErrors({ form: res.message ?? 'Sign up failed' });
-      }
-    } catch {
-      setErrors({ form: 'Something went wrong. Please try again.' });
+        }),
+      );
+      router.push('/');
+    } catch (err: any) {
+      setErrors({ form: err.message ?? 'Something went wrong. Please try again.' });
     } finally {
       setLoading(false);
     }

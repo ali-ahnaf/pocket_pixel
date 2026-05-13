@@ -9,6 +9,7 @@ import {
   serializeRecurringExpense,
 } from "./shared";
 import { asyncHandler } from "../../middleware/error-handler";
+import { cancelRecurring, scheduleRecurring } from "../../scheduler/recurring-scheduler";
 
 const router = Router({ mergeParams: true });
 
@@ -59,6 +60,16 @@ router.put("/:id", asyncHandler(async (req: Request, res: Response) => {
   }
 
   const updated = await findRecurringExpense(req.params.id, req.params.userId);
+
+  if (updated) {
+    const today = new Date().toISOString().slice(0, 10);
+    if (updated.endDate && today > updated.endDate) {
+      cancelRecurring(updated.id);
+    } else {
+      scheduleRecurring(updated);
+    }
+  }
+
   return res.json(updated ? serializeRecurringExpense(updated) : null);
 }));
 

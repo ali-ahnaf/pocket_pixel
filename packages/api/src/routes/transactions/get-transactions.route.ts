@@ -18,10 +18,23 @@ router.get("/", asyncHandler(async (req: Request, res: Response) => {
       userId: req.params.userId,
       date: buildTransactionDateRange(value.month, value.year),
     },
+    relations: ["transactionTags", "transactionTags.tag", "vault"],
     order: { date: "DESC" },
   });
 
-  return res.json(transactions);
+  const result = transactions.map((tx) => ({
+    id: tx.id,
+    userId: tx.userId,
+    title: tx.title,
+    amount: parseFloat(String(tx.amount)),
+    type: tx.type,
+    date: tx.date,
+    vaultId: tx.vaultId,
+    vault: tx.vault ? { id: tx.vault.id, name: tx.vault.name, icon: tx.vault.icon } : null,
+    tags: tx.transactionTags?.map((tt) => tt.tag) ?? [],
+  }));
+
+  return res.json(result);
 }));
 
 export default router;

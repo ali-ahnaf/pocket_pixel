@@ -1,85 +1,19 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { AppBar, Card, ProgressBar, Button, BottomNavBar } from '@/components';
 import { Package, Award, BarChart, Settings, HelpCircle, ChevronDown, TrendingUp, TrendingDown, CircleDollarSign, Flame, Gem, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { iconMapper } from '@/lib/iconMapper';
+import { profileApi } from '@/lib/api';
+import type { ApiUser, ApiTransaction, ApiVault } from '@/lib/api/ProfileApi';
 
-// ─── Page Data ────────────────────────────────────────────────────────────────
-
-const PLAYER = {
-  name: 'Steve Tracker',
-  level: 'Level 42 Budgeter',
-  tier: 'Diamond Tier',
-  avatarUrl: '/avatars/avatar1.jpeg',
-};
-
-const VAULTS = ['Main Stash', 'Hidden Cache', 'Guild Bank'] as const;
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const CURRENT_MONTH_YEAR = (() => {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 })();
-
-const SUMMARY_METRICS = [
-  {
-    label: 'Total Hoard',
-    value: '8,450g',
-    delta: '+12% vs last cycle',
-    trend: 'up' as const,
-    colorClass: 'text-primary',
-    BgIcon: CircleDollarSign,
-    bgIconColor: 'text-primary',
-  },
-  {
-    label: 'Resources Burned',
-    value: '3,210g',
-    delta: '-5% vs last cycle',
-    trend: 'up' as const,
-    colorClass: 'text-error',
-    BgIcon: Flame,
-    bgIconColor: 'text-error',
-  },
-];
-
-const NET_YIELD = {
-  label: 'Net Yield',
-  value: '5,240g',
-  colorClass: 'text-secondary',
-  BgIcon: Gem,
-  sparkBars: [40, 60, 30, 80, 100] as number[],
-};
-
-const RESOURCE_ALLOCATION = [
-  { label: 'Potions & Food', percent: 45, colorClass: 'bg-error' },
-  { label: 'Gear Repairs', percent: 30, colorClass: 'bg-tertiary' },
-  { label: 'Inn Stays', percent: 15, colorClass: 'bg-secondary' },
-  { label: 'Misc Loot', percent: 10, colorClass: 'bg-outline' },
-];
-
-const TOP_DRAINS = [
-  {
-    id: 1,
-    label: 'Tavern Ale',
-    amount: '-150g',
-    icon: 'Utensils',
-    iconBg: '#FFDAD6',
-  },
-  {
-    id: 2,
-    label: 'Iron Sword Repair',
-    amount: '-320g',
-    icon: 'Sword',
-    iconBg: '#FFD8E4',
-  },
-  {
-    id: 3,
-    label: 'Prancing Pony Inn',
-    amount: '-50g',
-    icon: 'BedDouble',
-    iconBg: '#CCE5FF',
-  },
-];
 
 const NAV_ITEMS = [
   { label: 'Inventory', icon: Package, href: '/', active: false },
@@ -88,42 +22,23 @@ const NAV_ITEMS = [
   { label: 'Settings', icon: Settings, href: '#', active: false },
 ];
 
-interface Transaction {
-  id: string;
-  date: string;
-  amount: number;
-}
+const TAG_COLORS = ['bg-error', 'bg-tertiary', 'bg-secondary', 'bg-outline', 'bg-primary'];
 
-const generateMockTransactions = (monthYear: string): Transaction[] => {
-  let seed = monthYear.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const random = () => {
-    const x = Math.sin(seed++) * 10000;
-    return x - Math.floor(x);
-  };
-  
-  const [y, m] = monthYear.split('-');
-  const daysInMonth = new Date(parseInt(y), parseInt(m), 0).getDate();
-  
-  const transactions: Transaction[] = [];
-  for (let i = 1; i <= daysInMonth; i++) {
-    const numTransactions = Math.floor(random() * 4);
-    for (let j = 0; j < numTransactions; j++) {
-      const isIncome = random() > 0.5;
-      const amount = Math.floor(random() * 200) + 10;
-      transactions.push({
-        id: `${monthYear}-${i}-${j}`,
-        date: `${monthYear}-${String(i).padStart(2, '0')}`,
-        amount: isIncome ? amount : -amount,
-      });
-    }
-  }
-  return transactions;
-};
+function formatCurrency(amount: number): string {
+  return `$${Math.abs(amount).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function StatsPage() {
-  const [selectedVault, setSelectedVault] = useState<string>(VAULTS[0]);
+  const router = useRouter();
+  const [userId, setUserId] = useState<string | null>(null);
+  const [profile, setProfile] = useState<ApiUser | null>(null);
+  const [transactions, setTransactions] = useState<ApiTransaction[]>([]);
+  const [vaults, setVaults] = useState<ApiVault[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const [selectedVaultId, setSelectedVaultId] = useState<string>('all');
   const [vaultOpen, setVaultOpen] = useState(false);
   const [selectedMonthYear, setSelectedMonthYear] = useState<string>(CURRENT_MONTH_YEAR);
   const [monthYearOpen, setMonthYearOpen] = useState(false);
@@ -131,67 +46,142 @@ export default function StatsPage() {
 
   const isCurrentMonth = selectedMonthYear === CURRENT_MONTH_YEAR;
 
-  const transactions = useMemo(() => generateMockTransactions(selectedMonthYear), [selectedMonthYear]);
+  useEffect(() => {
+    const stored = localStorage.getItem('pixel_pocket_profile');
+    if (!stored) { router.push('/signin'); return; }
+    try {
+      const parsed = JSON.parse(stored);
+      if (!parsed?.id) { router.push('/signin'); return; }
+      setUserId(parsed.id);
+    } catch {
+      router.push('/signin');
+    }
+  }, [router]);
 
-  const { chartData, netYieldValue } = useMemo(() => {
-    const [y, m] = selectedMonthYear.split('-');
-    const daysInMonth = new Date(parseInt(y), parseInt(m), 0).getDate();
-    
+  useEffect(() => {
+    if (!userId) return;
+    const [y, m] = selectedMonthYear.split('-').map(Number);
+    setIsLoading(true);
+    Promise.all([
+      profileApi.getUser(userId),
+      profileApi.getTransactions(userId, m, y),
+      profileApi.getVaults(userId),
+    ])
+      .then(([user, txs, vaultList]) => {
+        setProfile(user);
+        setTransactions(txs);
+        setVaults(vaultList);
+      })
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
+  }, [userId, selectedMonthYear]);
+
+  const filteredTransactions = useMemo(() => {
+    if (selectedVaultId === 'all') return transactions;
+    return transactions.filter((t) => t.vaultId === selectedVaultId);
+  }, [transactions, selectedVaultId]);
+
+  const totalIncome = useMemo(
+    () => filteredTransactions.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0),
+    [filteredTransactions],
+  );
+  const totalExpenses = useMemo(
+    () => filteredTransactions.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
+    [filteredTransactions],
+  );
+  const netYield = totalIncome - totalExpenses;
+
+  const { points } = useMemo(() => {
+    const [y, m] = selectedMonthYear.split('-').map(Number);
+    const daysInMonth = new Date(y, m, 0).getDate();
     const dailyValues = Array(daysInMonth).fill(0);
-    let totalNet = 0;
-    transactions.forEach(t => {
-       const day = parseInt(t.date.split('-')[2], 10);
-       dailyValues[day - 1] += t.amount;
-       totalNet += t.amount;
-    });
-    
-    let cumulative = 5000; // base value
-    const data = dailyValues.map((val) => {
-       cumulative += val;
-       return cumulative;
-    });
-    
-    return { 
-      chartData: data, 
-      netYieldValue: `${totalNet >= 0 ? '+' : ''}${totalNet.toLocaleString()}g` 
-    };
-  }, [transactions, selectedMonthYear]);
 
-  const points = useMemo(() => {
-    if (chartData.length === 0) return '';
-    const max = Math.max(...chartData);
-    const min = Math.min(...chartData);
+    filteredTransactions.forEach((t) => {
+      const day = parseInt(t.date.split('-')[2], 10);
+      if (day >= 1 && day <= daysInMonth) {
+        dailyValues[day - 1] += t.type === 'income' ? t.amount : -t.amount;
+      }
+    });
+
+    let cumulative = 0;
+    const data = dailyValues.map((val) => { cumulative += val; return cumulative; });
+
+    if (data.length < 2) return { points: '' };
+    const max = Math.max(...data);
+    const min = Math.min(...data);
     const range = max - min || 1;
-    
-    return chartData.map((val, i) => {
-      const x = (i / (chartData.length - 1)) * 100;
-      const y = 100 - ((val - min) / range) * 100;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join(' ');
-  }, [chartData]);
+
+    const pts = data
+      .map((val, i) => {
+        const x = (i / (data.length - 1)) * 100;
+        const yCoord = 100 - ((val - min) / range) * 100;
+        return `${x.toFixed(1)},${yCoord.toFixed(1)}`;
+      })
+      .join(' ');
+
+    return { points: pts };
+  }, [filteredTransactions, selectedMonthYear]);
+
+  const resourceAllocation = useMemo(() => {
+    const expenses = filteredTransactions.filter((t) => t.type === 'expense');
+    const totalExp = expenses.reduce((s, t) => s + t.amount, 0);
+    if (totalExp === 0) return [];
+
+    const tagTotals: Record<string, { label: string; total: number }> = {};
+    expenses.forEach((t) => {
+      const key = t.tags?.[0]?.name ?? 'Other';
+      tagTotals[key] = tagTotals[key] ?? { label: key, total: 0 };
+      tagTotals[key].total += t.amount;
+    });
+
+    return Object.values(tagTotals)
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5)
+      .map((entry, i) => ({
+        label: entry.label,
+        percent: Math.round((entry.total / totalExp) * 100),
+        colorClass: TAG_COLORS[i % TAG_COLORS.length],
+      }));
+  }, [filteredTransactions]);
+
+  const topDrains = useMemo(
+    () =>
+      filteredTransactions
+        .filter((t) => t.type === 'expense')
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 3)
+        .map((t) => ({
+          id: t.id,
+          label: t.title || t.tags?.[0]?.name || 'Expense',
+          amount: `-${formatCurrency(t.amount)}`,
+          icon: t.tags?.[0]?.icon || t.vault?.icon || 'ShoppingCart',
+          iconBg: t.tags?.[0]?.backgroundColor || '#FFDAD6',
+        })),
+    [filteredTransactions],
+  );
 
   const displayMonthYear = (yyyyMm: string) => {
     if (!yyyyMm) return '';
     const [y, m] = yyyyMm.split('-');
-    const date = new Date(parseInt(y), parseInt(m) - 1, 1);
-    return date.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+    return new Date(parseInt(y), parseInt(m) - 1, 1).toLocaleString('en-US', { month: 'long', year: 'numeric' });
   };
+
+  const selectedVaultName = selectedVaultId === 'all' ? 'All Vaults' : (vaults.find((v) => v.id === selectedVaultId)?.name ?? 'All Vaults');
 
   return (
     <div className="bg-background px-3 text-on-background font-body-lg min-h-screen flex flex-col md:flex-row overflow-x-hidden selection:bg-primary selection:text-on-primary">
       {/* TopAppBar (Mobile) */}
-      <AppBar title="Pixel Pocket" avatarUrl={PLAYER.avatarUrl} />
+      <AppBar />
 
       {/* NavigationDrawer (Desktop) */}
       <aside className="hidden md:flex flex-col h-screen w-80 border-r-4 border-black bg-surface-container dark:bg-surface-container-high sticky top-0 z-50">
         <div className="p-4 border-b-4 border-black flex items-center gap-4 bg-surface-container-low">
           <div className="h-16 w-16 border-4 border-black shadow-[inset_-2px_-2px_0px_0px_rgba(0,0,0,0.3),_inset_2px_2px_0px_0px_rgba(255,255,255,0.2)] rounded-none bg-secondary-container overflow-hidden shrink-0">
-            <img alt="Player Avatar" className="object-cover w-full h-full [image-rendering:pixelated]" src={PLAYER.avatarUrl} />
+            <img alt="Player Avatar" className="object-cover w-full h-full [image-rendering:pixelated]" src={profile?.avatar || '/avatars/avatar1.jpeg'} />
           </div>
           <div className="flex flex-col overflow-hidden">
-            <h2 className="font-headline-md text-primary truncate">{PLAYER.name}</h2>
-            <p className="font-body-sm text-on-surface-variant truncate">{PLAYER.level}</p>
-            <p className="font-label-caps text-secondary text-[10px] mt-1">{PLAYER.tier}</p>
+            <h2 className="font-headline-md text-primary truncate">{profile?.name ?? '...'}</h2>
+            <p className="font-body-sm text-on-surface-variant truncate">{profile?.email ?? ''}</p>
           </div>
         </div>
 
@@ -248,21 +238,21 @@ export default function StatsPage() {
                     onClick={() => setVaultOpen((v) => !v)}
                   >
                     <Package className="text-primary w-4 h-4 shrink-0" />
-                    <span className="flex-grow text-left">{selectedVault}</span>
+                    <span className="flex-grow text-left">{selectedVaultName}</span>
                     <ChevronDown className="w-4 h-4 shrink-0" />
                   </Button>
                   {vaultOpen && (
                     <div className="absolute top-full left-0 w-full bg-surface-container-high border-4 border-black border-t-0 z-50">
-                      {VAULTS.map((vault) => (
+                      {[{ id: 'all', name: 'All Vaults' }, ...vaults].map((vault) => (
                         <div
-                          key={vault}
+                          key={vault.id}
                           className="p-2 hover:bg-primary hover:text-on-primary cursor-pointer font-body-sm"
                           onClick={() => {
-                            setSelectedVault(vault);
+                            setSelectedVaultId(vault.id);
                             setVaultOpen(false);
                           }}
                         >
-                          {vault}
+                          {vault.name}
                         </div>
                       ))}
                     </div>
@@ -348,48 +338,73 @@ export default function StatsPage() {
           <div className="flex flex-col gap-stack-md">
             {/* Summary Metrics Row */}
             <div className="grid grid-cols-2 gap-stack-md">
-              {SUMMARY_METRICS.map(({ label, value, delta, trend, colorClass, BgIcon, bgIconColor }) => (
-                <Card key={label} className="relative overflow-hidden flex flex-col gap-3 !p-3">
-                  {/* Background Icon */}
-                  <BgIcon className={`absolute -right-4 -top-4 w-32 h-32 opacity-10 ${bgIconColor}`} />
-                  <h3 className="font-label-caps text-label-caps text-outline uppercase">{label}</h3>
-                  <div className={`font-headline-lg text-headline-lg ${colorClass}`}>{value}</div>
-                  <div className={`flex items-center gap-2 ${colorClass} font-body-sm text-body-sm`}>
-                    {trend === 'up' ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                    <span>{delta}</span>
-                  </div>
-                </Card>
-              ))}
+              {/* Total Income */}
+              <Card className="relative overflow-hidden flex flex-col gap-3 !p-3">
+                <CircleDollarSign className="absolute -right-4 -top-4 w-32 h-32 opacity-10 text-primary" />
+                <h3 className="font-label-caps text-label-caps text-outline uppercase">Total Hoard</h3>
+                {isLoading ? (
+                  <div className="h-8 bg-surface-container-highest rounded w-24 animate-pulse" />
+                ) : (
+                  <div className="font-headline-lg text-headline-md text-primary">{formatCurrency(totalIncome)}</div>
+                )}
+                <div className="flex items-center gap-2 text-primary font-body-sm text-body-sm">
+                  <TrendingUp className="w-4 h-4" />
+                  <span>Income this period</span>
+                </div>
+              </Card>
+
+              {/* Total Expenses */}
+              <Card className="relative overflow-hidden flex flex-col gap-3 !p-3">
+                <Flame className="absolute -right-4 -top-4 w-32 h-32 opacity-10 text-error" />
+                <h3 className="font-label-caps text-label-caps text-outline uppercase">Resources Burned</h3>
+                {isLoading ? (
+                  <div className="h-8 bg-surface-container-highest rounded w-24 animate-pulse" />
+                ) : (
+                  <div className="font-headline-lg text-headline-md text-error">{formatCurrency(totalExpenses)}</div>
+                )}
+                <div className="flex items-center gap-2 text-error font-body-sm text-body-sm">
+                  <TrendingDown className="w-4 h-4" />
+                  <span>Expenses this period</span>
+                </div>
+              </Card>
             </div>
 
             {/* Net Yield — Full Width */}
             <Card className="relative overflow-hidden flex flex-col gap-3 !p-3">
-              <NET_YIELD.BgIcon className="absolute -right-4 -top-4 w-32 h-32 opacity-10 text-secondary" />
-              <h3 className="font-label-caps text-label-caps text-outline uppercase">{NET_YIELD.label}</h3>
-              <div className={`font-headline-lg text-headline-lg ${NET_YIELD.colorClass}`}>{netYieldValue}</div>
+              <Gem className="absolute -right-4 -top-4 w-32 h-32 opacity-10 text-secondary" />
+              <h3 className="font-label-caps text-label-caps text-outline uppercase">Net Yield</h3>
+              {isLoading ? (
+                <div className="h-8 bg-surface-container-highest rounded w-24 animate-pulse" />
+              ) : (
+                <div className={`font-headline-lg text-headline-lg ${netYield >= 0 ? 'text-secondary' : 'text-error'}`}>
+                  {netYield >= 0 ? '+' : '-'}{formatCurrency(Math.abs(netYield))}
+                </div>
+              )}
               {/* Line chart */}
-              <div className="h-16 mt-2 w-full max-w-[200px]">
-                <svg viewBox="0 -5 100 110" preserveAspectRatio="none" className="w-full h-full overflow-visible">
-                  <polyline
-                    fill="none"
-                    stroke="#000"
-                    strokeWidth="6"
-                    strokeLinejoin="miter"
-                    strokeLinecap="square"
-                    transform="translate(0, 4)"
-                    points={points}
-                  />
-                  <polyline
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    strokeLinejoin="miter"
-                    strokeLinecap="square"
-                    className="text-secondary"
-                    points={points}
-                  />
-                </svg>
-              </div>
+              {!isLoading && points && (
+                <div className="h-16 mt-2 w-full max-w-[200px]">
+                  <svg viewBox="0 -5 100 110" preserveAspectRatio="none" className="w-full h-full overflow-visible">
+                    <polyline
+                      fill="none"
+                      stroke="#000"
+                      strokeWidth="6"
+                      strokeLinejoin="miter"
+                      strokeLinecap="square"
+                      transform="translate(0, 4)"
+                      points={points}
+                    />
+                    <polyline
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      strokeLinejoin="miter"
+                      strokeLinecap="square"
+                      className="text-secondary"
+                      points={points}
+                    />
+                  </svg>
+                </div>
+              )}
             </Card>
 
             {/* Resource Allocation */}
@@ -398,46 +413,73 @@ export default function StatsPage() {
                 <h3 className="font-headline-md text-headline-md text-on-surface">Resource Allocation</h3>
                 <p className="font-body-sm text-on-surface-variant mt-1">Where your gold is going this cycle.</p>
               </div>
-              <div className="flex flex-col gap-4">
-                {RESOURCE_ALLOCATION.map(({ label, percent, colorClass }) => (
-                  <div key={label} className="flex flex-col gap-1">
-                    <div className="flex justify-between font-body-sm text-body-sm">
-                      <span className="text-on-surface flex items-center gap-2">
-                        <span className={`w-3 h-3 ${colorClass} border-2 border-black inline-block`} />
-                        {label}
-                      </span>
-                      <span className="text-on-surface-variant">{percent}%</span>
+              {isLoading ? (
+                <div className="flex flex-col gap-4 animate-pulse">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex flex-col gap-1">
+                      <div className="h-4 bg-surface-container-highest rounded w-1/2" />
+                      <div className="h-6 bg-surface-container-highest border-4 border-black" />
                     </div>
-                    <div className="h-6 w-full bg-surface-dim border-4 border-black overflow-hidden">
-                      <div className={`h-full ${colorClass}`} style={{ width: `${percent}%` }} />
+                  ))}
+                </div>
+              ) : resourceAllocation.length === 0 ? (
+                <p className="font-body-sm text-on-surface-variant py-4 text-center">No expense data for this period.</p>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {resourceAllocation.map(({ label, percent, colorClass }) => (
+                    <div key={label} className="flex flex-col gap-1">
+                      <div className="flex justify-between font-body-sm text-body-sm">
+                        <span className="text-on-surface flex items-center gap-2">
+                          <span className={`w-3 h-3 ${colorClass} border-2 border-black inline-block`} />
+                          {label}
+                        </span>
+                        <span className="text-on-surface-variant">{percent}%</span>
+                      </div>
+                      <div className="h-6 w-full bg-surface-dim border-4 border-black overflow-hidden">
+                        <div className={`h-full ${colorClass}`} style={{ width: `${percent}%` }} />
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </Card>
 
             {/* Top Drains */}
             <Card className="flex flex-col gap-4 !p-3">
               <h3 className="font-headline-md text-headline-md text-on-surface border-b-4 border-black pb-2">Top Drains</h3>
-              <div className="flex flex-col gap-3">
-                {TOP_DRAINS.map(({ id, label, amount, icon, iconBg }) => {
-                  const Icon = iconMapper(icon);
-                  return (
-                    <div
-                      key={id}
-                      className="flex justify-between items-center bg-surface-dim p-3 border-4 border-black hover:bg-surface-container-highest transition-colors cursor-pointer shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 border-4 border-black" style={{ backgroundColor: iconBg }}>
-                          <Icon className="w-5 h-5 text-on-error-container" />
-                        </div>
-                        <span className="font-body-sm text-on-surface">{label}</span>
-                      </div>
-                      <span className="font-label-caps text-error">{amount}</span>
+              {isLoading ? (
+                <div className="flex flex-col gap-3 animate-pulse">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center gap-3 bg-surface-dim p-3 border-4 border-black">
+                      <div className="w-10 h-10 bg-surface-container-highest border-4 border-black shrink-0" />
+                      <div className="flex-1 h-4 bg-surface-container-highest rounded" />
+                      <div className="h-4 w-16 bg-surface-container-highest rounded shrink-0" />
                     </div>
-                  );
-                })}
-              </div>
+                  ))}
+                </div>
+              ) : topDrains.length === 0 ? (
+                <p className="font-body-sm text-on-surface-variant py-4 text-center">No expenses recorded this period.</p>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {topDrains.map(({ id, label, amount, icon, iconBg }) => {
+                    const Icon = iconMapper(icon);
+                    return (
+                      <div
+                        key={id}
+                        className="flex justify-between items-center bg-surface-dim p-3 border-4 border-black hover:bg-surface-container-highest transition-colors cursor-pointer shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 border-4 border-black" style={{ backgroundColor: iconBg }}>
+                            <Icon className="w-5 h-5 text-on-error-container" />
+                          </div>
+                          <span className="font-body-sm text-on-surface">{label}</span>
+                        </div>
+                        <span className="font-label-caps text-error">{amount}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </Card>
           </div>
         </div>

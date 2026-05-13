@@ -9,14 +9,16 @@ import type { ApiTag, ApiVault } from '../lib/api/ProfileApi';
 interface LogResourceModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
   userId: string | null;
+  selectedMonth?: number;
+  selectedYear?: number;
 }
 
-export function LogResourceModal({ isOpen, onClose, userId }: LogResourceModalProps) {
+export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedMonth, selectedYear }: LogResourceModalProps) {
   const [isExpense, setIsExpense] = useState(true);
   const [amount, setAmount] = useState('');
   const [title, setTitle] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isVisible, setIsVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,12 +42,12 @@ export function LogResourceModal({ isOpen, onClose, userId }: LogResourceModalPr
   useEffect(() => {
     if (isOpen && userId) {
       profileApi.getTags(userId).then((res) => {
-        if (res.data) setAvailableTags(res.data);
+        if (res) setAvailableTags(res);
       });
       profileApi.getVaults(userId).then((res) => {
-        if (res.data) {
-          setVaults(res.data);
-          const def = res.data.find((v) => v.isDefault) ?? res.data[0] ?? null;
+        if (res) {
+          setVaults(res);
+          const def = res.find((v) => v.isDefault) ?? res[0] ?? null;
           if (def) setSelectedVaultId(def.id);
         }
       });
@@ -71,9 +73,9 @@ export function LogResourceModal({ isOpen, onClose, userId }: LogResourceModalPr
         toggleTag(existing);
       } else {
         const res = await profileApi.createTag(userId, { name: tagName });
-        if (res.data) {
-          setAvailableTags([...availableTags, res.data]);
-          setSelectedTags([...selectedTags, res.data]);
+        if (res) {
+          setAvailableTags([...availableTags, res]);
+          setSelectedTags([...selectedTags, res]);
           setTagInput('');
         }
       }
@@ -83,19 +85,26 @@ export function LogResourceModal({ isOpen, onClose, userId }: LogResourceModalPr
   const handleSubmit = async () => {
     if (!userId || !amount || isSubmitting) return;
     setIsSubmitting(true);
+    const now = new Date();
+    const isCurrentMonth = selectedMonth === undefined || selectedYear === undefined
+      || (selectedMonth === now.getMonth() && selectedYear === now.getFullYear());
+    const date = isCurrentMonth
+      ? undefined
+      : `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-01`;
     try {
       await profileApi.createTransaction(userId, {
         amount: parseFloat(amount),
         type: isExpense ? 'expense' : 'income',
         tagIds: selectedTags.map((t) => t.id),
         title: title || undefined,
-        date,
         vaultId: selectedVaultId ?? null,
+        date,
       });
       setAmount('');
       setTitle('');
       setSelectedTags([]);
       setTagInput('');
+      onSuccess?.();
       onClose();
     } finally {
       setIsSubmitting(false);
@@ -145,6 +154,17 @@ export function LogResourceModal({ isOpen, onClose, userId }: LogResourceModalPr
 
         {/* Content Area */}
         <main className="px-4 space-y-5 pb-3 overflow-y-auto">
+          {/* Name Input */}
+          <div className="space-y-2">
+            <input
+              className="w-full h-16 px-4 bg-surface-container-lowest border-4 border-black shadow-[inset_4px_4px_0px_rgba(0,0,0,0.6),_inset_-2px_-2px_0px_rgba(255,255,255,0.05)] font-body-lg text-on-surface focus:outline-none placeholder:text-surface-variant"
+              placeholder="e.g. Grocery run"
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          </div>
+
           {/* Amount Input */}
           <div className="space-y-2">
             <div className="relative flex items-center">

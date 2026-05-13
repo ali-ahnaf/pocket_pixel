@@ -8,6 +8,8 @@
     "dev:api": "npm run dev --workspace=packages/api",
     "dev:ui": "npm run dev --workspace=packages/ui",
     "build": "npm run build --workspaces",
+    "build:prod": "npm run build --workspace=packages/shared && npm run build --workspace=packages/ui && npm run build --workspace=packages/api",
+    "start": "npm run start --workspace=packages/api",
     "build:shared": "npm run build --workspace=packages/shared",
     "migration:generate": "npm run migration:generate --workspace=packages/api",
     "migration:run": "npm run migration:run --workspace=packages/api",

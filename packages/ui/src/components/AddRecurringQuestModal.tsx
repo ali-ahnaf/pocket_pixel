@@ -20,16 +20,7 @@ interface AddRecurringQuestModalProps {
 
 const INTERVALS = ['Daily', 'Weekly', 'Monthly', 'Yearly'];
 
-export function AddRecurringQuestModal({
-  isOpen,
-  onClose,
-  title,
-  initialData,
-  onSave,
-  availableTags = [],
-  availableVaults = [],
-  onCreateTag,
-}: AddRecurringQuestModalProps) {
+export function AddRecurringQuestModal({ isOpen, onClose, title, initialData, onSave, availableTags = [], availableVaults = [], onCreateTag }: AddRecurringQuestModalProps) {
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isVisible, setIsVisible] = useState(false);
   const [name, setName] = useState(initialData?.title || initialData?.name || '');
@@ -42,40 +33,35 @@ export function AddRecurringQuestModal({
 
   // Tag state — selectedTagIds stores UUIDs of selected tags
   const [tagInput, setTagInput] = useState('');
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>(
-    initialData?.tagIds || []
-  );
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>(initialData?.tagIds || []);
   const [isCreatingTag, setIsCreatingTag] = useState(false);
 
   // Vault state
-  const [selectedVaultId, setSelectedVaultId] = useState<string>(
-    initialData?.vaultId || availableVaults[0]?.id || ''
-  );
+  const [selectedVaultId, setSelectedVaultId] = useState<string>(initialData?.vaultId || availableVaults[0]?.id || '');
   const [isVaultDropdownOpen, setIsVaultDropdownOpen] = useState(false);
 
   // Interval state
   const [selectedInterval, setSelectedInterval] = useState(
-    initialData?.frequency && INTERVALS.map(i => i.toLowerCase()).includes(initialData.frequency.toLowerCase())
-      ? INTERVALS.find(i => i.toLowerCase() === initialData.frequency.toLowerCase()) || INTERVALS[2]
-      : INTERVALS[2]
+    initialData?.frequency && INTERVALS.map((i) => i.toLowerCase()).includes(initialData.frequency.toLowerCase())
+      ? INTERVALS.find((i) => i.toLowerCase() === initialData.frequency.toLowerCase()) || INTERVALS[2]
+      : INTERVALS[2],
   );
   const [isIntervalDropdownOpen, setIsIntervalDropdownOpen] = useState(false);
 
-  const selectedVault = availableVaults.find(v => v.id === selectedVaultId) || availableVaults[0];
+  const selectedVault = availableVaults.find((v) => v.id === selectedVaultId) || availableVaults[0];
   const SelectedVaultIcon = iconMapper(selectedVault?.icon || 'Briefcase');
 
   const tagInputUpper = tagInput.trim().toUpperCase();
 
   const suggestions = availableTags
-    .filter(t => !selectedTagIds.includes(t.id) && t.name.toUpperCase().includes(tagInputUpper) && tagInputUpper.length > 0)
+    .filter((t) => !selectedTagIds.includes(t.id))
+    .filter((t) => tagInputUpper.length === 0 || t.name.toUpperCase().includes(tagInputUpper))
     .slice(0, 3);
 
-  const selectedTagObjects = availableTags.filter(t => selectedTagIds.includes(t.id));
+  const selectedTagObjects = availableTags.filter((t) => selectedTagIds.includes(t.id));
 
   const toggleTag = (tagId: string) => {
-    setSelectedTagIds(prev =>
-      prev.includes(tagId) ? prev.filter(id => id !== tagId) : [...prev, tagId]
-    );
+    setSelectedTagIds((prev) => (prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]));
     setTagInput('');
   };
 
@@ -84,7 +70,7 @@ export function AddRecurringQuestModal({
     setIsCreatingTag(true);
     const newTag = await onCreateTag(tagInput.trim());
     if (newTag) {
-      setSelectedTagIds(prev => [...prev, newTag.id]);
+      setSelectedTagIds((prev) => [...prev, newTag.id]);
       setTagInput('');
     }
     setIsCreatingTag(false);
@@ -93,7 +79,7 @@ export function AddRecurringQuestModal({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && tagInput.trim()) {
       e.preventDefault();
-      const exact = availableTags.find(t => t.name.toUpperCase() === tagInputUpper);
+      const exact = availableTags.find((t) => t.name.toUpperCase() === tagInputUpper);
       if (exact && !selectedTagIds.includes(exact.id)) {
         toggleTag(exact.id);
       } else if (onCreateTag) {
@@ -112,7 +98,7 @@ export function AddRecurringQuestModal({
         setEndDate(initialData.endDate || '');
         setSelectedTagIds(initialData.tagIds || []);
         if (initialData.frequency) {
-          const match = INTERVALS.find(i => i.toLowerCase() === initialData.frequency.toLowerCase());
+          const match = INTERVALS.find((i) => i.toLowerCase() === initialData.frequency.toLowerCase());
           if (match) setSelectedInterval(match);
         }
         if (initialData.vaultId) setSelectedVaultId(initialData.vaultId);
@@ -165,20 +151,11 @@ export function AddRecurringQuestModal({
     onClose();
   };
 
-  const canCreateTag =
-    tagInput.trim().length > 0 &&
-    !!onCreateTag &&
-    !availableTags.find(t => t.name.toUpperCase() === tagInputUpper) &&
-    !isCreatingTag;
+  const canCreateTag = tagInput.trim().length > 0 && !!onCreateTag && !availableTags.find((t) => t.name.toUpperCase() === tagInputUpper) && !isCreatingTag;
 
   return (
     <>
-      <div
-        className={`fixed inset-0 bg-black/70 z-[100] transition-opacity duration-300 ease-in-out ${
-          isVisible ? 'opacity-100' : 'opacity-0'
-        }`}
-        onClick={onClose}
-      />
+      <div className={`fixed inset-0 bg-black/70 z-[100] transition-opacity duration-300 ease-in-out ${isVisible ? 'opacity-100' : 'opacity-0'}`} onClick={onClose} />
 
       <div
         className={`fixed bottom-0 left-0 right-0 md:left-1/2 md:-translate-x-1/2 z-[110] w-full max-w-md bg-surface-container-high border-4 border-black shadow-[inset_2px_2px_0px_rgba(255,255,255,0.1),_inset_-2px_-2px_0px_rgba(0,0,0,0.4)] flex flex-col mt-auto mx-auto max-h-[90vh] overflow-y-auto rounded-t-xl transition-transform duration-300 ease-in-out custom-scrollbar ${
@@ -208,12 +185,7 @@ export function AddRecurringQuestModal({
           {/* Name Input */}
           <div className="space-y-2 mt-4">
             <label className="pixel-input-label ml-1">NAME</label>
-            <Input
-              placeholder="e.g. Health Potion Subscription"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full"
-            />
+            <Input placeholder="e.g. Health Potion Subscription" value={name} onChange={(e) => setName(e.target.value)} className="w-full" />
           </div>
 
           {/* Amount Input */}
@@ -268,7 +240,7 @@ export function AddRecurringQuestModal({
             <div className="relative">
               {selectedTagObjects.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-3">
-                  {selectedTagObjects.map(tag => (
+                  {selectedTagObjects.map((tag) => (
                     <span
                       key={tag.id}
                       onClick={() => toggleTag(tag.id)}
@@ -291,16 +263,19 @@ export function AddRecurringQuestModal({
 
               {/* Suggestions from existing tags */}
               {suggestions.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {suggestions.map(tag => (
-                    <span
-                      key={tag.id}
-                      onClick={() => toggleTag(tag.id)}
-                      className="bg-surface-container-highest text-sm border-4 border-black px-3 py-1 font-label-caps font-bold flex items-center gap-1 active:translate-y-0.5 cursor-pointer hover:bg-surface-container-high transition-colors"
-                    >
-                      {tag.name.toUpperCase()} <Plus size={14} />
-                    </span>
-                  ))}
+                <div className="space-y-2 mt-3">
+                  <p className="text-[10px] font-label-caps text-outline ml-1">{tagInput.length > 0 ? 'MATCHING TAGS' : 'INITIAL SUGGESTIONS'}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {suggestions.map((tag) => (
+                      <span
+                        key={tag.id}
+                        onClick={() => toggleTag(tag.id)}
+                        className="bg-surface-container-highest text-sm border-4 border-black px-3 py-1 font-label-caps font-bold flex items-center gap-1 active:translate-y-0.5 cursor-pointer hover:bg-surface-container-high transition-colors"
+                      >
+                        {tag.name.toUpperCase()} <Plus size={14} />
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -353,26 +328,20 @@ export function AddRecurringQuestModal({
                 >
                   <div className="flex items-center gap-3">
                     <SelectedVaultIcon className="text-secondary" size={20} />
-                    <span className="text-primary font-bold">
-                      {selectedVault?.name || 'Select vault'}
-                    </span>
+                    <span className="text-primary font-bold">{selectedVault?.name || 'Select vault'}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-1 h-6 bg-black/10 rounded-full" />
-                    <ChevronDown
-                      className={`text-outline transition-transform duration-300 ${isVaultDropdownOpen ? 'rotate-180' : ''}`}
-                      size={20}
-                    />
+                    <ChevronDown className={`text-outline transition-transform duration-300 ${isVaultDropdownOpen ? 'rotate-180' : ''}`} size={20} />
                   </div>
                 </button>
 
                 {isVaultDropdownOpen && (
                   <>
+                    <div className="fixed inset-0 z-[115]" onClick={() => setIsVaultDropdownOpen(false)} />
                     <div
-                      className="fixed inset-0 z-[115]"
-                      onClick={() => setIsVaultDropdownOpen(false)}
-                    />
-                    <div className={`absolute top-[calc(100%+4px)] left-0 right-0 z-[120] bg-surface-container-high border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] transition-all duration-200 ${isVaultDropdownOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}>
+                      className={`absolute top-[calc(100%+4px)] left-0 right-0 z-[120] bg-surface-container-high border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] transition-all duration-200 ${isVaultDropdownOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
+                    >
                       <div className="max-h-60 overflow-y-auto custom-scrollbar">
                         {availableVaults.map((vault) => {
                           const VaultIcon = iconMapper(vault.icon || 'Briefcase');
@@ -390,9 +359,7 @@ export function AddRecurringQuestModal({
                             >
                               <div className="flex items-center gap-3">
                                 <VaultIcon className={isSelected ? 'text-secondary' : 'text-outline'} size={20} />
-                                <span className={`font-body-lg ${isSelected ? 'text-primary font-bold' : 'text-on-surface'}`}>
-                                  {vault.name}
-                                </span>
+                                <span className={`font-body-lg ${isSelected ? 'text-primary font-bold' : 'text-on-surface'}`}>{vault.name}</span>
                               </div>
                               {isSelected && <div className="w-4 h-4 bg-primary border-2 border-black" />}
                             </button>
@@ -422,20 +389,16 @@ export function AddRecurringQuestModal({
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-1 h-6 bg-black/10 rounded-full" />
-                  <ChevronDown
-                    className={`text-outline transition-transform duration-300 ${isIntervalDropdownOpen ? 'rotate-180' : ''}`}
-                    size={20}
-                  />
+                  <ChevronDown className={`text-outline transition-transform duration-300 ${isIntervalDropdownOpen ? 'rotate-180' : ''}`} size={20} />
                 </div>
               </button>
 
               {isIntervalDropdownOpen && (
                 <>
+                  <div className="fixed inset-0 z-[115]" onClick={() => setIsIntervalDropdownOpen(false)} />
                   <div
-                    className="fixed inset-0 z-[115]"
-                    onClick={() => setIsIntervalDropdownOpen(false)}
-                  />
-                  <div className={`absolute bottom-[calc(100%+4px)] left-0 right-0 z-[120] bg-surface-container-high border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] transition-all duration-200 ${isIntervalDropdownOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}`}>
+                    className={`absolute bottom-[calc(100%+4px)] left-0 right-0 z-[120] bg-surface-container-high border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] transition-all duration-200 ${isIntervalDropdownOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}`}
+                  >
                     <div className="max-h-60 overflow-y-auto custom-scrollbar">
                       {INTERVALS.map((interval) => (
                         <button
@@ -448,9 +411,7 @@ export function AddRecurringQuestModal({
                             selectedInterval === interval ? 'bg-surface-container-highest' : 'bg-surface-container-low'
                           }`}
                         >
-                          <span className={`font-body-lg ${selectedInterval === interval ? 'text-primary font-bold' : 'text-on-surface'}`}>
-                            {interval}
-                          </span>
+                          <span className={`font-body-lg ${selectedInterval === interval ? 'text-primary font-bold' : 'text-on-surface'}`}>{interval}</span>
                           {selectedInterval === interval && <div className="w-4 h-4 bg-primary border-2 border-black" />}
                         </button>
                       ))}
@@ -462,11 +423,7 @@ export function AddRecurringQuestModal({
           </div>
 
           <div className="pt-2">
-            <Button
-              variant="primary"
-              className="w-full py-3 flex items-center justify-center gap-2 group"
-              onClick={handleSave}
-            >
+            <Button variant="primary" className="w-full py-3 flex items-center justify-center gap-2 group" onClick={handleSave}>
               <Save className="w-5 h-5 group-active:scale-90 transition-transform" />
               <span className="font-headline-sm uppercase tracking-wider">{initialData ? 'Save Changes' : 'Create Record'}</span>
             </Button>
