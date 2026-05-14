@@ -22,7 +22,7 @@
 
 | Login | Dashboard | Analytics |
 |-------|-----------|-----------|
-| ![Login Screen](assets/ss_login_screen.png) | ![Dashboard](assets/ss_login_screen.png) | ![Analytics](assets/ss_login_screen.png) |
+| ![Login Screen](assets/ss_login_screen.png) | ![Dashboard](assets/ss_home.png) | ![Analytics](assets/ss_analytics.png) |
 
 > **Contributors:** Drop screenshots of the Dashboard and Analytics pages into `assets/` and update the links above!
 
