@@ -62,6 +62,14 @@ This project was entirely **vibe coded** with claude, gemini models, and codex. 
 
 **Google stitch**: https://stitch.withgoogle.com/projects/14795631199624450898
 
+## Agentic coding
+
+The repository has a bunch of skills defined in `.agents`. These are supported by codex and gemini models.
+To use it with claude, run:
+
+```bash
+ln -s .agents .claude
+```
 
 ---
 

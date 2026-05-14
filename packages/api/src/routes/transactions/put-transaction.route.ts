@@ -1,16 +1,16 @@
 import { Request, Response, Router } from "express";
 import Joi from "joi";
-import { transactionsRepo } from "./shared";
+import { transactionsRepo, transactionTagsRepo } from "./shared";
 import { asyncHandler } from "../../middleware/error-handler";
 
 const router = Router({ mergeParams: true });
 const updateTransactionSchema = Joi.object({
   amount: Joi.number().positive().precision(2),
   type: Joi.string().valid("expense", "income"),
-  tag: Joi.string().max(100).allow(null, ""),
   title: Joi.string().max(200).allow(null, ""),
   date: Joi.string().isoDate(),
   vaultId: Joi.string().uuid().allow(null),
+  tagIds: Joi.array().items(Joi.string().uuid()),
 }).min(1);
 
 router.put("/:id", asyncHandler(async (req: Request, res: Response) => {
@@ -23,8 +23,20 @@ router.put("/:id", asyncHandler(async (req: Request, res: Response) => {
   });
   if (!transaction) return res.status(404).json({ message: "Transaction not found" });
 
-  Object.assign(transaction, value);
+  const { tagIds, ...transactionData } = value;
+  Object.assign(transaction, transactionData);
   const saved = await transactionsRepo().save(transaction);
+
+  if (tagIds !== undefined) {
+    await transactionTagsRepo().delete({ transactionId: saved.id });
+    if (tagIds.length > 0) {
+      const tags = tagIds.map((tagId: string) =>
+        transactionTagsRepo().create({ transactionId: saved.id, tagId })
+      );
+      await transactionTagsRepo().save(tags);
+    }
+  }
+
   return res.json(saved);
 }));
 

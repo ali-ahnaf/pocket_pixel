@@ -49,7 +49,7 @@ export const AppBar: React.FC = () => {
       <Button variant="ghost" className="p-2 w-10 h-10 border-transparent bg-surface-container">
         <Menu />
       </Button>
-      <h1 className="font-headline-md font-bold uppercase tracking-tight text-primary text-center flex-1">Pixel Pocket</h1>
+      <h1 className="font-headline-md font-bold uppercase tracking-tight text-primary text-center flex-1">Pocket Pixel</h1>
       <div className="relative" ref={menuRef}>
         <button
           onClick={() => setMenuOpen((o) => !o)}

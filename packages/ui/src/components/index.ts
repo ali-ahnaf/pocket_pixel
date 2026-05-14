@@ -23,3 +23,4 @@ export { AvatarPickerModal } from "./AvatarPickerModal";
 export { BottomNavBar } from "./BottomNavBar";
 export { AddTagModal } from "./AddTagModal";
 export { DeleteTagModal } from "./DeleteTagModal";
+export { EditTransactionModal } from "./EditTransactionModal";

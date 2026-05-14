@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { Button, Card, ProgressBar, LogResourceModal, AppBar, BottomNavBar } from '@/components';
+import { Button, Card, ProgressBar, LogResourceModal, AppBar, BottomNavBar, EditTransactionModal } from '@/components';
 import { iconMapper } from '@/lib/iconMapper';
 import { profileApi } from '@/lib/api';
 import type { ApiUser, ApiTransaction } from '@/lib/api/ProfileApi';
@@ -11,7 +11,7 @@ import { Package, Award, Settings, HelpCircle, ChevronLeft, ChevronRight, Chevro
 const MONTH_NAMES = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
 
 function formatCurrency(amount: number): string {
-  return `$${Math.abs(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `⛁${Math.abs(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function formatDate(dateStr: string): string {
@@ -38,10 +38,11 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<ApiTransaction | null>(null);
   const [profile, setProfile] = useState<ApiUser | null>(null);
   const [transactions, setTransactions] = useState<ApiTransaction[]>([]);
   const [vaults, setVaults] = useState<import('@/lib/api/ProfileApi').ApiVault[]>([]);
-  const [selectedVaultFilter, setSelectedVaultFilter] = useState<string>('all');
+  const [selectedVaultFilter, setSelectedVaultFilter] = useState<string[]>([]);
   const [vaultDropdownOpen, setVaultDropdownOpen] = useState(false);
   const vaultDropdownRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -90,7 +91,7 @@ export default function DashboardPage() {
     } else setSelectedMonth((m) => m + 1);
   };
 
-  const filteredDrops = selectedVaultFilter === 'all' ? transactions : transactions.filter((t) => t.vaultId === selectedVaultFilter);
+  const filteredDrops = selectedVaultFilter.length === 0 ? transactions : transactions.filter((t) => selectedVaultFilter.includes(t.vaultId ?? ''));
   const totalIncome = filteredDrops.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const totalExpenses = filteredDrops.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
   const netYield = totalIncome - totalExpenses;
@@ -225,19 +226,26 @@ export default function DashboardPage() {
                     onClick={() => setVaultDropdownOpen((o) => !o)}
                     className="flex items-center gap-1.5 font-label-caps text-[10px] uppercase bg-surface border-2 border-black text-on-surface px-2 py-1 hover:bg-surface-container-highest active:translate-y-px transition-transform"
                   >
-                    {selectedVaultFilter === 'all' ? 'All Vaults' : (vaults.find((v) => v.id === selectedVaultFilter)?.name ?? 'All Vaults')}
+                    {selectedVaultFilter.length === 0 ? 'All Vaults' : selectedVaultFilter.length === 1 ? (vaults.find((v) => v.id === selectedVaultFilter[0])?.name ?? 'All Vaults') : `${selectedVaultFilter.length} Vaults`}
                     <ChevronDown size={10} className={`transition-transform ${vaultDropdownOpen ? 'rotate-180' : ''}`} />
                   </button>
                   {vaultDropdownOpen && (
                     <div className="absolute right-0 top-full mt-1 z-50 min-w-[120px] border-2 border-black bg-surface shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex flex-col">
-                      {[{ id: 'all', name: 'All Vaults' }, ...vaults].map((v) => (
+                      <button
+                        onClick={() => { setSelectedVaultFilter([]); setVaultDropdownOpen(false); }}
+                        className={`font-label-caps text-[10px] uppercase text-left px-3 py-2 hover:bg-primary hover:text-on-primary transition-colors border-b border-black ${selectedVaultFilter.length === 0 ? 'bg-primary text-on-primary' : 'text-on-surface'}`}
+                      >
+                        All Vaults
+                      </button>
+                      {vaults.map((v) => (
                         <button
                           key={v.id}
                           onClick={() => {
-                            setSelectedVaultFilter(v.id);
-                            setVaultDropdownOpen(false);
+                            setSelectedVaultFilter((prev) =>
+                              prev.includes(v.id) ? prev.filter((id) => id !== v.id) : [...prev, v.id]
+                            );
                           }}
-                          className={`font-label-caps text-[10px] uppercase text-left px-3 py-2 hover:bg-primary hover:text-on-primary transition-colors border-b border-black last:border-b-0 ${selectedVaultFilter === v.id ? 'bg-primary text-on-primary' : 'text-on-surface'}`}
+                          className={`font-label-caps text-[10px] uppercase text-left px-3 py-2 hover:bg-primary hover:text-on-primary transition-colors border-b border-black last:border-b-0 ${selectedVaultFilter.includes(v.id) ? 'bg-primary text-on-primary' : 'text-on-surface'}`}
                         >
                           {v.name}
                         </button>
@@ -275,6 +283,7 @@ export default function DashboardPage() {
                       <div
                         key={tx.id}
                         className="flex items-center gap-4 bg-surface p-3 border-4 border-black hover:bg-surface-container-highest transition-colors cursor-pointer shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]"
+                        onClick={() => setEditingTransaction(tx)}
                       >
                         <div
                           className={`h-10 w-10 border-2 border-black flex items-center justify-center shrink-0 ${!tagBg ? (tx.type === 'income' ? 'bg-primary-container' : 'bg-error-container') : ''}`}
@@ -283,13 +292,11 @@ export default function DashboardPage() {
                           <TxIcon />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-body-lg font-bold text-on-surface truncate">{getTransactionTitle(tx)}</p>
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <p className="font-body-sm text-on-surface-variant truncate">{getTransactionCategory(tx)}</p>
-                            {tx.vault?.name && (
-                              <span className="font-label-caps text-[9px] uppercase px-1 py-0.5 border border-black bg-surface-container text-outline shrink-0 leading-none">{tx.vault.name}</span>
-                            )}
-                          </div>
+                          <p className="font-body-sm font-bold text-on-surface truncate">{getTransactionTitle(tx)}</p>
+                          <p className="text-[14px] text-on-surface-variant truncate">{getTransactionCategory(tx)}</p>
+                          {tx.vault?.name && (
+                            <span className="font-label-caps text-[9px] uppercase px-1 py-0.5 border border-black bg-surface-container text-outline leading-none inline-block mt-0.5">{tx.vault.name}</span>
+                          )}
                         </div>
                         <div className="text-right shrink-0">
                           <p className={`font-label-caps ${tx.type === 'income' ? 'text-primary' : 'text-error'}`}>
@@ -322,6 +329,7 @@ export default function DashboardPage() {
       </div>
 
       <LogResourceModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={handleTransactionSuccess} userId={userId} selectedMonth={selectedMonth} selectedYear={selectedYear} />
+      <EditTransactionModal isOpen={!!editingTransaction} onClose={() => setEditingTransaction(null)} onSuccess={handleTransactionSuccess} userId={userId} transaction={editingTransaction} />
     </div>
   );
 }

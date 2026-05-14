@@ -18,7 +18,7 @@ export default function PixelLoader() {
         {/* Title */}
         <div className="text-center">
           <p className="text-[#a5d655] uppercase tracking-tight leading-none font-extrabold text-2xl" style={{ fontFamily: 'var(--font-anybody)' }}>
-            Pixel Pocket
+            Pocket Pixel
           </p>
           <p className="text-[#8d937f] text-[10px] mt-1 tracking-[0.25em] uppercase" style={{ fontFamily: 'var(--font-jetbrains-mono)' }}>
             LOADING...

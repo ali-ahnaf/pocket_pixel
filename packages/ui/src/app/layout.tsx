@@ -21,7 +21,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Pixel Pocket — Expense Tracker',
+  title: 'Pocket Pixel — Expense Tracker',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -111,6 +111,14 @@ export default class ProfileApi extends ApiClient {
     return this.post<{ id: string }>(`/users/${userId}/transactions`, data);
   }
 
+  updateTransaction(userId: string, transactionId: string, data: { amount?: number; type?: string; tagIds?: string[]; title?: string | null; vaultId?: string | null; date?: string }): Promise<ApiTransaction> {
+    return this.put<ApiTransaction>(`/users/${userId}/transactions/${transactionId}`, data);
+  }
+
+  deleteTransaction(userId: string, transactionId: string): Promise<void> {
+    return this.delete<void>(`/users/${userId}/transactions/${transactionId}`);
+  }
+
   // Recurring quests
   getRecurringQuests(userId: string): Promise<ApiRecurringQuest[]> {
     return this.get<ApiRecurringQuest[]>(`/users/${userId}/recurring`);

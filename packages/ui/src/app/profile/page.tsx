@@ -448,7 +448,7 @@ export default function ProfilePage() {
             {loading ? (
               <p className="font-body-sm text-on-surface-variant">Loading...</p>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-gutter mt-4">
+              <div className="grid grid-cols-1 gap-gutter mt-4">
                 {tags.map((tag) => {
                   const IconComp = iconMapper(tag.icon);
                   return (

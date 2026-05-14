@@ -6,7 +6,8 @@ import { usePathname } from 'next/navigation';
 import { Home, User, BarChart } from 'lucide-react';
 
 export const BottomNavBar: React.FC = () => {
-  const pathname = usePathname();
+  const rawPathname = usePathname();
+  const pathname = rawPathname.replace(/\/$/, '') || '/';
 
   const navItems = [
     {

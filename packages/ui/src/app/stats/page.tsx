@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { AppBar, Card, ProgressBar, Button, BottomNavBar } from '@/components';
 import { useAuth } from '@/hooks/useAuth';
-import { Package, Award, BarChart, Settings, HelpCircle, ChevronDown, TrendingUp, TrendingDown, CircleDollarSign, Flame, Gem, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Package, Award, BarChart, Settings, HelpCircle, ChevronDown, TrendingUp, TrendingDown, CircleDollarSign, Flame, Gem, Calendar, ChevronLeft, ChevronRight, Vault, LineChart } from 'lucide-react';
 import { iconMapper } from '@/lib/iconMapper';
 import { profileApi } from '@/lib/api';
 import type { ApiUser, ApiTransaction, ApiVault } from '@/lib/api/ProfileApi';
@@ -25,7 +25,7 @@ const NAV_ITEMS = [
 const TAG_COLORS = ['bg-error', 'bg-tertiary', 'bg-secondary', 'bg-outline', 'bg-primary'];
 
 function formatCurrency(amount: number): string {
-  return `$${Math.abs(amount).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  return `⛁ ${Math.abs(amount).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -131,6 +131,51 @@ export default function StatsPage() {
         colorClass: TAG_COLORS[i % TAG_COLORS.length],
       }));
   }, [filteredTransactions]);
+
+  const vaultSavings = useMemo(() => {
+    return vaults.map((vault) => {
+      const vaultTxs = transactions.filter((t) => t.vaultId === vault.id);
+      const income = vaultTxs.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+      const expense = vaultTxs.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+      return { vault, income, expense, savings: income - expense };
+    });
+  }, [transactions, vaults]);
+
+  const [selectedLineVaultId, setSelectedLineVaultId] = useState<string>('all');
+
+  const lineChartPoints = useMemo(() => {
+    const [y, m] = selectedMonthYear.split('-').map(Number);
+    const daysInMonth = new Date(y, m, 0).getDate();
+
+    const vaultIds = selectedLineVaultId === 'all' ? vaults.map((v) => v.id) : [selectedLineVaultId];
+
+    return vaultIds.map((vaultId) => {
+      const vault = vaults.find((v) => v.id === vaultId);
+      const vaultTxs = transactions.filter((t) => t.vaultId === vaultId && t.type === 'expense');
+
+      const daily = Array(daysInMonth).fill(0);
+      vaultTxs.forEach((t) => {
+        const day = parseInt(t.date.split('-')[2], 10);
+        if (day >= 1 && day <= daysInMonth) daily[day - 1] += t.amount;
+      });
+
+      if (daily.every((v) => v === 0)) return { vault, points: '' };
+
+      const max = Math.max(...daily);
+      const min = 0;
+      const range = max - min || 1;
+
+      const pts = daily
+        .map((val, i) => {
+          const x = (i / (daily.length - 1)) * 100;
+          const yCoord = 100 - ((val - min) / range) * 100;
+          return `${x.toFixed(1)},${yCoord.toFixed(1)}`;
+        })
+        .join(' ');
+
+      return { vault, points: pts };
+    }).filter((d) => d.points !== '');
+  }, [transactions, vaults, selectedLineVaultId, selectedMonthYear]);
 
   const topDrains = useMemo(
     () =>
@@ -428,6 +473,112 @@ export default function StatsPage() {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+            </Card>
+
+            {/* Vault Savings */}
+            <Card className="flex flex-col gap-4 !p-3">
+              <div>
+                <h3 className="font-headline-md text-headline-md text-on-surface">Vault Savings</h3>
+                <p className="font-body-sm text-on-surface-variant mt-1">Current savings (income − expense) per vault.</p>
+              </div>
+              {isLoading ? (
+                <div className="flex flex-col gap-3 animate-pulse">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="h-14 bg-surface-container-highest border-4 border-black" />
+                  ))}
+                </div>
+              ) : vaultSavings.length === 0 ? (
+                <p className="font-body-sm text-on-surface-variant py-4 text-center">No vaults found.</p>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {vaultSavings.map(({ vault, income, expense, savings }) => (
+                    <div key={vault.id} className="flex items-center justify-between bg-surface-dim p-3 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-label-caps text-on-surface uppercase">{vault.name}</span>
+                        <span className="font-body-sm text-on-surface-variant text-[11px]">
+                          {formatCurrency(income)} in · {formatCurrency(expense)} out
+                        </span>
+                      </div>
+                      <div className={`font-headline-sm ${savings >= 0 ? 'text-secondary' : 'text-error'}`}>
+                        {savings >= 0 ? '+' : '-'}{formatCurrency(Math.abs(savings))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+
+            {/* Daily Expenses by Vault — Line Graph */}
+            <Card className="flex flex-col gap-4 !p-3">
+              <div className="flex items-start justify-between gap-2 flex-wrap">
+                <div>
+                  <h3 className="font-headline-md text-headline-md text-on-surface flex items-center gap-2">
+                    <LineChart className="w-5 h-5 text-primary" />
+                    Daily Expenses
+                  </h3>
+                  <p className="font-body-sm text-on-surface-variant mt-1">Expense burn per day, by vault.</p>
+                </div>
+                {/* Vault tabs */}
+                <div className="flex flex-wrap gap-1">
+                  <button
+                    onClick={() => setSelectedLineVaultId('all')}
+                    className={`px-3 py-1 font-body-sm border-2 border-black transition-colors ${selectedLineVaultId === 'all' ? 'bg-primary text-on-primary' : 'bg-surface hover:bg-surface-container-highest text-on-surface'}`}
+                  >
+                    All
+                  </button>
+                  {vaults.map((vault) => (
+                    <button
+                      key={vault.id}
+                      onClick={() => setSelectedLineVaultId(vault.id)}
+                      className={`px-3 py-1 font-body-sm border-2 border-black transition-colors ${selectedLineVaultId === vault.id ? 'bg-primary text-on-primary' : 'bg-surface hover:bg-surface-container-highest text-on-surface'}`}
+                    >
+                      {vault.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {isLoading ? (
+                <div className="h-28 bg-surface-container-highest border-4 border-black animate-pulse" />
+              ) : lineChartPoints.length === 0 ? (
+                <p className="font-body-sm text-on-surface-variant py-4 text-center">No expense data for this period.</p>
+              ) : (
+                <div className="flex flex-col gap-6">
+                  {lineChartPoints.map(({ vault, points }, idx) => {
+                    const STROKE_COLORS = ['text-primary', 'text-secondary', 'text-tertiary', 'text-error'];
+                    const colorClass = STROKE_COLORS[idx % STROKE_COLORS.length];
+                    return (
+                      <div key={vault?.id ?? idx} className="flex flex-col gap-1">
+                        {selectedLineVaultId === 'all' && (
+                          <span className={`font-label-caps text-[10px] uppercase ${colorClass}`}>{vault?.name}</span>
+                        )}
+                        <div className="h-20 w-full">
+                          <svg viewBox="0 -5 100 110" preserveAspectRatio="none" className="w-full h-full overflow-visible">
+                            <polyline
+                              fill="none"
+                              stroke="#000"
+                              strokeWidth="6"
+                              strokeLinejoin="miter"
+                              strokeLinecap="square"
+                              transform="translate(0, 4)"
+                              points={points}
+                            />
+                            <polyline
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                              strokeLinejoin="miter"
+                              strokeLinecap="square"
+                              className={colorClass}
+                              points={points}
+                            />
+                          </svg>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </Card>

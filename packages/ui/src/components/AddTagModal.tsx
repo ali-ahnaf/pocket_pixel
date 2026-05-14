@@ -106,7 +106,7 @@ export function AddTagModal({ isOpen, onClose, title, initialData, onSave }: Add
 
             <div className="space-y-2">
               <label className="pixel-input-label ml-1">ICON</label>
-              <div className="flex overflow-x-auto gap-3 pb-2 pt-1 px-1 custom-scrollbar">
+              <div className="grid grid-rows-2 grid-flow-col gap-3 pb-2 pt-1 px-1 overflow-x-auto custom-scrollbar">
                 {AVAILABLE_ICONS.map((iconName) => {
                   const IconComp = iconMapper(iconName);
                   const isSelected = icon === iconName;
