@@ -2,14 +2,15 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Mail, Lock, LogIn, Swords, Coins } from 'lucide-react';
+import { Mail, Lock, LogIn, Coins } from 'lucide-react';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { authApi } from '@/lib/api';
-import { AUTH_TOKEN_STORAGE_KEY } from '@/lib/api/ApiClient';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function SignInPage() {
   const router = useRouter();
+  const { setSession } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ email?: string; password?: string; form?: string }>({});
@@ -34,15 +35,7 @@ export default function SignInPage() {
     setLoading(true);
     try {
       const res = await authApi.signIn({ email, password });
-      localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, res.token);
-      localStorage.setItem(
-        'pixel_pocket_profile',
-        JSON.stringify({
-          id: res.id,
-          name: res.name,
-          email: res.email,
-          avatar: res.avatar,
-        }));
+      setSession(res.token, { id: res.id, name: res.name, email: res.email, avatar: res.avatar });
       router.push('/');
     } catch (err: any) {
       setErrors({ form: err.message ?? 'Something went wrong. Please try again.' });

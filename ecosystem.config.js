@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: 'expense-tracker-api',
+      name: 'pocket-pixel',
       script: 'packages/api/dist/index.js',
       cwd: __dirname,
       instances: 1,
@@ -10,8 +10,8 @@ module.exports = {
         NODE_ENV: 'production',
         PORT: 4000,
       },
-      out_file: '/var/logs/pixel_pocket/api-out.log',
-      error_file: '/var/logs/pixel_pocket/api-error.log',
+      out_file: '/var/logs/pocket_pixel/api-out.log',
+      error_file: '/var/logs/pocket_pixel/api-error.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss',
       restart_delay: 3000,
       max_restarts: 10,

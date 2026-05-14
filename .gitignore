@@ -5,4 +5,4 @@
 **/.next
 .env
 .env.local
-**/*.sqlitelogs/
+**/*.sqlite

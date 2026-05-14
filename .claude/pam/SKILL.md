@@ -41,6 +41,8 @@ Always prioritize using existing components from `packages/ui/src/components` ov
 - **`Badge`**:
   - Small inline tags.
   - Variants match the Button variants.
+- **always create a new component for modals/dialogs and call it from the main component.**
+- **Try to split large blocks of UI elements into smaller components.**
 
 ## 3. Icons
 
@@ -78,8 +80,3 @@ Always apply `[image-rendering:pixelated]` to images and avatars to preserve the
 - Selection color and scrollbar are customized to match the game aesthetic (`#a5d655` for primary accents).
 - Do not clutter `globals.css` with component-specific CSS if it can be achieved using Tailwind classes or abstracted into a React Component in `@/components`.
 
-
-## 6. Reusability
-
-- always create a new component for modals/dialogs and call it from the main component.
-- Try to split large blocks of UI elements into smaller components.

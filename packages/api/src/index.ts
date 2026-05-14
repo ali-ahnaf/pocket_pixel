@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import 'dotenv/config';
 import path from 'path';
 import fs from 'fs';
 import express from 'express';
@@ -58,6 +59,7 @@ AppDataSource.initialize()
       console.error('Failed to restore recurring jobs:', err);
     }
     app.listen(PORT, () => {
+      console.log(`Node env: ${process.env.NODE_ENV}`);
       console.log(`API running at http://localhost:${PORT}`);
     });
   })

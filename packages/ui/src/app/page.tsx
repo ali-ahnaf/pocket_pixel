@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 import { Button, Card, ProgressBar, LogResourceModal, AppBar, BottomNavBar } from '@/components';
 import { iconMapper } from '@/lib/iconMapper';
 import { profileApi } from '@/lib/api';
@@ -35,12 +35,12 @@ function getTransactionTitle(tx: ApiTransaction): string {
 }
 
 export default function DashboardPage() {
-  const router = useRouter();
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
   const [profile, setProfile] = useState<ApiUser | null>(null);
   const [transactions, setTransactions] = useState<ApiTransaction[]>([]);
-const [vaults, setVaults] = useState<import('@/lib/api/ProfileApi').ApiVault[]>([]);
+  const [vaults, setVaults] = useState<import('@/lib/api/ProfileApi').ApiVault[]>([]);
   const [selectedVaultFilter, setSelectedVaultFilter] = useState<string>('all');
   const [vaultDropdownOpen, setVaultDropdownOpen] = useState(false);
   const vaultDropdownRef = useRef<HTMLDivElement>(null);
@@ -50,24 +50,6 @@ const [vaults, setVaults] = useState<import('@/lib/api/ProfileApi').ApiVault[]>(
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
-
-  useEffect(() => {
-    const stored = localStorage.getItem('pixel_pocket_profile');
-    if (!stored) {
-      router.push('/signin');
-      return;
-    }
-    try {
-      const parsed = JSON.parse(stored);
-      if (!parsed?.id) {
-        router.push('/signin');
-        return;
-      }
-      setUserId(parsed.id);
-    } catch {
-      router.push('/signin');
-    }
-  }, [router]);
 
   useEffect(() => {
     if (!userId) return;
@@ -251,7 +233,10 @@ const [vaults, setVaults] = useState<import('@/lib/api/ProfileApi').ApiVault[]>(
                       {[{ id: 'all', name: 'All Vaults' }, ...vaults].map((v) => (
                         <button
                           key={v.id}
-                          onClick={() => { setSelectedVaultFilter(v.id); setVaultDropdownOpen(false); }}
+                          onClick={() => {
+                            setSelectedVaultFilter(v.id);
+                            setVaultDropdownOpen(false);
+                          }}
                           className={`font-label-caps text-[10px] uppercase text-left px-3 py-2 hover:bg-primary hover:text-on-primary transition-colors border-b border-black last:border-b-0 ${selectedVaultFilter === v.id ? 'bg-primary text-on-primary' : 'text-on-surface'}`}
                         >
                           {v.name}
@@ -302,9 +287,7 @@ const [vaults, setVaults] = useState<import('@/lib/api/ProfileApi').ApiVault[]>(
                           <div className="flex items-center gap-1.5 min-w-0">
                             <p className="font-body-sm text-on-surface-variant truncate">{getTransactionCategory(tx)}</p>
                             {tx.vault?.name && (
-                              <span className="font-label-caps text-[9px] uppercase px-1 py-0.5 border border-black bg-surface-container text-outline shrink-0 leading-none">
-                                {tx.vault.name}
-                              </span>
+                              <span className="font-label-caps text-[9px] uppercase px-1 py-0.5 border border-black bg-surface-container text-outline shrink-0 leading-none">{tx.vault.name}</span>
                             )}
                           </div>
                         </div>

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { AppBar, Card, ProgressBar, Button, BottomNavBar } from '@/components';
+import { useAuth } from '@/hooks/useAuth';
 import { Package, Award, BarChart, Settings, HelpCircle, ChevronDown, TrendingUp, TrendingDown, CircleDollarSign, Flame, Gem, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { iconMapper } from '@/lib/iconMapper';
 import { profileApi } from '@/lib/api';
@@ -31,8 +31,8 @@ function formatCurrency(amount: number): string {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function StatsPage() {
-  const router = useRouter();
-  const [userId, setUserId] = useState<string | null>(null);
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const [profile, setProfile] = useState<ApiUser | null>(null);
   const [transactions, setTransactions] = useState<ApiTransaction[]>([]);
   const [vaults, setVaults] = useState<ApiVault[]>([]);
@@ -45,18 +45,6 @@ export default function StatsPage() {
   const [pickerYear, setPickerYear] = useState(new Date().getFullYear());
 
   const isCurrentMonth = selectedMonthYear === CURRENT_MONTH_YEAR;
-
-  useEffect(() => {
-    const stored = localStorage.getItem('pixel_pocket_profile');
-    if (!stored) { router.push('/signin'); return; }
-    try {
-      const parsed = JSON.parse(stored);
-      if (!parsed?.id) { router.push('/signin'); return; }
-      setUserId(parsed.id);
-    } catch {
-      router.push('/signin');
-    }
-  }, [router]);
 
   useEffect(() => {
     if (!userId) return;

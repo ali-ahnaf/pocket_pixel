@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import {
   Button,
   Card,
@@ -56,7 +57,8 @@ type UiTag = ReturnType<typeof toUiTag>;
 type UiQuest = ReturnType<typeof toUiQuest>;
 
 export default function ProfilePage() {
-  const [userId, setUserId] = useState<string | null>(null);
+  const { user, updateProfile } = useAuth();
+  const userId = user?.id ?? null;
   const [loading, setLoading] = useState(true);
 
   const [isVaultModalOpen, setIsVaultModalOpen] = useState(false);
@@ -80,13 +82,10 @@ export default function ProfilePage() {
   const [tags, setTags] = useState<UiTag[]>([]);
 
   useEffect(() => {
-    const stored = localStorage.getItem('pixel_pocket_profile');
-    if (!stored) return;
-    const user = JSON.parse(stored);
-    setUserId(user.id);
+    if (!user) return;
     setPlayerName(user.name || '');
     setAvatarUrl(user.avatar || '/avatars/avatar1.jpeg');
-  }, []);
+  }, [user]);
 
   const fetchAll = useCallback(async (uid: string) => {
     setLoading(true);
@@ -105,7 +104,7 @@ export default function ProfilePage() {
     if (!userId) return;
     const res = await profileApi.updateUser(userId, { name: playerName, avatar: avatarUrl });
     if (res) {
-      localStorage.setItem('pixel_pocket_profile', JSON.stringify(res));
+      updateProfile({ id: res.id, name: res.name, email: res.email, avatar: res.avatar });
     }
   };
 

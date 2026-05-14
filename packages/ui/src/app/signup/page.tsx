@@ -2,16 +2,17 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Mail, Lock, User, UserPlus, Swords } from 'lucide-react';
+import { Mail, Lock, User, UserPlus, Coins } from 'lucide-react';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { AVATARS } from '@/lib/helpers/static';
 import { AvatarPickerModal } from '@/components/AvatarPickerModal';
 import { authApi } from '@/lib/api';
-import { AUTH_TOKEN_STORAGE_KEY } from '@/lib/api/ApiClient';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function SignUpPage() {
   const router = useRouter();
+  const { setSession } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -41,16 +42,7 @@ export default function SignUpPage() {
     setLoading(true);
     try {
       const res = (await authApi.signUp({ name, email, password, avatar: selectedAvatar })) as any;
-      localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, res.token);
-      localStorage.setItem(
-        'pixel_pocket_profile',
-        JSON.stringify({
-          id: res.id,
-          name: res.name,
-          email: res.email,
-          avatar: res.avatar,
-        }),
-      );
+      setSession(res.token, { id: res.id, name: res.name, email: res.email, avatar: res.avatar });
       router.push('/');
     } catch (err: any) {
       setErrors({ form: err.message ?? 'Something went wrong. Please try again.' });
@@ -68,7 +60,7 @@ export default function SignUpPage() {
         {/* Logo / Title */}
         <div className="text-center flex flex-col items-center gap-3">
           <div className="w-16 h-16 bg-primary border-4 border-black flex items-center justify-center shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
-            <Swords className="w-8 h-8 text-on-primary" />
+            <Coins className="w-8 h-8 text-on-primary" />
           </div>
           <div>
             <h1 className="font-headline-lg text-primary uppercase tracking-tight leading-none">Pocket Pixel</h1>
