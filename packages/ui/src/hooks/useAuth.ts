@@ -1,7 +1,6 @@
 'use client';
 
 import { useReducer, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { AUTH_TOKEN_STORAGE_KEY } from '@/lib/api/ApiClient';
 
 const PROFILE_STORAGE_KEY = 'pocket_pixel_profile';
@@ -19,10 +18,7 @@ interface AuthState {
   loading: boolean;
 }
 
-type AuthAction =
-  | { type: 'SET_USER'; payload: AuthUser }
-  | { type: 'CLEAR_USER' }
-  | { type: 'DONE_LOADING' };
+type AuthAction = { type: 'SET_USER'; payload: AuthUser } | { type: 'CLEAR_USER' } | { type: 'DONE_LOADING' };
 
 function authReducer(state: AuthState, action: AuthAction): AuthState {
   switch (action.type) {
@@ -36,29 +32,25 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
 }
 
 export function useAuth() {
-  const router = useRouter();
   const [state, dispatch] = useReducer(authReducer, { user: null, loading: true });
 
   useEffect(() => {
     const stored = localStorage.getItem(PROFILE_STORAGE_KEY);
     if (!stored) {
       dispatch({ type: 'CLEAR_USER' });
-      router.push('/signin');
       return;
     }
     try {
       const parsed = JSON.parse(stored);
       if (!parsed?.id) {
         dispatch({ type: 'CLEAR_USER' });
-        router.push('/signin');
         return;
       }
       dispatch({ type: 'SET_USER', payload: parsed });
     } catch {
       dispatch({ type: 'CLEAR_USER' });
-      router.push('/signin');
     }
-  }, [router]);
+  }, []);
 
   const setSession = useCallback((token: string, profile: AuthUser) => {
     localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);

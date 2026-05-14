@@ -13,6 +13,8 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
+    if (!pathname) return;
+
     const token = typeof window === 'undefined' ? null : window.localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
     const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
 
