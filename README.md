@@ -125,8 +125,11 @@ npm run dev:ui
 # Build shared → UI → API in order
 npm run build:prod
 
+# run migrations and saves the file in /var/www/pocket_pixel
+npm run migration:run-prod
+
 # Start the server (API serves the compiled UI)
-npm run start
+pm2 start ecosystem.config.js
 # → http://localhost:4000
 ```
 

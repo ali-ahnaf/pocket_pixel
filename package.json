@@ -13,6 +13,7 @@
     "build:shared": "npm run build --workspace=packages/shared",
     "migration:generate": "npm run migration:generate --workspace=packages/api",
     "migration:run": "npm run migration:run --workspace=packages/api",
+    "migration:run-prod": "npm run migration:run-prod --workspace=packages/api",
     "migration:revert": "npm run migration:revert --workspace=packages/api"
   }
 }
