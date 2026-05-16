@@ -7,6 +7,8 @@ import { Expense } from "./entities/Expense.entity";
 import { Vault } from "./entities/Vault.entity";
 import { Tag } from "./entities/Tag.entity";
 import { TransactionTag } from "./entities/TransactionTag.entity";
+import { RecurringOccurrenceSkip } from "./entities/RecurringOccurrenceSkip.entity";
+import { Debt } from "./entities/Debt.entity";
 
 const isTsNode = !!(process as any)[Symbol.for("ts-node.register.instance")];
 
@@ -16,7 +18,7 @@ export const AppDataSource = new DataSource({
     process.env.NODE_ENV === "production"
       ? "/var/www/pocket_pixel/pocket_pixel.sqlite"
       : "pocket_pixel.sqlite",
-  entities: [User, Expense, Vault, Tag, TransactionTag],
+  entities: [User, Expense, Vault, Tag, TransactionTag, RecurringOccurrenceSkip, Debt],
   migrations: [isTsNode ? "src/migrations/*.ts" : "dist/migrations/*.js"],
   synchronize: false,
   logging: false,

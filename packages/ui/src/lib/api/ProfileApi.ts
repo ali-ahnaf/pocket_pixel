@@ -37,6 +37,17 @@ export interface ApiTransaction {
   tags: ApiTag[];
 }
 
+export interface ApiRecurringOccurrence {
+  recurringId: string;
+  date: string;
+  title: string | null;
+  amount: number;
+  type: 'expense' | 'income';
+  vaultId: string | null;
+  vault: { id: string; name: string; icon: string | null } | null;
+  tags: ApiTag[];
+}
+
 export interface ApiRecurringQuest {
   id: string;
   userId: string;
@@ -49,6 +60,15 @@ export interface ApiRecurringQuest {
   tagIds: string[];
   tags: ApiTag[];
   vaultId: string | null;
+}
+
+export interface ApiDebt {
+  id: string;
+  userId: string;
+  title: string;
+  amount: number;
+  type: 'expense' | 'income';
+  createdAt: string;
 }
 
 export default class ProfileApi extends ApiClient {
@@ -124,6 +144,18 @@ export default class ProfileApi extends ApiClient {
     return this.get<ApiRecurringQuest[]>(`/users/${userId}/recurring`);
   }
 
+  getRecurringOccurrences(userId: string, month: number, year: number): Promise<ApiRecurringOccurrence[]> {
+    return this.get<ApiRecurringOccurrence[]>(`/users/${userId}/recurring/occurrences?month=${month}&year=${year}`);
+  }
+
+  applyRecurringOccurrence(userId: string, questId: string, date: string): Promise<{ id: string }> {
+    return this.post<{ id: string }>(`/users/${userId}/recurring/${questId}/apply`, { date });
+  }
+
+  skipRecurringOccurrence(userId: string, questId: string, date: string): Promise<void> {
+    return this.post<void>(`/users/${userId}/recurring/${questId}/skip`, { date });
+  }
+
   createRecurringQuest(
     userId: string,
     data: { title: string; amount: number; type: string; interval: string; startDate?: string | null; endDate?: string | null; tagIds?: string[]; vaultId?: string | null },
@@ -141,5 +173,22 @@ export default class ProfileApi extends ApiClient {
 
   deleteRecurringQuest(userId: string, questId: string): Promise<void> {
     return this.delete<void>(`/users/${userId}/recurring/${questId}`);
+  }
+
+  // Debts (dues)
+  getDebts(userId: string): Promise<ApiDebt[]> {
+    return this.get<ApiDebt[]>(`/users/${userId}/debts`);
+  }
+
+  createDebt(userId: string, data: { title: string; amount: number; type: 'expense' | 'income' }): Promise<ApiDebt> {
+    return this.post<ApiDebt>(`/users/${userId}/debts`, data);
+  }
+
+  deleteDebt(userId: string, debtId: string): Promise<void> {
+    return this.delete<void>(`/users/${userId}/debts/${debtId}`);
+  }
+
+  applyDebt(userId: string, debtId: string, vaultId: string | null): Promise<{ id: string }> {
+    return this.post<{ id: string }>(`/users/${userId}/debts/${debtId}/apply`, { vaultId });
   }
 }

@@ -12,6 +12,7 @@ import analyticsRouter from './routes/analytics.routes';
 import vaultsRouter from './routes/vaults.routes';
 import tagsRouter from './routes/tags.routes';
 import recurringRouter from './routes/recurring.routes';
+import debtsRouter from './routes/debts.routes';
 import { requireAuth } from './middleware/auth';
 import { errorHandler } from './middleware/error-handler';
 import { restoreAllRecurringJobs } from './scheduler/recurring-scheduler';
@@ -40,6 +41,7 @@ app.use('/api/users/:userId/analytics', analyticsRouter);
 app.use('/api/users/:userId/vaults', vaultsRouter);
 app.use('/api/users/:userId/tags', tagsRouter);
 app.use('/api/users/:userId/recurring', recurringRouter);
+app.use('/api/users/:userId/debts', debtsRouter);
 app.use(errorHandler);
 
 const uiDir = path.join(__dirname, '../../ui/out');

@@ -5,8 +5,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button, Card, ProgressBar, LogResourceModal, AppBar, BottomNavBar, EditTransactionModal } from '@/components';
 import { iconMapper } from '@/lib/iconMapper';
 import { profileApi } from '@/lib/api';
-import type { ApiUser, ApiTransaction } from '@/lib/api/ProfileApi';
-import { Package, Award, Settings, HelpCircle, ChevronLeft, ChevronRight, ChevronDown, Plus } from 'lucide-react';
+import type { ApiUser, ApiTransaction, ApiRecurringOccurrence } from '@/lib/api/ProfileApi';
+import { Package, Award, Settings, HelpCircle, ChevronLeft, ChevronRight, ChevronDown, Plus, X } from 'lucide-react';
 
 const MONTH_NAMES = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
 
@@ -34,6 +34,19 @@ function getTransactionTitle(tx: ApiTransaction): string {
   return tx.title || (tx.type === 'income' ? 'Unnamed Income' : 'Unnamed Expense');
 }
 
+function getOccurrenceIconName(o: ApiRecurringOccurrence): string {
+  if (o.type === 'expense') return o.tags?.[0]?.icon || o.vault?.icon || 'ShoppingCart';
+  return o.vault?.icon || 'CircleDollarSign';
+}
+
+function getOccurrenceCategory(o: ApiRecurringOccurrence): string {
+  return o.tags?.[0]?.name || (o.type === 'income' ? 'Income' : 'Expense');
+}
+
+function getOccurrenceTitle(o: ApiRecurringOccurrence): string {
+  return o.title || (o.type === 'income' ? 'Unnamed Income' : 'Unnamed Expense');
+}
+
 export default function DashboardPage() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
@@ -41,6 +54,8 @@ export default function DashboardPage() {
   const [editingTransaction, setEditingTransaction] = useState<ApiTransaction | null>(null);
   const [profile, setProfile] = useState<ApiUser | null>(null);
   const [transactions, setTransactions] = useState<ApiTransaction[]>([]);
+  const [occurrences, setOccurrences] = useState<ApiRecurringOccurrence[]>([]);
+  const [applyingOccurrence, setApplyingOccurrence] = useState<string | null>(null);
   const [vaults, setVaults] = useState<import('@/lib/api/ProfileApi').ApiVault[]>([]);
   const [selectedVaultFilter, setSelectedVaultFilter] = useState<string[]>([]);
   const [vaultDropdownOpen, setVaultDropdownOpen] = useState(false);
@@ -55,11 +70,17 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!userId) return;
     setIsLoading(true);
-    Promise.all([profileApi.getUser(userId), profileApi.getTransactions(userId, selectedMonth + 1, selectedYear), profileApi.getVaults(userId)])
-      .then(([user, txs, vaultList]) => {
+    Promise.all([
+      profileApi.getUser(userId),
+      profileApi.getTransactions(userId, selectedMonth + 1, selectedYear),
+      profileApi.getVaults(userId),
+      profileApi.getRecurringOccurrences(userId, selectedMonth + 1, selectedYear),
+    ])
+      .then(([user, txs, vaultList, occs]) => {
         setProfile(user);
         setTransactions(txs);
         setVaults(vaultList);
+        setOccurrences(occs);
       })
       .catch(console.error)
       .finally(() => setIsLoading(false));
@@ -91,7 +112,36 @@ export default function DashboardPage() {
     } else setSelectedMonth((m) => m + 1);
   };
 
-  const filteredDrops = selectedVaultFilter.length === 0 ? transactions : transactions.filter((t) => selectedVaultFilter.includes(t.vaultId ?? ''));
+  const filteredDrops = (selectedVaultFilter.length === 0 ? transactions : transactions.filter((t) => selectedVaultFilter.includes(t.vaultId ?? '')))
+    .slice()
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const filteredOccurrences = selectedVaultFilter.length === 0 ? occurrences : occurrences.filter((o) => selectedVaultFilter.includes(o.vaultId ?? ''));
+
+  const handleApplyOccurrence = async (occ: ApiRecurringOccurrence) => {
+    if (!userId) return;
+    const key = `${occ.recurringId}:${occ.date}`;
+    setApplyingOccurrence(key);
+    try {
+      await profileApi.applyRecurringOccurrence(userId, occ.recurringId, occ.date);
+      setRefetchKey((k) => k + 1);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setApplyingOccurrence(null);
+    }
+  };
+
+  const handleSkipOccurrence = async (occ: ApiRecurringOccurrence) => {
+    if (!userId) return;
+    const key = `${occ.recurringId}:${occ.date}`;
+    setOccurrences((prev) => prev.filter((o) => `${o.recurringId}:${o.date}` !== key));
+    try {
+      await profileApi.skipRecurringOccurrence(userId, occ.recurringId, occ.date);
+    } catch (err) {
+      console.error(err);
+      setRefetchKey((k) => k + 1);
+    }
+  };
   const totalIncome = filteredDrops.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const totalExpenses = filteredDrops.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
   const netYield = totalIncome - totalExpenses;
@@ -233,7 +283,7 @@ export default function DashboardPage() {
                     <div className="absolute right-0 top-full mt-1 z-50 min-w-[120px] border-2 border-black bg-surface shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex flex-col">
                       <button
                         onClick={() => { setSelectedVaultFilter([]); setVaultDropdownOpen(false); }}
-                        className={`font-label-caps text-[10px] uppercase text-left px-3 py-2 hover:bg-primary hover:text-on-primary transition-colors border-b border-black ${selectedVaultFilter.length === 0 ? 'bg-primary text-on-primary' : 'text-on-surface'}`}
+                        className={`font-label-caps text-[10px] uppercase text-left px-3 py-2 transition-colors border-b border-black ${selectedVaultFilter.length === 0 ? 'bg-primary text-on-primary' : 'text-on-surface hover:bg-surface-container-highest'}`}
                       >
                         All Vaults
                       </button>
@@ -245,7 +295,7 @@ export default function DashboardPage() {
                               prev.includes(v.id) ? prev.filter((id) => id !== v.id) : [...prev, v.id]
                             );
                           }}
-                          className={`font-label-caps text-[10px] uppercase text-left px-3 py-2 hover:bg-primary hover:text-on-primary transition-colors border-b border-black last:border-b-0 ${selectedVaultFilter.includes(v.id) ? 'bg-primary text-on-primary' : 'text-on-surface'}`}
+                          className={`font-label-caps text-[10px] uppercase text-left px-3 py-2 transition-colors border-b border-black last:border-b-0 ${selectedVaultFilter.includes(v.id) ? 'bg-primary text-on-primary' : 'text-on-surface hover:bg-surface-container-highest'}`}
                         >
                           {v.name}
                         </button>
@@ -268,7 +318,7 @@ export default function DashboardPage() {
                     </div>
                   ))}
                 </div>
-              ) : filteredDrops.length === 0 ? (
+              ) : filteredDrops.length === 0 && filteredOccurrences.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
                   <Package className="text-outline opacity-40" size={48} />
                   <p className="font-label-caps text-outline uppercase">No drops this month</p>
@@ -304,6 +354,59 @@ export default function DashboardPage() {
                             {formatCurrency(tx.amount)}
                           </p>
                           <p className="font-body-sm text-outline text-[10px]">{formatDate(tx.date)}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {filteredOccurrences.map((occ) => {
+                    const OccIcon = iconMapper(getOccurrenceIconName(occ));
+                    const tagBg = occ.tags?.[0]?.backgroundColor;
+                    const key = `${occ.recurringId}:${occ.date}`;
+                    const isApplying = applyingOccurrence === key;
+                    return (
+                      <div
+                        key={key}
+                        className="flex items-center gap-4 bg-surface/40 p-3 border-4 border-dashed border-outline/60 hover:bg-surface-container-highest/50 transition-colors"
+                      >
+                        <div
+                          className={`h-10 w-10 border-2 border-dashed border-outline/70 flex items-center justify-center shrink-0 opacity-70 ${!tagBg ? (occ.type === 'income' ? 'bg-primary-container/40' : 'bg-error-container/40') : ''}`}
+                          style={tagBg ? { backgroundColor: tagBg, opacity: 0.5 } : undefined}
+                        >
+                          <OccIcon />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-body-sm font-bold text-on-surface/70 truncate">{getOccurrenceTitle(occ)}</p>
+                          </div>
+                          <p className="text-[14px] text-on-surface-variant/70 truncate">{getOccurrenceCategory(occ)}</p>
+                          {occ.vault?.name && (
+                            <span className="font-label-caps text-[9px] uppercase px-1 py-0.5 border border-dashed border-outline bg-surface-container/50 text-outline leading-none inline-block mt-0.5">{occ.vault.name}</span>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <p className={`font-label-caps opacity-70 ${occ.type === 'income' ? 'text-primary' : 'text-error'}`}>
+                            {occ.type === 'income' ? '+' : '-'}
+                            {formatCurrency(occ.amount)}
+                          </p>
+                          <p className="font-body-sm text-outline text-[10px]">{formatDate(occ.date)}</p>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleApplyOccurrence(occ)}
+                              disabled={isApplying}
+                              className="font-label-caps text-[10px] uppercase bg-primary text-on-primary border-2 border-black px-2 py-1 hover:bg-primary/90 active:translate-y-px transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {isApplying ? 'Applying…' : 'Apply'}
+                            </button>
+                            <button
+                              onClick={() => handleSkipOccurrence(occ)}
+                              disabled={isApplying}
+                              aria-label="Discard ghost entry"
+                              title="Discard"
+                              className="flex items-center justify-center bg-surface text-on-surface border-2 border-black h-[26px] w-[26px] hover:bg-error hover:text-on-error active:translate-y-px transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );

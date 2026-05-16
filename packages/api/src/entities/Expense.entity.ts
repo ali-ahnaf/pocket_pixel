@@ -41,6 +41,9 @@ export class Expense {
   @Column({ type: 'varchar', nullable: true })
   vaultId: string | null;
 
+  @Column({ type: 'varchar', nullable: true })
+  sourceRecurringId: string | null;
+
   @ManyToOne(() => User, (user) => user.expenses, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;

@@ -20,6 +20,34 @@ interface AddRecurringQuestModalProps {
 
 const INTERVALS = ['Daily', 'Weekly', 'Monthly', 'Yearly'];
 
+const toDateInputValue = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const normalizeDateInput = (value: unknown): string => {
+  if (!value) return '';
+  if (value instanceof Date) return toDateInputValue(value);
+  if (typeof value === 'string') {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+    const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (match) return match[1];
+    const parsed = new Date(value);
+    if (!isNaN(parsed.getTime())) return toDateInputValue(parsed);
+  }
+  return '';
+};
+
+const getDefaultStartDate = () => toDateInputValue(new Date());
+
+const getDefaultEndDate = () => {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 3);
+  return toDateInputValue(d);
+};
+
 export function AddRecurringQuestModal({ isOpen, onClose, title, initialData, onSave, availableTags = [], availableVaults = [], onCreateTag }: AddRecurringQuestModalProps) {
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isVisible, setIsVisible] = useState(false);
@@ -28,8 +56,8 @@ export function AddRecurringQuestModal({ isOpen, onClose, title, initialData, on
   const [isExpense, setIsExpense] = useState(initialData ? initialData.type === 'EXPENSE' : true);
 
   // Date states
-  const [startDate, setStartDate] = useState(initialData?.startDate || '');
-  const [endDate, setEndDate] = useState(initialData?.endDate || '');
+  const [startDate, setStartDate] = useState(normalizeDateInput(initialData?.startDate) || getDefaultStartDate());
+  const [endDate, setEndDate] = useState(normalizeDateInput(initialData?.endDate) || getDefaultEndDate());
 
   // Tag state — selectedTagIds stores UUIDs of selected tags
   const [tagInput, setTagInput] = useState('');
@@ -94,8 +122,8 @@ export function AddRecurringQuestModal({ isOpen, onClose, title, initialData, on
         setName(initialData.title || initialData.name || '');
         setAmount(initialData.amount?.toString() || '');
         setIsExpense(initialData.type === 'EXPENSE');
-        setStartDate(initialData.startDate || '');
-        setEndDate(initialData.endDate || '');
+        setStartDate(normalizeDateInput(initialData.startDate) || getDefaultStartDate());
+        setEndDate(normalizeDateInput(initialData.endDate) || getDefaultEndDate());
         setSelectedTagIds(initialData.tagIds || []);
         if (initialData.frequency) {
           const match = INTERVALS.find((i) => i.toLowerCase() === initialData.frequency.toLowerCase());
@@ -106,8 +134,8 @@ export function AddRecurringQuestModal({ isOpen, onClose, title, initialData, on
         setName('');
         setAmount('');
         setIsExpense(true);
-        setStartDate('');
-        setEndDate('');
+        setStartDate(getDefaultStartDate());
+        setEndDate(getDefaultEndDate());
         setSelectedTagIds([]);
         setSelectedInterval(INTERVALS[2]);
         if (availableVaults[0]) setSelectedVaultId(availableVaults[0].id);

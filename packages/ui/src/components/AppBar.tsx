@@ -4,11 +4,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Menu, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button } from './Button';
+import { Sidebar } from './Sidebar';
 import { AUTH_TOKEN_STORAGE_KEY } from '@/lib/api/ApiClient';
 
 export const AppBar: React.FC = () => {
   const [localAvatarUrl, setLocalAvatarUrl] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -46,7 +48,13 @@ export const AppBar: React.FC = () => {
 
   return (
     <header className="md:hidden bg-surface dark:bg-surface-dim text-primary dark:text-primary-fixed w-full border-b-4 border-black flex justify-between items-center px-margin-mobile h-16 sticky top-0 z-40">
-      <Button variant="ghost" className="p-2 w-10 h-10 border-transparent bg-surface-container">
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onLogout={handleLogout} />
+      <Button
+        variant="ghost"
+        className="p-2 w-10 h-10 border-transparent bg-surface-container"
+        onClick={() => setSidebarOpen(true)}
+        aria-label="Open menu"
+      >
         <Menu />
       </Button>
       <h1 className="font-headline-md font-bold uppercase tracking-tight text-primary text-center flex-1">Pocket Pixel</h1>

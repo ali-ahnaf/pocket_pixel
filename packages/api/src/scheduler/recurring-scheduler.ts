@@ -2,6 +2,7 @@ import cron, { ScheduledTask } from 'node-cron';
 import { AppDataSource } from '../data-source';
 import { Expense, RecurrenceInterval } from '../entities/Expense.entity';
 import { TransactionTag } from '../entities/TransactionTag.entity';
+import { RecurringOccurrenceSkip } from '../entities/RecurringOccurrenceSkip.entity';
 import { IsNull, Not } from 'typeorm';
 
 const activeJobs = new Map<string, ScheduledTask>();
@@ -27,6 +28,7 @@ function buildCronExpression(interval: RecurrenceInterval, startDate: string): s
 async function fireRecurringTransaction(expenseId: string): Promise<void> {
   const repo = AppDataSource.getRepository(Expense);
   const tagsRepo = AppDataSource.getRepository(TransactionTag);
+  const skipsRepo = AppDataSource.getRepository(RecurringOccurrenceSkip);
 
   const recurring = await repo.findOne({
     where: { id: expenseId, deletedAt: IsNull() },
@@ -47,6 +49,20 @@ async function fireRecurringTransaction(expenseId: string): Promise<void> {
     return;
   }
 
+  const existing = await repo.findOne({
+    where: {
+      userId: recurring.userId,
+      sourceRecurringId: recurring.id,
+      date: today,
+    },
+  });
+  if (existing) return;
+
+  const skipped = await skipsRepo.findOne({
+    where: { recurringId: recurring.id, date: today },
+  });
+  if (skipped) return;
+
   const transaction = repo.create({
     userId: recurring.userId,
     title: recurring.title,
@@ -54,6 +70,7 @@ async function fireRecurringTransaction(expenseId: string): Promise<void> {
     type: recurring.type,
     date: today,
     vaultId: recurring.vaultId,
+    sourceRecurringId: recurring.id,
   });
 
   const saved = await repo.save(transaction) as unknown as Expense;

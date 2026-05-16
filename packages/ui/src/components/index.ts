@@ -21,6 +21,8 @@ export { DeleteQuestModal } from "./DeleteQuestModal";
 export { AppBar } from "./AppBar";
 export { AvatarPickerModal } from "./AvatarPickerModal";
 export { BottomNavBar } from "./BottomNavBar";
+export { Sidebar } from "./Sidebar";
+export { AddDebtModal } from "./AddDebtModal";
 export { AddTagModal } from "./AddTagModal";
 export { DeleteTagModal } from "./DeleteTagModal";
 export { EditTransactionModal } from "./EditTransactionModal";
