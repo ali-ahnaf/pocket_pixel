@@ -1,5 +1,5 @@
 <div align="center">
-
+ 
 # Pocket Pixel — Expense Tracker
 
 **Level up your finances. Track every coin, quest every habit.**
