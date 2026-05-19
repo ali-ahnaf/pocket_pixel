@@ -89,6 +89,7 @@ jobs:
           npm install
           npm run migration:run-prod
           npm run build:shared
+          npm run build:api
           npm run build:client
           pm2 startOrRestart ecosystem.config.js --env production
           pm2 save
