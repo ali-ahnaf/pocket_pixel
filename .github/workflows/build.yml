@@ -40,6 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       VPS_HOST: ${{ secrets.HOSTINGER_VPS_HOST }}
+      VPS_PORT: ${{ secrets.HOSTINGER_VPS_PORT }}
       VPS_USER: ${{ secrets.HOSTINGER_VPS_USER }}
       VPS_APP_DIR: ${{ secrets.HOSTINGER_VPS_APP_DIR }}
 
@@ -49,27 +50,41 @@ jobs:
       - name: Configure SSH
         run: |
           install -m 700 -d ~/.ssh
-          printf '%s\n' "${{ secrets.HOSTINGER_VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H -p 22 "$VPS_HOST" > ~/.ssh/known_hosts
+          printf '%s\n' "${{ secrets.HOSTINGER_VPS_SSH_KEY }}" | tr -d '\r' > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H -p "${VPS_PORT:-22}" "$VPS_HOST" > ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<EOF
+          Host deploy-target
+            HostName $VPS_HOST
+            User $VPS_USER
+            Port ${VPS_PORT:-22}
+            IdentityFile ~/.ssh/deploy_key
+            IdentitiesOnly yes
+            PreferredAuthentications publickey
+            BatchMode yes
+            StrictHostKeyChecking yes
+          EOF
+          chmod 600 ~/.ssh/config
+
+      - name: Verify SSH access
+        run: ssh deploy-target "mkdir -p '$VPS_APP_DIR'"
 
       - name: Sync project to VPS
         run: |
-          ssh -p 22 "$VPS_USER@$VPS_HOST" "mkdir -p '$VPS_APP_DIR'"
           rsync -az --delete \
-            -e "ssh -p 22" \
+            -e "ssh -F ~/.ssh/config" \
             --exclude '.git/' \
             --exclude '.github/' \
             --exclude 'node_modules/' \
             --exclude '.env' \
             --exclude '.env.*' \
             --exclude 'pocket_pixel.sqlite' \
-            ./ "$VPS_USER@$VPS_HOST:$VPS_APP_DIR/"
+            ./ "deploy-target:$VPS_APP_DIR/"
 
       - name: Run remote deploy commands
         run: |
-          ssh -p 22 "$VPS_USER@$VPS_HOST" <<EOF
+          ssh deploy-target <<EOF
           set -eu
           cd "$VPS_APP_DIR"
           npm install
