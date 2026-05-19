@@ -73,7 +73,6 @@ jobs:
       - name: Sync project to VPS
         run: |
           rsync -az --delete \
-            -e "ssh -F ~/.ssh/config" \
             --exclude '.git/' \
             --exclude '.github/' \
             --exclude 'node_modules/' \
