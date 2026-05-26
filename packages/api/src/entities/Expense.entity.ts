@@ -11,6 +11,12 @@ export class Expense {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Column({ type: 'datetime', nullable: true, default: null })
+  createdAt: Date | null;
+
+  @Column({ type: 'datetime', nullable: true, default: null })
+  updatedAt: Date | null;
+
   @Column({ type: 'varchar' })
   userId: string;
 

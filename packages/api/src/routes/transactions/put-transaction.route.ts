@@ -25,6 +25,7 @@ router.put("/:id", asyncHandler(async (req: Request, res: Response) => {
 
   const { tagIds, ...transactionData } = value;
   Object.assign(transaction, transactionData);
+  transaction.updatedAt = new Date();
   const saved = await transactionsRepo().save(transaction);
 
   if (tagIds !== undefined) {
