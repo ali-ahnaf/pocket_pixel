@@ -22,13 +22,26 @@ router.get("/", asyncHandler(async (req: Request, res: Response) => {
     order: { date: "DESC" },
   });
 
-  const result = transactions.map((tx) => ({
+  const sortedTransactions = transactions.slice().sort((a, b) => {
+    if (a.createdAt === null && b.createdAt === null) {
+      return b.date.localeCompare(a.date);
+    }
+
+    if (a.createdAt === null) return 1;
+    if (b.createdAt === null) return -1;
+
+    const createdAtDiff = b.createdAt.getTime() - a.createdAt.getTime();
+    return createdAtDiff !== 0 ? createdAtDiff : b.date.localeCompare(a.date);
+  });
+
+  const result = sortedTransactions.map((tx) => ({
     id: tx.id,
     userId: tx.userId,
     title: tx.title,
     amount: parseFloat(String(tx.amount)),
     type: tx.type,
     date: tx.date,
+    createdAt: tx.createdAt,
     vaultId: tx.vaultId,
     vault: tx.vault ? { id: tx.vault.id, name: tx.vault.name, icon: tx.vault.icon } : null,
     tags: tx.transactionTags?.map((tt) => tt.tag) ?? [],
