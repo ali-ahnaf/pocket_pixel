@@ -20,14 +20,11 @@ router.post("/", asyncHandler(async (req: Request, res: Response) => {
 
   const { tagIds, date: providedDate, ...transactionData } = value;
   const date = providedDate ?? new Date().toISOString().split('T')[0];
-  const now = new Date();
 
   const transaction = transactionsRepo().create({
     ...transactionData,
     userId: req.params.userId,
     date,
-    createdAt: now,
-    updatedAt: now,
   });
   const saved = await transactionsRepo().save(transaction) as unknown as Expense;
 
