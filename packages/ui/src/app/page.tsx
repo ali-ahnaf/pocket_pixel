@@ -19,30 +19,6 @@ function formatDate(dateStr: string): string {
   return new Date(year, month - 1, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function formatCreatedAt(createdAt: string | null): string {
-  if (!createdAt) return 'Created date unavailable';
-
-  return new Date(createdAt).toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
-
-function compareTransactionsByCreatedAt(a: ApiTransaction, b: ApiTransaction): number {
-  if (a.createdAt === null && b.createdAt === null) {
-    return b.date.localeCompare(a.date);
-  }
-
-  if (a.createdAt === null) return 1;
-  if (b.createdAt === null) return -1;
-
-  const createdAtDiff = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-  return createdAtDiff !== 0 ? createdAtDiff : b.date.localeCompare(a.date);
-}
-
 function getTransactionIconName(tx: ApiTransaction): string {
   if (tx.type === 'expense') {
     return tx.tags?.[0]?.icon || tx.vault?.icon || 'ShoppingCart';
@@ -138,7 +114,7 @@ export default function DashboardPage() {
 
   const filteredDrops = (selectedVaultFilter.length === 0 ? transactions : transactions.filter((t) => selectedVaultFilter.includes(t.vaultId ?? '')))
     .slice()
-    .sort(compareTransactionsByCreatedAt);
+    .sort((a, b) => b.date.localeCompare(a.date));
   const filteredOccurrences = selectedVaultFilter.length === 0 ? occurrences : occurrences.filter((o) => selectedVaultFilter.includes(o.vaultId ?? ''));
 
   const handleApplyOccurrence = async (occ: ApiRecurringOccurrence) => {
@@ -368,7 +344,6 @@ export default function DashboardPage() {
                         <div className="flex-1 min-w-0">
                           <p className="font-body-sm font-bold text-on-surface truncate">{getTransactionTitle(tx)}</p>
                           <p className="text-[14px] text-on-surface-variant truncate">{getTransactionCategory(tx)}</p>
-                          <p className="text-[11px] text-outline truncate">{formatCreatedAt(tx.createdAt)}</p>
                           {tx.vault?.name && (
                             <span className="font-label-caps text-[9px] uppercase px-1 py-0.5 border border-black bg-surface-container text-outline leading-none inline-block mt-0.5">{tx.vault.name}</span>
                           )}

@@ -32,7 +32,6 @@ export interface ApiTransaction {
   amount: number;
   type: 'expense' | 'income';
   date: string;
-  createdAt: string | null;
   vaultId: string | null;
   vault: { id: string; name: string; icon: string | null } | null;
   tags: ApiTag[];
