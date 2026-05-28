@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Coins, TrendingDown, TrendingUp, ChevronDown, Plus, Package } from 'lucide-react';
+import { X, Coins, TrendingDown, TrendingUp, ChevronDown, Plus, Package, CalendarDays, Clock3 } from 'lucide-react';
 import { iconMapper } from '../lib/iconMapper';
 import { profileApi } from '../lib/api';
 import type { ApiTag, ApiVault } from '../lib/api/ProfileApi';
+import { toDateInputValue, toTimeInputValue } from '../lib/utils';
 
 interface LogResourceModalProps {
   isOpen: boolean;
@@ -19,6 +20,8 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
   const [isExpense, setIsExpense] = useState(true);
   const [amount, setAmount] = useState('');
   const [title, setTitle] = useState('');
+  const [transactionDate, setTransactionDate] = useState('');
+  const [transactionTime, setTransactionTime] = useState('');
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isVisible, setIsVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,8 +42,26 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
     .filter((tag) => !selectedTags.some((t) => t.id === tag.id) && tag.name.toLowerCase().includes(tagInput.toLowerCase()))
     .slice(0, 3);
 
+  const getDefaultTransactionDate = (date = new Date()) => {
+    const isCurrentMonth = selectedMonth === undefined || selectedYear === undefined
+      || (selectedMonth === date.getMonth() && selectedYear === date.getFullYear());
+
+    if (isCurrentMonth) return toDateInputValue(date);
+    return `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-01`;
+  };
+
   useEffect(() => {
     if (isOpen && userId) {
+      const now = new Date();
+      setIsExpense(true);
+      setAmount('');
+      setTitle('');
+      setTransactionDate(getDefaultTransactionDate(now));
+      setTransactionTime(toTimeInputValue(now));
+      setSelectedTags([]);
+      setTagInput('');
+      setSelectedVaultId(null);
+
       profileApi.getTags(userId).then((res) => {
         if (res) setAvailableTags(res);
       });
@@ -83,14 +104,8 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
   };
 
   const handleSubmit = async () => {
-    if (!userId || !amount || isSubmitting) return;
+    if (!userId || !amount || !transactionDate || !transactionTime || isSubmitting) return;
     setIsSubmitting(true);
-    const now = new Date();
-    const isCurrentMonth = selectedMonth === undefined || selectedYear === undefined
-      || (selectedMonth === now.getMonth() && selectedYear === now.getFullYear());
-    const date = isCurrentMonth
-      ? undefined
-      : `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-01`;
     try {
       await profileApi.createTransaction(userId, {
         amount: parseFloat(amount),
@@ -98,10 +113,15 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
         tagIds: selectedTags.map((t) => t.id),
         title: title || undefined,
         vaultId: selectedVaultId ?? null,
-        date,
+        date: transactionDate,
+        time: transactionTime,
       });
+      const now = new Date();
+      setIsExpense(true);
       setAmount('');
       setTitle('');
+      setTransactionDate(getDefaultTransactionDate(now));
+      setTransactionTime(toTimeInputValue(now));
       setSelectedTags([]);
       setTagInput('');
       onSuccess?.();
@@ -178,6 +198,36 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <div className="relative flex items-center">
+                <div className="absolute left-4 flex items-center pointer-events-none">
+                  <CalendarDays className="text-primary" size={18} />
+                </div>
+                <input
+                  className="w-full h-14 pl-12 pr-4 bg-surface-container-lowest border-4 border-black shadow-[inset_4px_4px_0px_rgba(0,0,0,0.6),_inset_-2px_-2px_0px_rgba(255,255,255,0.05)] font-body-lg text-on-surface focus:outline-none"
+                  type="date"
+                  value={transactionDate}
+                  onChange={(e) => setTransactionDate(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="relative flex items-center">
+                <div className="absolute left-4 flex items-center pointer-events-none">
+                  <Clock3 className="text-primary" size={18} />
+                </div>
+                <input
+                  className="w-full h-14 pl-12 pr-4 bg-surface-container-lowest border-4 border-black shadow-[inset_4px_4px_0px_rgba(0,0,0,0.6),_inset_-2px_-2px_0px_rgba(255,255,255,0.05)] font-body-lg text-on-surface focus:outline-none"
+                  type="time"
+                  value={transactionTime}
+                  onChange={(e) => setTransactionTime(e.target.value)}
+                />
+              </div>
             </div>
           </div>
 
@@ -332,7 +382,7 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
           <div className="pt-5">
             <button
               onClick={handleSubmit}
-              disabled={!amount || isSubmitting}
+              disabled={!amount || !transactionDate || !transactionTime || isSubmitting}
               className="w-full h-20 bg-primary-container text-on-primary-container border-4 border-black shadow-[inset_2px_2px_0px_rgba(255,255,255,0.1),_inset_-2px_-2px_0px_rgba(0,0,0,0.4)] active:translate-y-0.5 active:shadow-none flex items-center justify-center gap-4 transition-transform group disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="font-headline-md font-black uppercase tracking-wider">{isSubmitting ? 'RECORDING...' : 'RECORD'}</span>

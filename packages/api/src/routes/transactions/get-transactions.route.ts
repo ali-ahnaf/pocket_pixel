@@ -1,6 +1,6 @@
 import { Request, Response, Router } from "express";
 import Joi from "joi";
-import { buildTransactionDateRange, transactionsRepo } from "./shared";
+import { buildTransactionDateRange, compareTransactionsByMomentDesc, transactionsRepo } from "./shared";
 import { asyncHandler } from "../../middleware/error-handler";
 
 const router = Router({ mergeParams: true });
@@ -22,17 +22,7 @@ router.get("/", asyncHandler(async (req: Request, res: Response) => {
     order: { date: "DESC" },
   });
 
-  const sortedTransactions = transactions.slice().sort((a, b) => {
-    if (a.createdAt === null && b.createdAt === null) {
-      return b.date.localeCompare(a.date);
-    }
-
-    if (a.createdAt === null) return 1;
-    if (b.createdAt === null) return -1;
-
-    const createdAtDiff = b.createdAt.getTime() - a.createdAt.getTime();
-    return createdAtDiff !== 0 ? createdAtDiff : b.date.localeCompare(a.date);
-  });
+  const sortedTransactions = transactions.slice().sort(compareTransactionsByMomentDesc);
 
   const result = sortedTransactions.map((tx) => ({
     id: tx.id,
@@ -41,6 +31,7 @@ router.get("/", asyncHandler(async (req: Request, res: Response) => {
     amount: parseFloat(String(tx.amount)),
     type: tx.type,
     date: tx.date,
+    time: tx.time,
     createdAt: tx.createdAt,
     vaultId: tx.vaultId,
     vault: tx.vault ? { id: tx.vault.id, name: tx.vault.name, icon: tx.vault.icon } : null,

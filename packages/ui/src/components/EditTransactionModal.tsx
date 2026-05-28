@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Coins, TrendingDown, TrendingUp, ChevronDown, Plus, Pencil, Trash2 } from 'lucide-react';
+import { X, Coins, TrendingDown, TrendingUp, ChevronDown, Plus, Pencil, Trash2, CalendarDays, Clock3 } from 'lucide-react';
 import { iconMapper } from '../lib/iconMapper';
 import { profileApi } from '../lib/api';
 import type { ApiTag, ApiVault, ApiTransaction } from '../lib/api/ProfileApi';
+import { normalizeDateInput, normalizeTimeInput } from '../lib/utils';
 
 interface EditTransactionModalProps {
   isOpen: boolean;
@@ -18,6 +19,8 @@ export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, trans
   const [isExpense, setIsExpense] = useState(true);
   const [amount, setAmount] = useState('');
   const [title, setTitle] = useState('');
+  const [transactionDate, setTransactionDate] = useState('');
+  const [transactionTime, setTransactionTime] = useState('');
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isVisible, setIsVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,6 +57,8 @@ export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, trans
       setIsExpense(transaction.type === 'expense');
       setAmount(String(transaction.amount));
       setTitle(transaction.title ?? '');
+      setTransactionDate(normalizeDateInput(transaction.date));
+      setTransactionTime(normalizeTimeInput(transaction.time ?? transaction.createdAt));
       setSelectedTags(transaction.tags ?? []);
       setSelectedVaultId(transaction.vaultId);
       setTagInput('');
@@ -90,7 +95,7 @@ export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, trans
   };
 
   const handleSubmit = async () => {
-    if (!userId || !amount || !transaction || isSubmitting) return;
+    if (!userId || !amount || !transaction || !transactionDate || !transactionTime || isSubmitting) return;
     setIsSubmitting(true);
     try {
       await profileApi.updateTransaction(userId, transaction.id, {
@@ -99,6 +104,8 @@ export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, trans
         tagIds: selectedTags.map((t) => t.id),
         title: title || null,
         vaultId: selectedVaultId,
+        date: transactionDate,
+        time: transactionTime,
       });
       onSuccess?.();
       onClose();
@@ -183,6 +190,36 @@ export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, trans
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <div className="relative flex items-center">
+                <div className="absolute left-4 flex items-center pointer-events-none">
+                  <CalendarDays className="text-primary" size={18} />
+                </div>
+                <input
+                  className="w-full h-14 pl-12 pr-4 bg-surface-container-lowest border-4 border-black shadow-[inset_4px_4px_0px_rgba(0,0,0,0.6),_inset_-2px_-2px_0px_rgba(255,255,255,0.05)] font-body-lg text-on-surface focus:outline-none"
+                  type="date"
+                  value={transactionDate}
+                  onChange={(e) => setTransactionDate(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="relative flex items-center">
+                <div className="absolute left-4 flex items-center pointer-events-none">
+                  <Clock3 className="text-primary" size={18} />
+                </div>
+                <input
+                  className="w-full h-14 pl-12 pr-4 bg-surface-container-lowest border-4 border-black shadow-[inset_4px_4px_0px_rgba(0,0,0,0.6),_inset_-2px_-2px_0px_rgba(255,255,255,0.05)] font-body-lg text-on-surface focus:outline-none"
+                  type="time"
+                  value={transactionTime}
+                  onChange={(e) => setTransactionTime(e.target.value)}
+                />
+              </div>
             </div>
           </div>
 
@@ -341,7 +378,7 @@ export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, trans
           <div className="pt-5 flex flex-col gap-3">
             <button
               onClick={handleSubmit}
-              disabled={!amount || isSubmitting}
+              disabled={!amount || !transactionDate || !transactionTime || isSubmitting}
               className="w-full h-16 bg-primary-container text-on-primary-container border-4 border-black shadow-[inset_2px_2px_0px_rgba(255,255,255,0.1),_inset_-2px_-2px_0px_rgba(0,0,0,0.4)] active:translate-y-0.5 active:shadow-none flex items-center justify-center gap-4 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Pencil size={20} />

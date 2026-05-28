@@ -4,6 +4,7 @@ import { Expense, RecurrenceInterval } from '../entities/Expense.entity';
 import { TransactionTag } from '../entities/TransactionTag.entity';
 import { RecurringOccurrenceSkip } from '../entities/RecurringOccurrenceSkip.entity';
 import { IsNull, Not } from 'typeorm';
+import { getCurrentTimeString } from '../routes/transactions/shared';
 
 const activeJobs = new Map<string, ScheduledTask>();
 
@@ -63,12 +64,16 @@ async function fireRecurringTransaction(expenseId: string): Promise<void> {
   });
   if (skipped) return;
 
+  const now = new Date();
   const transaction = repo.create({
     userId: recurring.userId,
     title: recurring.title,
     amount: recurring.amount,
     type: recurring.type,
     date: today,
+    time: getCurrentTimeString(),
+    createdAt: now,
+    updatedAt: now,
     vaultId: recurring.vaultId,
     sourceRecurringId: recurring.id,
   });

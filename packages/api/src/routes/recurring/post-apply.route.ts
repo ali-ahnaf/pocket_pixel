@@ -5,6 +5,7 @@ import { asyncHandler } from "../../middleware/error-handler";
 import { Expense } from "../../entities/Expense.entity";
 import { TransactionTag } from "../../entities/TransactionTag.entity";
 import { AppDataSource } from "../../data-source";
+import { getCurrentTimeString } from "../transactions/shared";
 
 const router = Router({ mergeParams: true });
 
@@ -41,12 +42,16 @@ router.post("/:id/apply", asyncHandler(async (req: Request, res: Response) => {
     return res.status(409).json({ message: "Occurrence already applied" });
   }
 
+  const now = new Date();
   const transaction = expensesRepo().create({
     userId: req.params.userId,
     title: quest.title,
     amount: quest.amount,
     type: quest.type,
     date,
+    time: getCurrentTimeString(),
+    createdAt: now,
+    updatedAt: now,
     vaultId: quest.vaultId,
     sourceRecurringId: quest.id,
   });

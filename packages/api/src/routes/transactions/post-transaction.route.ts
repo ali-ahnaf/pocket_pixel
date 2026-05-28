@@ -1,6 +1,6 @@
 import { Request, Response, Router } from "express";
 import Joi from "joi";
-import { transactionsRepo, transactionTagsRepo } from "./shared";
+import { getCurrentDateString, getCurrentTimeString, normalizeTransactionDateInput, transactionTimePattern, transactionsRepo, transactionTagsRepo } from "./shared";
 import { Expense } from "../../entities/Expense.entity";
 import { asyncHandler } from "../../middleware/error-handler";
 
@@ -11,21 +11,29 @@ const createTransactionSchema = Joi.object({
   tagIds: Joi.array().items(Joi.string().uuid()).default([]),
   title: Joi.string().max(200).allow(null, "").optional(),
   vaultId: Joi.string().uuid().allow(null).optional(),
-  date: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  date: Joi.string().optional(),
+  time: Joi.string().pattern(transactionTimePattern).optional(),
 });
 
 router.post("/", asyncHandler(async (req: Request, res: Response) => {
   const { error, value } = createTransactionSchema.validate(req.body);
   if (error) return res.status(400).json({ message: error.message });
 
-  const { tagIds, date: providedDate, ...transactionData } = value;
-  const date = providedDate ?? new Date().toISOString().split('T')[0];
+  const { tagIds, date: providedDate, time: providedTime, ...transactionData } = value;
+  const normalizedDate = normalizeTransactionDateInput(providedDate);
+  if (providedDate && !normalizedDate.date) {
+    return res.status(400).json({ message: 'date must be in YYYY-MM-DD or ISO-8601 format' });
+  }
+
   const now = new Date();
+  const date = normalizedDate.date ?? getCurrentDateString(now);
+  const time = providedTime ?? normalizedDate.time ?? getCurrentTimeString(now);
 
   const transaction = transactionsRepo().create({
     ...transactionData,
     userId: req.params.userId,
     date,
+    time,
     createdAt: now,
     updatedAt: now,
   });

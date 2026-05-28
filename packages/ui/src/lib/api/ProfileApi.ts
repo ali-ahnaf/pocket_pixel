@@ -32,6 +32,7 @@ export interface ApiTransaction {
   amount: number;
   type: 'expense' | 'income';
   date: string;
+  time: string | null;
   createdAt: string | null;
   vaultId: string | null;
   vault: { id: string; name: string; icon: string | null } | null;
@@ -128,11 +129,11 @@ export default class ProfileApi extends ApiClient {
     return this.get<ApiTransaction[]>(`/users/${userId}/transactions?month=${month}&year=${year}`);
   }
 
-  createTransaction(userId: string, data: { amount: number; type?: string; tagIds?: string[]; title?: string; vaultId?: string | null; date?: string }): Promise<{ id: string }> {
-    return this.post<{ id: string }>(`/users/${userId}/transactions`, data);
+  createTransaction(userId: string, data: { amount: number; type?: string; tagIds?: string[]; title?: string; vaultId?: string | null; date?: string; time?: string }): Promise<ApiTransaction> {
+    return this.post<ApiTransaction>(`/users/${userId}/transactions`, data);
   }
 
-  updateTransaction(userId: string, transactionId: string, data: { amount?: number; type?: string; tagIds?: string[]; title?: string | null; vaultId?: string | null; date?: string }): Promise<ApiTransaction> {
+  updateTransaction(userId: string, transactionId: string, data: { amount?: number; type?: string; tagIds?: string[]; title?: string | null; vaultId?: string | null; date?: string; time?: string | null }): Promise<ApiTransaction> {
     return this.put<ApiTransaction>(`/users/${userId}/transactions/${transactionId}`, data);
   }
 
