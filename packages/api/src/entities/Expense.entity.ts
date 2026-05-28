@@ -32,9 +32,6 @@ export class Expense {
   @Column({ type: 'date', nullable: true })
   date: string;
 
-  @Column({ type: 'varchar', length: 5, nullable: true, default: null })
-  time: string | null;
-
   @Column({ type: 'varchar', nullable: true })
   interval: RecurrenceInterval;
 
