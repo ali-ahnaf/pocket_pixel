@@ -15,6 +15,9 @@ const CURRENT_MONTH_YEAR = (() => {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 })();
 
+const ALL_TIME_PERIOD = 'all-time';
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
 const NAV_ITEMS = [
   { label: 'Inventory', icon: Package, href: '/', active: false },
   { label: 'Quests', icon: Award, href: '#', active: false },
@@ -26,6 +29,52 @@ const TAG_COLORS = ['bg-error', 'bg-tertiary', 'bg-secondary', 'bg-outline', 'bg
 
 function formatCurrency(amount: number): string {
   return `⛁ ${Math.abs(amount).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+}
+
+function getMonthKey(date: string): string | null {
+  const [year, month] = date.split('-');
+  if (!year || !month) return null;
+  return `${year}-${month}`;
+}
+
+function getMonthRange(transactions: ApiTransaction[]): string[] {
+  const months = transactions
+    .map((t) => getMonthKey(t.date))
+    .filter((month): month is string => Boolean(month))
+    .sort();
+
+  if (months.length === 0) return [];
+
+  const [startYear, startMonth] = months[0].split('-').map(Number);
+  const [endYear, endMonth] = months[months.length - 1].split('-').map(Number);
+  const range: string[] = [];
+
+  for (let year = startYear, month = startMonth; year < endYear || (year === endYear && month <= endMonth); month += 1) {
+    range.push(`${year}-${String(month).padStart(2, '0')}`);
+    if (month === 12) {
+      year += 1;
+      month = 0;
+    }
+  }
+
+  return range;
+}
+
+function valuesToPolyline(values: number[]): string {
+  if (values.length === 0) return '';
+  if (values.length === 1) return `0,50 100,50`;
+
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  const range = max - min || 1;
+
+  return values
+    .map((value, index) => {
+      const x = (index / (values.length - 1)) * 100;
+      const yCoord = 100 - ((value - min) / range) * 100;
+      return `${x.toFixed(1)},${yCoord.toFixed(1)}`;
+    })
+    .join(' ');
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -44,15 +93,16 @@ export default function StatsPage() {
   const [monthYearOpen, setMonthYearOpen] = useState(false);
   const [pickerYear, setPickerYear] = useState(new Date().getFullYear());
 
+  const isAllTime = selectedMonthYear === ALL_TIME_PERIOD;
   const isCurrentMonth = selectedMonthYear === CURRENT_MONTH_YEAR;
 
   useEffect(() => {
     if (!userId) return;
-    const [y, m] = selectedMonthYear.split('-').map(Number);
+    const [y, m] = isAllTime ? [null, null] : selectedMonthYear.split('-').map(Number);
     setIsLoading(true);
     Promise.all([
       profileApi.getUser(userId),
-      profileApi.getTransactions(userId, m, y),
+      isAllTime ? profileApi.getAllTransactions(userId) : profileApi.getTransactions(userId, m as number, y as number),
       profileApi.getVaults(userId),
     ])
       .then(([user, txs, vaultList]) => {
@@ -62,7 +112,7 @@ export default function StatsPage() {
       })
       .catch(console.error)
       .finally(() => setIsLoading(false));
-  }, [userId, selectedMonthYear]);
+  }, [userId, selectedMonthYear, isAllTime]);
 
   const filteredTransactions = useMemo(() => {
     if (selectedVaultId === 'all') return transactions;
@@ -80,6 +130,20 @@ export default function StatsPage() {
   const netYield = totalIncome - totalExpenses;
 
   const { points } = useMemo(() => {
+    if (isAllTime) {
+      const monthRange = getMonthRange(filteredTransactions);
+      const monthlyValues = monthRange.map((month) =>
+        filteredTransactions
+          .filter((t) => getMonthKey(t.date) === month)
+          .reduce((sum, t) => sum + (t.type === 'income' ? t.amount : -t.amount), 0),
+      );
+
+      let cumulative = 0;
+      const data = monthlyValues.map((val) => { cumulative += val; return cumulative; });
+
+      return { points: valuesToPolyline(data) };
+    }
+
     const [y, m] = selectedMonthYear.split('-').map(Number);
     const daysInMonth = new Date(y, m, 0).getDate();
     const dailyValues = Array(daysInMonth).fill(0);
@@ -94,21 +158,8 @@ export default function StatsPage() {
     let cumulative = 0;
     const data = dailyValues.map((val) => { cumulative += val; return cumulative; });
 
-    if (data.length < 2) return { points: '' };
-    const max = Math.max(...data);
-    const min = Math.min(...data);
-    const range = max - min || 1;
-
-    const pts = data
-      .map((val, i) => {
-        const x = (i / (data.length - 1)) * 100;
-        const yCoord = 100 - ((val - min) / range) * 100;
-        return `${x.toFixed(1)},${yCoord.toFixed(1)}`;
-      })
-      .join(' ');
-
-    return { points: pts };
-  }, [filteredTransactions, selectedMonthYear]);
+    return { points: valuesToPolyline(data) };
+  }, [filteredTransactions, selectedMonthYear, isAllTime]);
 
   const resourceAllocation = useMemo(() => {
     const expenses = filteredTransactions.filter((t) => t.type === 'expense');
@@ -144,15 +195,27 @@ export default function StatsPage() {
   const [selectedLineVaultId, setSelectedLineVaultId] = useState<string>('all');
 
   const lineChartPoints = useMemo(() => {
-    const [y, m] = selectedMonthYear.split('-').map(Number);
-    const daysInMonth = new Date(y, m, 0).getDate();
-
     const vaultIds = selectedLineVaultId === 'all' ? vaults.map((v) => v.id) : [selectedLineVaultId];
 
     return vaultIds.map((vaultId) => {
       const vault = vaults.find((v) => v.id === vaultId);
       const vaultTxs = transactions.filter((t) => t.vaultId === vaultId && t.type === 'expense');
 
+      if (isAllTime) {
+        const monthRange = getMonthRange(transactions);
+        const monthly = Array(monthRange.length).fill(0);
+        vaultTxs.forEach((t) => {
+          const monthIndex = monthRange.indexOf(getMonthKey(t.date) ?? '');
+          if (monthIndex >= 0) monthly[monthIndex] += t.amount;
+        });
+
+        if (monthly.every((v) => v === 0)) return { vault, points: '' };
+
+        return { vault, points: valuesToPolyline(monthly) };
+      }
+
+      const [y, m] = selectedMonthYear.split('-').map(Number);
+      const daysInMonth = new Date(y, m, 0).getDate();
       const daily = Array(daysInMonth).fill(0);
       vaultTxs.forEach((t) => {
         const day = parseInt(t.date.split('-')[2], 10);
@@ -161,21 +224,9 @@ export default function StatsPage() {
 
       if (daily.every((v) => v === 0)) return { vault, points: '' };
 
-      const max = Math.max(...daily);
-      const min = 0;
-      const range = max - min || 1;
-
-      const pts = daily
-        .map((val, i) => {
-          const x = (i / (daily.length - 1)) * 100;
-          const yCoord = 100 - ((val - min) / range) * 100;
-          return `${x.toFixed(1)},${yCoord.toFixed(1)}`;
-        })
-        .join(' ');
-
-      return { vault, points: pts };
+      return { vault, points: valuesToPolyline(daily) };
     }).filter((d) => d.points !== '');
-  }, [transactions, vaults, selectedLineVaultId, selectedMonthYear]);
+  }, [transactions, vaults, selectedLineVaultId, selectedMonthYear, isAllTime]);
 
   const topDrains = useMemo(
     () =>
@@ -194,6 +245,7 @@ export default function StatsPage() {
   );
 
   const displayMonthYear = (yyyyMm: string) => {
+    if (yyyyMm === ALL_TIME_PERIOD) return 'ALL TIME';
     if (!yyyyMm) return '';
     const [y, m] = yyyyMm.split('-');
     return new Date(parseInt(y), parseInt(m) - 1, 1).toLocaleString('en-US', { month: 'long', year: 'numeric' });
@@ -313,6 +365,20 @@ export default function StatsPage() {
 
                     {monthYearOpen && (
                       <div className="absolute top-full mt-1 left-0 w-[240px] bg-surface-container-high border-4 border-black z-50 p-3 shadow-[4px_4px_0_rgba(0,0,0,0.5)] flex flex-col gap-3">
+                        <button
+                          onClick={() => {
+                            setSelectedMonthYear(ALL_TIME_PERIOD);
+                            setMonthYearOpen(false);
+                          }}
+                          className={`p-2 text-center font-label-caps uppercase border-2 transition-colors ${
+                            isAllTime
+                              ? 'bg-primary text-on-primary border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]'
+                              : 'bg-surface hover:bg-surface-container-highest border-black text-on-surface'
+                          }`}
+                        >
+                          ALL TIME
+                        </button>
+
                         {/* Year Selector */}
                         <div className="flex justify-between items-center bg-surface-dim border-2 border-black p-1">
                           <button
@@ -332,7 +398,7 @@ export default function StatsPage() {
 
                         {/* Month Grid */}
                         <div className="grid grid-cols-3 gap-2">
-                          {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((mon, i) => {
+                          {MONTH_NAMES.map((mon, i) => {
                             const monthValue = `${pickerYear}-${String(i + 1).padStart(2, '0')}`;
                             const isActive = selectedMonthYear === monthValue;
                             return (
@@ -444,7 +510,9 @@ export default function StatsPage() {
             <Card className="flex flex-col gap-4 !p-3">
               <div>
                 <h3 className="font-headline-md text-headline-md text-on-surface">Resource Allocation</h3>
-                <p className="font-body-sm text-on-surface-variant mt-1">Where your gold is going this cycle.</p>
+                <p className="font-body-sm text-on-surface-variant mt-1">
+                  Where your gold is going {isAllTime ? 'across all time' : 'this cycle'}.
+                </p>
               </div>
               {isLoading ? (
                 <div className="flex flex-col gap-4 animate-pulse">
@@ -481,7 +549,9 @@ export default function StatsPage() {
             <Card className="flex flex-col gap-4 !p-3">
               <div>
                 <h3 className="font-headline-md text-headline-md text-on-surface">Vault Savings</h3>
-                <p className="font-body-sm text-on-surface-variant mt-1">Current savings (income − expense) per vault.</p>
+                <p className="font-body-sm text-on-surface-variant mt-1">
+                  {isAllTime ? 'All-time' : 'Current'} savings (income − expense) per vault.
+                </p>
               </div>
               {isLoading ? (
                 <div className="flex flex-col gap-3 animate-pulse">
@@ -516,9 +586,11 @@ export default function StatsPage() {
                 <div>
                   <h3 className="font-headline-md text-headline-md text-on-surface flex items-center gap-2">
                     <LineChart className="w-5 h-5 text-primary" />
-                    Daily Expenses
+                    {isAllTime ? 'Monthly Expenses' : 'Daily Expenses'}
                   </h3>
-                  <p className="font-body-sm text-on-surface-variant mt-1">Expense burn per day, by vault.</p>
+                  <p className="font-body-sm text-on-surface-variant mt-1">
+                    Expense burn per {isAllTime ? 'month' : 'day'}, by vault.
+                  </p>
                 </div>
                 {/* Vault tabs */}
                 <div className="flex flex-wrap gap-1">

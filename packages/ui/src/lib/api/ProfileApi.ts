@@ -127,6 +127,10 @@ export default class ProfileApi extends ApiClient {
     return this.get<ApiTransaction[]>(`/users/${userId}/transactions?month=${month}&year=${year}`);
   }
 
+  getAllTransactions(userId: string): Promise<ApiTransaction[]> {
+    return this.get<ApiTransaction[]>(`/users/${userId}/transactions?period=all`);
+  }
+
   createTransaction(userId: string, data: { amount: number; type?: string; tagIds?: string[]; title?: string; vaultId?: string | null; date?: string }): Promise<{ id: string }> {
     return this.post<{ id: string }>(`/users/${userId}/transactions`, data);
   }
