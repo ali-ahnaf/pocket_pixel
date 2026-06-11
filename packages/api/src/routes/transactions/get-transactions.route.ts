@@ -31,7 +31,7 @@ router.get("/", asyncHandler(async (req: Request, res: Response) => {
   const transactions = await transactionsRepo().find({
     where,
     relations: ["transactionTags", "transactionTags.tag", "vault"],
-    order: { date: "DESC" },
+    order: { updatedAt: "DESC" },
   });
 
   const result = transactions.map((tx) => ({
@@ -44,6 +44,8 @@ router.get("/", asyncHandler(async (req: Request, res: Response) => {
     vaultId: tx.vaultId,
     vault: tx.vault ? { id: tx.vault.id, name: tx.vault.name, icon: tx.vault.icon } : null,
     tags: tx.transactionTags?.map((tt) => tt.tag) ?? [],
+    createdAt: tx.createdAt,
+    updatedAt: tx.updatedAt,
   }));
 
   return res.json(result);

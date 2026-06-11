@@ -1,9 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { User } from './User.entity';
 import { TransactionType } from './Expense.entity';
+import { BaseEntity } from './BaseEntity';
 
 @Entity('debts')
-export class Debt {
+export class Debt extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -18,9 +19,6 @@ export class Debt {
 
   @Column({ type: 'varchar', default: 'expense' })
   type: TransactionType;
-
-  @CreateDateColumn({ type: 'datetime' })
-  createdAt: Date;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })

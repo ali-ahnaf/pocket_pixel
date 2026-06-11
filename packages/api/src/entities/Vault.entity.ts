@@ -1,8 +1,9 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, DeleteDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { User } from './User.entity';
+import { BaseEntity } from './BaseEntity';
 
 @Entity('vaults')
-export class Vault {
+export class Vault extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -14,9 +15,6 @@ export class Vault {
 
   @Column({ type: 'varchar', length: 255 })
   description: string;
-
-  @DeleteDateColumn({ type: 'datetime', nullable: true })
-  deletedAt: Date;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   icon: string | null;

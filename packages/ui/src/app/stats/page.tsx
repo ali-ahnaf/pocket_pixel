@@ -3,7 +3,24 @@
 import { useState, useMemo, useEffect } from 'react';
 import { AppBar, Card, ProgressBar, Button, BottomNavBar } from '@/components';
 import { useAuth } from '@/hooks/useAuth';
-import { Package, Award, BarChart, Settings, HelpCircle, ChevronDown, TrendingUp, TrendingDown, CircleDollarSign, Flame, Gem, Calendar, ChevronLeft, ChevronRight, Vault, LineChart } from 'lucide-react';
+import {
+  Package,
+  Award,
+  BarChart,
+  Settings,
+  HelpCircle,
+  ChevronDown,
+  TrendingUp,
+  TrendingDown,
+  CircleDollarSign,
+  Flame,
+  Gem,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Vault,
+  LineChart,
+} from 'lucide-react';
 import { iconMapper } from '@/lib/iconMapper';
 import { profileApi } from '@/lib/api';
 import type { ApiUser, ApiTransaction, ApiVault } from '@/lib/api/ProfileApi';
@@ -100,11 +117,7 @@ export default function StatsPage() {
     if (!userId) return;
     const [y, m] = isAllTime ? [null, null] : selectedMonthYear.split('-').map(Number);
     setIsLoading(true);
-    Promise.all([
-      profileApi.getUser(userId),
-      isAllTime ? profileApi.getAllTransactions(userId) : profileApi.getTransactions(userId, m as number, y as number),
-      profileApi.getVaults(userId),
-    ])
+    Promise.all([profileApi.getUser(userId), isAllTime ? profileApi.getAllTransactions(userId) : profileApi.getTransactions(userId, m as number, y as number), profileApi.getVaults(userId)])
       .then(([user, txs, vaultList]) => {
         setProfile(user);
         setTransactions(txs);
@@ -119,27 +132,20 @@ export default function StatsPage() {
     return transactions.filter((t) => t.vaultId === selectedVaultId);
   }, [transactions, selectedVaultId]);
 
-  const totalIncome = useMemo(
-    () => filteredTransactions.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0),
-    [filteredTransactions],
-  );
-  const totalExpenses = useMemo(
-    () => filteredTransactions.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
-    [filteredTransactions],
-  );
+  const totalIncome = useMemo(() => filteredTransactions.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0), [filteredTransactions]);
+  const totalExpenses = useMemo(() => filteredTransactions.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0), [filteredTransactions]);
   const netYield = totalIncome - totalExpenses;
 
   const { points } = useMemo(() => {
     if (isAllTime) {
       const monthRange = getMonthRange(filteredTransactions);
-      const monthlyValues = monthRange.map((month) =>
-        filteredTransactions
-          .filter((t) => getMonthKey(t.date) === month)
-          .reduce((sum, t) => sum + (t.type === 'income' ? t.amount : -t.amount), 0),
-      );
+      const monthlyValues = monthRange.map((month) => filteredTransactions.filter((t) => getMonthKey(t.date) === month).reduce((sum, t) => sum + (t.type === 'income' ? t.amount : -t.amount), 0));
 
       let cumulative = 0;
-      const data = monthlyValues.map((val) => { cumulative += val; return cumulative; });
+      const data = monthlyValues.map((val) => {
+        cumulative += val;
+        return cumulative;
+      });
 
       return { points: valuesToPolyline(data) };
     }
@@ -156,7 +162,10 @@ export default function StatsPage() {
     });
 
     let cumulative = 0;
-    const data = dailyValues.map((val) => { cumulative += val; return cumulative; });
+    const data = dailyValues.map((val) => {
+      cumulative += val;
+      return cumulative;
+    });
 
     return { points: valuesToPolyline(data) };
   }, [filteredTransactions, selectedMonthYear, isAllTime]);
@@ -168,16 +177,18 @@ export default function StatsPage() {
 
     const tagTotals: Record<string, { label: string; total: number }> = {};
     expenses.forEach((t) => {
-      const key = t.tags?.[0]?.name ?? 'Other';
-      tagTotals[key] = tagTotals[key] ?? { label: key, total: 0 };
-      tagTotals[key].total += t.amount;
+      const keys = t.tags?.length ? t.tags.map((tag) => tag.name) : ['Other'];
+      keys.forEach((key) => {
+        tagTotals[key] = tagTotals[key] ?? { label: key, total: 0 };
+        tagTotals[key].total += t.amount;
+      });
     });
 
     return Object.values(tagTotals)
       .sort((a, b) => b.total - a.total)
-      .slice(0, 5)
       .map((entry, i) => ({
         label: entry.label,
+        amount: entry.total,
         percent: Math.round((entry.total / totalExp) * 100),
         colorClass: TAG_COLORS[i % TAG_COLORS.length],
       }));
@@ -197,35 +208,37 @@ export default function StatsPage() {
   const lineChartPoints = useMemo(() => {
     const vaultIds = selectedLineVaultId === 'all' ? vaults.map((v) => v.id) : [selectedLineVaultId];
 
-    return vaultIds.map((vaultId) => {
-      const vault = vaults.find((v) => v.id === vaultId);
-      const vaultTxs = transactions.filter((t) => t.vaultId === vaultId && t.type === 'expense');
+    return vaultIds
+      .map((vaultId) => {
+        const vault = vaults.find((v) => v.id === vaultId);
+        const vaultTxs = transactions.filter((t) => t.vaultId === vaultId && t.type === 'expense');
 
-      if (isAllTime) {
-        const monthRange = getMonthRange(transactions);
-        const monthly = Array(monthRange.length).fill(0);
+        if (isAllTime) {
+          const monthRange = getMonthRange(transactions);
+          const monthly = Array(monthRange.length).fill(0);
+          vaultTxs.forEach((t) => {
+            const monthIndex = monthRange.indexOf(getMonthKey(t.date) ?? '');
+            if (monthIndex >= 0) monthly[monthIndex] += t.amount;
+          });
+
+          if (monthly.every((v) => v === 0)) return { vault, points: '' };
+
+          return { vault, points: valuesToPolyline(monthly) };
+        }
+
+        const [y, m] = selectedMonthYear.split('-').map(Number);
+        const daysInMonth = new Date(y, m, 0).getDate();
+        const daily = Array(daysInMonth).fill(0);
         vaultTxs.forEach((t) => {
-          const monthIndex = monthRange.indexOf(getMonthKey(t.date) ?? '');
-          if (monthIndex >= 0) monthly[monthIndex] += t.amount;
+          const day = parseInt(t.date.split('-')[2], 10);
+          if (day >= 1 && day <= daysInMonth) daily[day - 1] += t.amount;
         });
 
-        if (monthly.every((v) => v === 0)) return { vault, points: '' };
+        if (daily.every((v) => v === 0)) return { vault, points: '' };
 
-        return { vault, points: valuesToPolyline(monthly) };
-      }
-
-      const [y, m] = selectedMonthYear.split('-').map(Number);
-      const daysInMonth = new Date(y, m, 0).getDate();
-      const daily = Array(daysInMonth).fill(0);
-      vaultTxs.forEach((t) => {
-        const day = parseInt(t.date.split('-')[2], 10);
-        if (day >= 1 && day <= daysInMonth) daily[day - 1] += t.amount;
-      });
-
-      if (daily.every((v) => v === 0)) return { vault, points: '' };
-
-      return { vault, points: valuesToPolyline(daily) };
-    }).filter((d) => d.points !== '');
+        return { vault, points: valuesToPolyline(daily) };
+      })
+      .filter((d) => d.points !== '');
   }, [transactions, vaults, selectedLineVaultId, selectedMonthYear, isAllTime]);
 
   const topDrains = useMemo(
@@ -381,17 +394,11 @@ export default function StatsPage() {
 
                         {/* Year Selector */}
                         <div className="flex justify-between items-center bg-surface-dim border-2 border-black p-1">
-                          <button
-                            className="p-1 hover:bg-primary hover:text-on-primary transition-colors"
-                            onClick={() => setPickerYear((y) => y - 1)}
-                          >
+                          <button className="p-1 hover:bg-primary hover:text-on-primary transition-colors" onClick={() => setPickerYear((y) => y - 1)}>
                             <ChevronLeft className="w-4 h-4" />
                           </button>
                           <span className="font-headline-sm text-on-surface">{pickerYear}</span>
-                          <button
-                            className="p-1 hover:bg-primary hover:text-on-primary transition-colors"
-                            onClick={() => setPickerYear((y) => y + 1)}
-                          >
+                          <button className="p-1 hover:bg-primary hover:text-on-primary transition-colors" onClick={() => setPickerYear((y) => y + 1)}>
                             <ChevronRight className="w-4 h-4" />
                           </button>
                         </div>
@@ -476,31 +483,16 @@ export default function StatsPage() {
                 <div className="h-8 bg-surface-container-highest rounded w-24 animate-pulse" />
               ) : (
                 <div className={`font-headline-lg text-headline-lg ${netYield >= 0 ? 'text-secondary' : 'text-error'}`}>
-                  {netYield >= 0 ? '+' : '-'}{formatCurrency(Math.abs(netYield))}
+                  {netYield >= 0 ? '+' : '-'}
+                  {formatCurrency(Math.abs(netYield))}
                 </div>
               )}
               {/* Line chart */}
               {!isLoading && points && (
                 <div className="h-16 mt-2 w-full max-w-[200px]">
                   <svg viewBox="0 -5 100 110" preserveAspectRatio="none" className="w-full h-full overflow-visible">
-                    <polyline
-                      fill="none"
-                      stroke="#000"
-                      strokeWidth="6"
-                      strokeLinejoin="miter"
-                      strokeLinecap="square"
-                      transform="translate(0, 4)"
-                      points={points}
-                    />
-                    <polyline
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      strokeLinejoin="miter"
-                      strokeLinecap="square"
-                      className="text-secondary"
-                      points={points}
-                    />
+                    <polyline fill="none" stroke="#000" strokeWidth="6" strokeLinejoin="miter" strokeLinecap="square" transform="translate(0, 4)" points={points} />
+                    <polyline fill="none" stroke="currentColor" strokeWidth="4" strokeLinejoin="miter" strokeLinecap="square" className="text-secondary" points={points} />
                   </svg>
                 </div>
               )}
@@ -510,9 +502,7 @@ export default function StatsPage() {
             <Card className="flex flex-col gap-4 !p-3">
               <div>
                 <h3 className="font-headline-md text-headline-md text-on-surface">Resource Allocation</h3>
-                <p className="font-body-sm text-on-surface-variant mt-1">
-                  Where your gold is going {isAllTime ? 'across all time' : 'this cycle'}.
-                </p>
+                <p className="font-body-sm text-on-surface-variant mt-1">Where your gold is going {isAllTime ? 'across all time' : 'this cycle'}.</p>
               </div>
               {isLoading ? (
                 <div className="flex flex-col gap-4 animate-pulse">
@@ -527,14 +517,16 @@ export default function StatsPage() {
                 <p className="font-body-sm text-on-surface-variant py-4 text-center">No expense data for this period.</p>
               ) : (
                 <div className="flex flex-col gap-4">
-                  {resourceAllocation.map(({ label, percent, colorClass }) => (
+                  {resourceAllocation.map(({ label, amount, percent, colorClass }) => (
                     <div key={label} className="flex flex-col gap-1">
                       <div className="flex justify-between font-body-sm text-body-sm">
                         <span className="text-on-surface flex items-center gap-2">
                           <span className={`w-3 h-3 ${colorClass} border-2 border-black inline-block`} />
                           {label}
                         </span>
-                        <span className="text-on-surface-variant">{percent}%</span>
+                        <span className="text-on-surface-variant">
+                          {formatCurrency(amount)} · {percent}%
+                        </span>
                       </div>
                       <div className="h-6 w-full bg-surface-dim border-4 border-black overflow-hidden">
                         <div className={`h-full ${colorClass}`} style={{ width: `${percent}%` }} />
@@ -549,9 +541,7 @@ export default function StatsPage() {
             <Card className="flex flex-col gap-4 !p-3">
               <div>
                 <h3 className="font-headline-md text-headline-md text-on-surface">Vault Savings</h3>
-                <p className="font-body-sm text-on-surface-variant mt-1">
-                  {isAllTime ? 'All-time' : 'Current'} savings (income − expense) per vault.
-                </p>
+                <p className="font-body-sm text-on-surface-variant mt-1">{isAllTime ? 'All-time' : 'Current'} savings (income − expense) per vault.</p>
               </div>
               {isLoading ? (
                 <div className="flex flex-col gap-3 animate-pulse">
@@ -564,7 +554,10 @@ export default function StatsPage() {
               ) : (
                 <div className="flex flex-col gap-3">
                   {vaultSavings.map(({ vault, income, expense, savings }) => (
-                    <div key={vault.id} className="flex items-center justify-between bg-surface-dim p-3 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]">
+                    <div
+                      key={vault.id}
+                      className="flex items-center justify-between bg-surface-dim p-3 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]"
+                    >
                       <div className="flex flex-col gap-0.5">
                         <span className="font-label-caps text-on-surface uppercase">{vault.name}</span>
                         <span className="font-body-sm text-on-surface-variant text-[11px]">
@@ -572,7 +565,8 @@ export default function StatsPage() {
                         </span>
                       </div>
                       <div className={`font-headline-sm ${savings >= 0 ? 'text-secondary' : 'text-error'}`}>
-                        {savings >= 0 ? '+' : '-'}{formatCurrency(Math.abs(savings))}
+                        {savings >= 0 ? '+' : '-'}
+                        {formatCurrency(Math.abs(savings))}
                       </div>
                     </div>
                   ))}
@@ -588,9 +582,7 @@ export default function StatsPage() {
                     <LineChart className="w-5 h-5 text-primary" />
                     {isAllTime ? 'Monthly Expenses' : 'Daily Expenses'}
                   </h3>
-                  <p className="font-body-sm text-on-surface-variant mt-1">
-                    Expense burn per {isAllTime ? 'month' : 'day'}, by vault.
-                  </p>
+                  <p className="font-body-sm text-on-surface-variant mt-1">Expense burn per {isAllTime ? 'month' : 'day'}, by vault.</p>
                 </div>
                 {/* Vault tabs */}
                 <div className="flex flex-wrap gap-1">
@@ -623,29 +615,11 @@ export default function StatsPage() {
                     const colorClass = STROKE_COLORS[idx % STROKE_COLORS.length];
                     return (
                       <div key={vault?.id ?? idx} className="flex flex-col gap-1">
-                        {selectedLineVaultId === 'all' && (
-                          <span className={`font-label-caps text-[10px] uppercase ${colorClass}`}>{vault?.name}</span>
-                        )}
+                        {selectedLineVaultId === 'all' && <span className={`font-label-caps text-[10px] uppercase ${colorClass}`}>{vault?.name}</span>}
                         <div className="h-20 w-full">
                           <svg viewBox="0 -5 100 110" preserveAspectRatio="none" className="w-full h-full overflow-visible">
-                            <polyline
-                              fill="none"
-                              stroke="#000"
-                              strokeWidth="6"
-                              strokeLinejoin="miter"
-                              strokeLinecap="square"
-                              transform="translate(0, 4)"
-                              points={points}
-                            />
-                            <polyline
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                              strokeLinejoin="miter"
-                              strokeLinecap="square"
-                              className={colorClass}
-                              points={points}
-                            />
+                            <polyline fill="none" stroke="#000" strokeWidth="6" strokeLinejoin="miter" strokeLinecap="square" transform="translate(0, 4)" points={points} />
+                            <polyline fill="none" stroke="currentColor" strokeWidth="4" strokeLinejoin="miter" strokeLinecap="square" className={colorClass} points={points} />
                           </svg>
                         </div>
                       </div>

@@ -3,9 +3,10 @@ import { Expense } from './Expense.entity';
 
 import { Vault } from './Vault.entity';
 import { Tag } from './Tag.entity';
+import { BaseEntity } from './BaseEntity';
 
 @Entity('users')
-export class User {
+export class User extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 

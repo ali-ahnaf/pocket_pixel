@@ -1,9 +1,10 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { User } from './User.entity';
 import { TransactionTag } from './TransactionTag.entity';
+import { BaseEntity } from './BaseEntity';
 
 @Entity('tags')
-export class Tag {
+export class Tag extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 

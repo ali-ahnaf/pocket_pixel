@@ -25,9 +25,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       router.replace('/signin');
     }
 
-    setTimeout(() => {
-      setChecking(false);
-    }, 1500);
+    setChecking(false);
   }, [pathname, router]);
 
   if (checking) return <PixelLoader />;

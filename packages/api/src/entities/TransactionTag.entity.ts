@@ -1,9 +1,10 @@
 import { Entity, PrimaryColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Expense } from './Expense.entity';
 import { Tag } from './Tag.entity';
+import { BaseEntity } from './BaseEntity';
 
 @Entity('transaction_tags')
-export class TransactionTag {
+export class TransactionTag extends BaseEntity {
   @PrimaryColumn({ type: 'varchar' })
   transactionId: string;
 

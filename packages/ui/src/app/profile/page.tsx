@@ -17,7 +17,7 @@ import {
   AddTagModal,
   DeleteTagModal,
 } from '@/components';
-import { Package, Award, Settings, HelpCircle, User, Briefcase, Plus, Pencil, Star, Trash2, Repeat, Calendar, CalendarDays, TrendingDown, TrendingUp, Tag } from 'lucide-react';
+import { Package, Award, Settings, HelpCircle, User, Briefcase, Plus, Pencil, Star, Trash2, Repeat, Calendar, CalendarDays, TrendingDown, TrendingUp, Tag, Coins } from 'lucide-react';
 import { iconMapper } from '@/lib/iconMapper';
 import { profileApi } from '@/lib/api';
 import type { ApiVault, ApiTag, ApiRecurringQuest } from '@/lib/api/ProfileApi';
@@ -390,8 +390,8 @@ export default function ProfilePage() {
                       <h3 className="font-headline-md text-on-surface mt-2 mb-1">{quest.title}</h3>
                       <p className="font-body-sm text-on-surface-variant mb-4">{quest.description}</p>
                       <div className="flex justify-between items-center bg-surface-dim border-4 border-black p-2 mb-4 border-t-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]">
-                        <span className={`font-body-lg font-bold ${isExpense ? 'text-error' : 'text-primary'}`}>
-                          {isExpense ? '-' : '+'} ${quest.amount.toFixed(2)}
+                        <span className={`font-body-lg font-bold flex items-center gap-1 ${isExpense ? 'text-error' : 'text-primary'}`}>
+                          {isExpense ? '-' : '+'} <Coins className="w-[16px] h-[16px]" /> {quest.amount.toFixed(2)}
                         </span>
                         <div className="flex items-center gap-1 bg-surface-container-high px-2 py-1 border-4 border-black text-on-surface-variant">
                           <QuestIcon className="w-[16px] h-[16px]" />

@@ -35,6 +35,8 @@ export interface ApiTransaction {
   vaultId: string | null;
   vault: { id: string; name: string; icon: string | null } | null;
   tags: ApiTag[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ApiRecurringOccurrence {

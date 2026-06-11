@@ -1,13 +1,14 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, DeleteDateColumn, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { User } from './User.entity';
 import { Vault } from './Vault.entity';
 import { TransactionTag } from './TransactionTag.entity';
+import { BaseEntity } from './BaseEntity';
 
 export type RecurrenceInterval = 'weekly' | 'monthly' | 'daily' | 'yearly';
 export type TransactionType = 'expense' | 'income';
 
 @Entity('expenses')
-export class Expense {
+export class Expense extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -34,9 +35,6 @@ export class Expense {
 
   @Column({ type: 'date', nullable: true })
   endDate: string;
-
-  @DeleteDateColumn({ type: 'datetime', nullable: true })
-  deletedAt: Date;
 
   @Column({ type: 'varchar', nullable: true })
   vaultId: string | null;

@@ -1,9 +1,10 @@
 import { Entity, PrimaryColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { User } from './User.entity';
 import { Expense } from './Expense.entity';
+import { BaseEntity } from './BaseEntity';
 
 @Entity('recurring_occurrence_skips')
-export class RecurringOccurrenceSkip {
+export class RecurringOccurrenceSkip extends BaseEntity {
   @PrimaryColumn({ type: 'varchar' })
   recurringId: string;
 

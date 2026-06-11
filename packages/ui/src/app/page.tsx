@@ -19,6 +19,10 @@ function formatDate(dateStr: string): string {
   return new Date(year, month - 1, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+function formatTime(dateStr: string): string {
+  return new Date(dateStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
 function getTransactionIconName(tx: ApiTransaction): string {
   if (tx.type === 'expense') {
     return tx.tags?.[0]?.icon || tx.vault?.icon || 'ShoppingCart';
@@ -60,6 +64,11 @@ export default function DashboardPage() {
   const [selectedVaultFilter, setSelectedVaultFilter] = useState<string[]>([]);
   const [vaultDropdownOpen, setVaultDropdownOpen] = useState(false);
   const vaultDropdownRef = useRef<HTMLDivElement>(null);
+  const didInitVaultFilter = useRef(false);
+  const [tags, setTags] = useState<import('@/lib/api/ProfileApi').ApiTag[]>([]);
+  const [selectedTagFilter, setSelectedTagFilter] = useState<string[]>([]);
+  const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
+  const tagDropdownRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [refetchKey, setRefetchKey] = useState(0);
 
@@ -75,12 +84,19 @@ export default function DashboardPage() {
       profileApi.getTransactions(userId, selectedMonth + 1, selectedYear),
       profileApi.getVaults(userId),
       profileApi.getRecurringOccurrences(userId, selectedMonth + 1, selectedYear),
+      profileApi.getTags(userId),
     ])
-      .then(([user, txs, vaultList, occs]) => {
+      .then(([user, txs, vaultList, occs, tagList]) => {
         setProfile(user);
         setTransactions(txs);
         setVaults(vaultList);
+        if (!didInitVaultFilter.current) {
+          didInitVaultFilter.current = true;
+          const primaryVault = vaultList.find((v) => v.isDefault);
+          if (primaryVault) setSelectedVaultFilter([primaryVault.id]);
+        }
         setOccurrences(occs);
+        setTags(tagList);
       })
       .catch(console.error)
       .finally(() => setIsLoading(false));
@@ -92,6 +108,9 @@ export default function DashboardPage() {
     function handleClickOutside(e: MouseEvent) {
       if (vaultDropdownRef.current && !vaultDropdownRef.current.contains(e.target as Node)) {
         setVaultDropdownOpen(false);
+      }
+      if (tagDropdownRef.current && !tagDropdownRef.current.contains(e.target as Node)) {
+        setTagDropdownOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -112,10 +131,13 @@ export default function DashboardPage() {
     } else setSelectedMonth((m) => m + 1);
   };
 
-  const filteredDrops = (selectedVaultFilter.length === 0 ? transactions : transactions.filter((t) => selectedVaultFilter.includes(t.vaultId ?? '')))
+  const matchesVault = (vaultId: string | null) => selectedVaultFilter.length === 0 || selectedVaultFilter.includes(vaultId ?? '');
+  const matchesTag = (txTags: { id: string }[]) => selectedTagFilter.length === 0 || txTags.some((t) => selectedTagFilter.includes(t.id));
+  const filteredDrops = transactions
+    .filter((t) => matchesVault(t.vaultId) && matchesTag(t.tags))
     .slice()
-    .sort((a, b) => b.date.localeCompare(a.date));
-  const filteredOccurrences = selectedVaultFilter.length === 0 ? occurrences : occurrences.filter((o) => selectedVaultFilter.includes(o.vaultId ?? ''));
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  const filteredOccurrences = occurrences.filter((o) => matchesVault(o.vaultId) && matchesTag(o.tags));
 
   const handleApplyOccurrence = async (occ: ApiRecurringOccurrence) => {
     if (!userId) return;
@@ -305,6 +327,41 @@ export default function DashboardPage() {
                 </div>
               </div>
 
+              <div ref={tagDropdownRef} className="relative">
+                <button
+                  onClick={() => setTagDropdownOpen((o) => !o)}
+                  className="flex items-center justify-between gap-1.5 w-full font-label-caps text-[10px] uppercase bg-surface border-2 border-black text-on-surface px-2 py-1.5 hover:bg-surface-container-highest active:translate-y-px transition-transform"
+                >
+                  <span>
+                    {selectedTagFilter.length === 0 ? 'All Tags' : selectedTagFilter.length === 1 ? (tags.find((t) => t.id === selectedTagFilter[0])?.name ?? 'All Tags') : `${selectedTagFilter.length} Tags`}
+                  </span>
+                  <ChevronDown size={10} className={`transition-transform ${tagDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {tagDropdownOpen && (
+                  <div className="absolute left-0 right-0 top-full mt-1 z-50 border-2 border-black bg-surface shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex flex-col max-h-64 overflow-y-auto">
+                    <button
+                      onClick={() => { setSelectedTagFilter([]); setTagDropdownOpen(false); }}
+                      className={`font-label-caps text-[10px] uppercase text-left px-3 py-2 transition-colors border-b border-black ${selectedTagFilter.length === 0 ? 'bg-primary text-on-primary' : 'text-on-surface hover:bg-surface-container-highest'}`}
+                    >
+                      All Tags
+                    </button>
+                    {tags.map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => {
+                          setSelectedTagFilter((prev) =>
+                            prev.includes(t.id) ? prev.filter((id) => id !== t.id) : [...prev, t.id]
+                          );
+                        }}
+                        className={`font-label-caps text-[10px] uppercase text-left px-3 py-2 transition-colors border-b border-black last:border-b-0 ${selectedTagFilter.includes(t.id) ? 'bg-primary text-on-primary' : 'text-on-surface hover:bg-surface-container-highest'}`}
+                      >
+                        {t.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {isLoading ? (
                 <div className="flex flex-col gap-3 animate-pulse">
                   {[1, 2, 3].map((i) => (
@@ -354,6 +411,7 @@ export default function DashboardPage() {
                             {formatCurrency(tx.amount)}
                           </p>
                           <p className="font-body-sm text-outline text-[10px]">{formatDate(tx.date)}</p>
+                          <p className="font-body-sm text-outline text-[10px]">{formatTime(tx.updatedAt)}</p>
                         </div>
                       </div>
                     );
