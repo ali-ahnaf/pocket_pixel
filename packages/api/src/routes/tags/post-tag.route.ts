@@ -1,6 +1,6 @@
 import { Request, Response, Router } from "express";
 import Joi from "joi";
-import { tagsRepo } from "./shared";
+import { tagsRepo, invalidateTagCache } from "./shared";
 import { asyncHandler } from "../../middleware/error-handler";
 
 const router = Router({ mergeParams: true });
@@ -17,6 +17,7 @@ router.post("/", asyncHandler(async (req: Request, res: Response) => {
 
   const tag = tagsRepo().create({ ...value, userId: req.params.userId });
   const saved = await tagsRepo().save(tag);
+  invalidateTagCache(req.params.userId);
   return res.status(201).json(saved);
 }));
 

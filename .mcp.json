@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "pocket-pixel-sqlite": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-server-sqlite-npx",
+        "packages/api/pocket_pixel.sqlite"
+      ]
+    }
+  }
+}

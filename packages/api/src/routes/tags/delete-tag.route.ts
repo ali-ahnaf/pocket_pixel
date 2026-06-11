@@ -1,5 +1,5 @@
 import { Request, Response, Router } from "express";
-import { tagsRepo } from "./shared";
+import { tagsRepo, invalidateTagCache } from "./shared";
 import { asyncHandler } from "../../middleware/error-handler";
 
 const router = Router({ mergeParams: true });
@@ -12,6 +12,7 @@ router.delete("/:id", asyncHandler(async (req: Request, res: Response) => {
   if (!tag) return res.status(404).json({ message: "Tag not found" });
 
   await tagsRepo().remove(tag);
+  invalidateTagCache(req.params.userId);
   return res.status(204).send();
 }));
 

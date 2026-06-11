@@ -20,10 +20,11 @@ import {
   ChevronRight,
   Vault,
   LineChart,
+  Cpu,
 } from 'lucide-react';
 import { iconMapper } from '@/lib/iconMapper';
 import { profileApi } from '@/lib/api';
-import type { ApiUser, ApiTransaction, ApiVault } from '@/lib/api/ProfileApi';
+import type { ApiUser, ApiTransaction, ApiVault, ApiTokenUsage } from '@/lib/api/ProfileApi';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -46,6 +47,13 @@ const TAG_COLORS = ['bg-error', 'bg-tertiary', 'bg-secondary', 'bg-outline', 'bg
 
 function formatCurrency(amount: number): string {
   return `⛁ ${Math.abs(amount).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+}
+
+function formatTokens(count: number | null | undefined): string {
+  const n = Number.isFinite(count) ? (count as number) : 0;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return n.toLocaleString('en-US');
 }
 
 function getMonthKey(date: string): string | null {
@@ -104,6 +112,10 @@ export default function StatsPage() {
   const [vaults, setVaults] = useState<ApiVault[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  const [tokenUsage, setTokenUsage] = useState<ApiTokenUsage | null>(null);
+  const [tokenUsageLoading, setTokenUsageLoading] = useState(false);
+  const [tokenUsageError, setTokenUsageError] = useState<string | null>(null);
+
   const [selectedVaultId, setSelectedVaultId] = useState<string>('all');
   const [vaultOpen, setVaultOpen] = useState(false);
   const [selectedMonthYear, setSelectedMonthYear] = useState<string>(CURRENT_MONTH_YEAR);
@@ -126,6 +138,20 @@ export default function StatsPage() {
       .catch(console.error)
       .finally(() => setIsLoading(false));
   }, [userId, selectedMonthYear, isAllTime]);
+
+  useEffect(() => {
+    if (!userId) return;
+    setTokenUsageLoading(true);
+    setTokenUsageError(null);
+    profileApi
+      .getTokenUsage(userId)
+      .then(setTokenUsage)
+      .catch((err) => {
+        console.error(err);
+        setTokenUsageError('Token usage is unavailable. Check that OPENAI_ADMIN_KEY is configured.');
+      })
+      .finally(() => setTokenUsageLoading(false));
+  }, [userId]);
 
   const filteredTransactions = useMemo(() => {
     if (selectedVaultId === 'all') return transactions;
@@ -663,6 +689,76 @@ export default function StatsPage() {
                       </div>
                     );
                   })}
+                </div>
+              )}
+            </Card>
+
+            {/* AI Token Usage */}
+            <Card className="flex flex-col gap-4 !p-3">
+              <div>
+                <h3 className="font-headline-md text-headline-md text-on-surface flex items-center gap-2">
+                  <Cpu className="w-5 h-5 text-primary" />
+                  AI Token Usage
+                </h3>
+                <p className="font-body-sm text-on-surface-variant mt-1">OpenAI tokens consumed this month by the expense parser.</p>
+              </div>
+
+              {tokenUsageLoading ? (
+                <div className="flex flex-col gap-4 animate-pulse">
+                  <div className="grid grid-cols-3 gap-stack-md">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="h-16 bg-surface-container-highest border-4 border-black" />
+                    ))}
+                  </div>
+                  <div className="h-14 bg-surface-container-highest border-4 border-black" />
+                </div>
+              ) : tokenUsageError ? (
+                <p className="font-body-sm text-error py-4 text-center">{tokenUsageError}</p>
+              ) : !tokenUsage || tokenUsage.totalTokens === 0 ? (
+                <p className="font-body-sm text-on-surface-variant py-4 text-center">No AI usage recorded this month.</p>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {/* Headline totals */}
+                  <div className="grid grid-cols-3 gap-stack-md">
+                    <div className="flex flex-col gap-1 bg-surface-dim p-3 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]">
+                      <span className="font-label-caps text-[10px] text-outline uppercase">Input</span>
+                      <span className="font-headline-sm text-on-surface">{formatTokens(tokenUsage.inputTokens)}</span>
+                    </div>
+                    <div className="flex flex-col gap-1 bg-surface-dim p-3 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]">
+                      <span className="font-label-caps text-[10px] text-outline uppercase">Output</span>
+                      <span className="font-headline-sm text-secondary">{formatTokens(tokenUsage.outputTokens)}</span>
+                    </div>
+                    <div className="flex flex-col gap-1 bg-surface-dim p-3 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]">
+                      <span className="font-label-caps text-[10px] text-outline uppercase">Total</span>
+                      <span className="font-headline-sm text-primary">{formatTokens(tokenUsage.totalTokens)}</span>
+                    </div>
+                  </div>
+
+                  <p className="font-body-sm text-on-surface-variant text-[11px]">
+                    {(tokenUsage.requests ?? 0).toLocaleString('en-US')} model {tokenUsage.requests === 1 ? 'request' : 'requests'} this month.
+                  </p>
+
+                  {/* Per-model breakdown */}
+                  {(tokenUsage.models?.length ?? 0) > 0 && (
+                    <div className="flex flex-col gap-2 border-t-4 border-black pt-3">
+                      {tokenUsage.models.map((m) => {
+                        const percent = tokenUsage.totalTokens > 0 ? Math.round((m.totalTokens / tokenUsage.totalTokens) * 100) : 0;
+                        return (
+                          <div key={m.model} className="flex flex-col gap-1">
+                            <div className="flex justify-between font-body-sm text-body-sm">
+                              <span className="text-on-surface truncate">{m.model}</span>
+                              <span className="text-on-surface-variant whitespace-nowrap">
+                                {formatTokens(m.totalTokens)} · {percent}%
+                              </span>
+                            </div>
+                            <div className="h-4 w-full bg-surface-dim border-4 border-black overflow-hidden">
+                              <div className="h-full bg-primary" style={{ width: `${percent}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </Card>

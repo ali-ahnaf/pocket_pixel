@@ -64,6 +64,30 @@ export interface ApiRecurringQuest {
   vaultId: string | null;
 }
 
+export interface ApiPromptResult {
+  title: string;
+  amount: number;
+  type: 'expense' | 'income';
+  tagIds: string[];
+}
+
+export interface ApiTokenUsageModel {
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  requests: number;
+}
+
+export interface ApiTokenUsage {
+  periodStart: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  requests: number;
+  models: ApiTokenUsageModel[];
+}
+
 export interface ApiDebt {
   id: string;
   userId: string;
@@ -105,6 +129,15 @@ export default class ProfileApi extends ApiClient {
 
   setDefaultVault(userId: string, vaultId: string): Promise<ApiVault> {
     return this.put<ApiVault>(`/users/${userId}/vaults/${vaultId}/set-default`);
+  }
+
+  // AI prompt
+  sendPrompt(userId: string, prompt: string): Promise<ApiPromptResult> {
+    return this.post<ApiPromptResult>(`/users/${userId}/prompt`, { prompt });
+  }
+
+  getTokenUsage(userId: string): Promise<ApiTokenUsage> {
+    return this.get<ApiTokenUsage>(`/users/${userId}/prompt/usage`);
   }
 
   // Tags

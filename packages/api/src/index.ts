@@ -13,6 +13,7 @@ import vaultsRouter from './routes/vaults.routes';
 import tagsRouter from './routes/tags.routes';
 import recurringRouter from './routes/recurring.routes';
 import debtsRouter from './routes/debts.routes';
+import promptRouter from './routes/prompt.routes';
 import { requireAuth } from './middleware/auth';
 import { errorHandler } from './middleware/error-handler';
 import { restoreAllRecurringJobs } from './scheduler/recurring-scheduler';
@@ -36,6 +37,7 @@ app.get('/health', (_req, res) => {
 app.use('/api/auth', authRouter);
 app.use('/api/users/:userId', requireAuth);
 app.use('/api/users', usersRouter);
+app.use('/api/users/:userId/prompt', promptRouter);
 app.use('/api/users/:userId/transactions', transactionsRouter);
 app.use('/api/users/:userId/analytics', analyticsRouter);
 app.use('/api/users/:userId/vaults', vaultsRouter);

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Coins, TrendingDown, TrendingUp, ChevronDown, Plus, Package } from 'lucide-react';
+import { X, Coins, TrendingDown, TrendingUp, ChevronDown, Plus, Package, Sparkles, Send, SlidersHorizontal } from 'lucide-react';
 import { iconMapper } from '../lib/iconMapper';
 import { profileApi } from '../lib/api';
 import type { ApiTag, ApiVault } from '../lib/api/ProfileApi';
@@ -16,6 +16,11 @@ interface LogResourceModalProps {
 }
 
 export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedMonth, selectedYear }: LogResourceModalProps) {
+  const [manualEntry, setManualEntry] = useState(false);
+  const [promptText, setPromptText] = useState('');
+  const [isPrompting, setIsPrompting] = useState(false);
+  const [promptResult, setPromptResult] = useState<string | null>(null);
+
   const [isExpense, setIsExpense] = useState(true);
   const [amount, setAmount] = useState('');
   const [title, setTitle] = useState('');
@@ -40,6 +45,11 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
     .slice(0, 3);
 
   useEffect(() => {
+    if (isOpen) {
+      setManualEntry(false);
+      setPromptText('');
+      setPromptResult(null);
+    }
     if (isOpen && userId) {
       profileApi.getTags(userId).then((res) => {
         if (res) setAvailableTags(res);
@@ -53,6 +63,25 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
       });
     }
   }, [isOpen, userId]);
+
+  const handleSendPrompt = async () => {
+    if (!promptText.trim() || isPrompting || !userId) return;
+    setIsPrompting(true);
+    setPromptResult(null);
+    try {
+      const res = await profileApi.sendPrompt(userId, promptText.trim());
+      setTitle(res.title);
+      setAmount(String(res.amount));
+      setIsExpense(res.type === 'expense');
+      setSelectedTags(availableTags.filter((tag) => res.tagIds.includes(tag.id)));
+      setManualEntry(true);
+    } catch {
+      setPromptResult('Something went wrong. Please try manual entry');
+      setManualEntry(true);
+    } finally {
+      setIsPrompting(false);
+    }
+  };
 
   const toggleTag = (tag: ApiTag) => {
     if (selectedTags.some((t) => t.id === tag.id)) {
@@ -154,6 +183,45 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
 
         {/* Content Area */}
         <main className="px-4 space-y-5 pb-3 overflow-y-auto">
+          {!manualEntry && (
+            <div className="space-y-3">
+              <textarea
+                className="w-full h-32 p-4 bg-surface-container-lowest border-4 border-black shadow-[inset_4px_4px_0px_rgba(0,0,0,0.6),_inset_-2px_-2px_0px_rgba(255,255,255,0.05)] font-body-lg text-on-surface focus:outline-none placeholder:text-surface-variant resize-none"
+                placeholder="Describe your transaction... e.g. Spent 24 on groceries at the market"
+                value={promptText}
+                onChange={(e) => setPromptText(e.target.value)}
+              />
+              <button
+                onClick={handleSendPrompt}
+                disabled={!promptText.trim() || isPrompting}
+                className="w-full h-16 bg-primary-container text-on-primary-container border-4 border-black shadow-[inset_2px_2px_0px_rgba(255,255,255,0.1),_inset_-2px_-2px_0px_rgba(0,0,0,0.4)] active:translate-y-0.5 active:shadow-none flex items-center justify-center gap-4 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Send size={20} />
+                <span className="font-headline-md font-black uppercase tracking-wider">{isPrompting ? 'SENDING...' : 'SEND'}</span>
+              </button>
+              {promptResult && (
+                <div className="p-4 bg-surface-container-lowest border-4 border-black shadow-[inset_4px_4px_0px_rgba(0,0,0,0.6)]">
+                  <p className="font-body-lg text-on-surface whitespace-pre-wrap">{promptResult}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <button
+            onClick={() => setManualEntry(!manualEntry)}
+            className="w-full h-12 border-4 border-black bg-surface-container-low text-on-surface font-label-caps flex items-center justify-between px-4 active:translate-y-0.5 hover:bg-surface-container-highest transition-colors"
+          >
+            <span className="flex items-center gap-2">
+              {manualEntry ? <Sparkles size={16} /> : <SlidersHorizontal size={16} />}
+              MANUAL ENTRY
+            </span>
+            <span className={`w-12 h-6 border-4 border-black flex items-center transition-colors ${manualEntry ? 'bg-primary justify-end' : 'bg-surface-container-highest justify-start'}`}>
+              <span className="w-4 h-4 bg-black" />
+            </span>
+          </button>
+
+          {manualEntry && (
+          <>
           {/* Name Input */}
           <div className="space-y-2">
             <input
@@ -339,6 +407,8 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
               <Package size={32} />
             </button>
           </div>
+          </>
+          )}
 
           {/* Visual Context Footer Decor */}
           <div className="flex justify-between items-center pt-1 opacity-50">
