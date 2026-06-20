@@ -18,7 +18,9 @@ function handleUnauthorized(): void {
   if (typeof window === 'undefined') return;
   window.localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
   window.localStorage.removeItem(PROFILE_STORAGE_KEY);
-  if (window.location.pathname !== SIGN_IN_PATH) {
+  // Normalise the trailing slash (Next runs with `trailingSlash: true`) so we
+  // don't redirect-loop when already on the sign-in page.
+  if (window.location.pathname.replace(/\/$/, '') !== SIGN_IN_PATH) {
     window.location.href = SIGN_IN_PATH;
   }
 }
@@ -41,6 +43,7 @@ export default class ApiClient {
   }
 
   private async request<T = any>(method: Method, url: string, config: AxiosRequestConfig = {}): Promise<T> {
+    const authToken = getStoredAuthToken();
     try {
       const response: AxiosResponse<T> = await this.axiosInstance.request({
         method,
@@ -48,14 +51,17 @@ export default class ApiClient {
         ...config,
         headers: {
           ...(config.headers ?? {}),
-          ...(getStoredAuthToken() ? { Authorization: `Bearer ${getStoredAuthToken()}` } : {}),
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
         },
       });
 
       return response.data;
     } catch (error: any) {
       console.log('error', error);
-      if (error.response?.status === 401) {
+      // Only treat a 401 as an expired session when we actually sent a token.
+      // A 401 from an unauthenticated request (e.g. a failed sign-in) is an
+      // expected error the caller should surface, not a reason to redirect.
+      if (error.response?.status === 401 && authToken) {
         handleUnauthorized();
       }
       if (error.response?.data instanceof Blob) {
