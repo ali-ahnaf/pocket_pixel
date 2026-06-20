@@ -7,6 +7,37 @@ on:
     branches: ["**"]
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared
+        run: npm run build:shared
+
+      - name: Run API tests
+        run: npm run test:api -- --runInBand
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+        working-directory: packages/ui
+
+      - name: Run UI e2e tests (headless)
+        run: npm run test:ui:e2e
+        env:
+          CI: true
+          NEXT_TELEMETRY_DISABLED: 1
+
   build:
     runs-on: ubuntu-latest
 
@@ -33,19 +64,6 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: 1
 
-      - name: Run API tests
-        run: npm run test:api -- --runInBand
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
-        working-directory: packages/ui
-
-      - name: Run UI e2e tests (headless)
-        run: npm run test:ui:e2e
-        env:
-          CI: true
-          NEXT_TELEMETRY_DISABLED: 1
-
       - name: Stage deploy bundle
         run: |
           mkdir -p bundle/packages/shared bundle/packages/api bundle/packages/ui
@@ -67,7 +85,7 @@ jobs:
 
   deploy:
     name: Deploy to Hostinger VPS
-    needs: build
+    needs: [build, test]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     env:
@@ -120,9 +138,8 @@ jobs:
           ssh deploy-target <<EOF
           set -eu
           cd "$VPS_APP_DIR"
-          npm ci --omit=dev
-          cd "$VPS_APP_DIR/packages/api" && NODE_ENV=production ../../node_modules/.bin/typeorm -d dist/data-source.js migration:run
-          cd "$VPS_APP_DIR"
+          npm ci --omit=dev --workspace=packages/api --workspace=packages/shared --include-workspace-root
+          npm run migration:run-prod --workspace=packages/api
           pm2 startOrRestart ecosystem.config.js --env production
           pm2 save
           EOF
