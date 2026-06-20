@@ -4,14 +4,14 @@
 
 **Level up your finances. Track every coin, quest every habit.**
 
-[![CI/CD](https://github.com/ali-ahnaf/pocket_pixel/actions/workflows/build.yml/badge.svg)](https://github.com/ali-ahnaf/pocket_pixel/actions/workflows/build.yml)
+[![CI/CD](https://github.com/ali-ahnaf/pocket_pixel/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/ali-ahnaf/pocket_pixel/actions/workflows/ci-cd.yml)
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org/)
 [![Express](https://img.shields.io/badge/Express-4.18-grey?logo=express)](https://expressjs.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-TypeORM-003b57?logo=sqlite&logoColor=white)](https://typeorm.io/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
-[![Stars](https://img.shields.io/github/stars/propo41/expense_tracker?style=social)](https://github.com/propo41/expense_tracker)
+[![Stars](https://img.shields.io/github/stars/ali-ahnaf/pocket_pixel?style=social)](https://github.com/ali-ahnaf/pocket_pixel)
 
 </div>
 
