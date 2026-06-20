@@ -4,6 +4,7 @@
 
 **Level up your finances. Track every coin, quest every habit.**
 
+[![CI/CD](https://github.com/ali-ahnaf/pocket_pixel/actions/workflows/build.yml/badge.svg)](https://github.com/ali-ahnaf/pocket_pixel/actions/workflows/build.yml)
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org/)
@@ -20,8 +21,8 @@
 
 ### Screenshots
 
-| Dashboard | Analytics |
-|-----------|-----------|
+| Dashboard                        | Analytics                             |
+| -------------------------------- | ------------------------------------- |
 | ![Dashboard](assets/ss_home.png) | ![Analytics](assets/ss_analytics.png) |
 
 </div>
@@ -42,15 +43,15 @@ Pocket Pixel is a **gamified personal finance tracker** built for people who wan
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS |
-| Backend | Express.js, TypeORM, SQLite (better-sqlite3) |
-| Auth | JWT (30-day sessions), bcryptjs password hashing |
-| Scheduling | node-cron (recurring transaction automation) |
-| Validation | Joi |
-| Process Manager | PM2 |
-| Monorepo | npm workspaces |
+| Layer           | Technology                                                  |
+| --------------- | ----------------------------------------------------------- |
+| Frontend        | Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS |
+| Backend         | Express.js, TypeORM, SQLite (better-sqlite3)                |
+| Auth            | JWT (30-day sessions), bcryptjs password hashing            |
+| Scheduling      | node-cron (recurring transaction automation)                |
+| Validation      | Joi                                                         |
+| Process Manager | PM2                                                         |
+| Monorepo        | npm workspaces                                              |
 
 ---
 
@@ -111,6 +112,7 @@ pocket_pixel/
 git clone https://github.com/propo41/expense_tracker.git
 cd expense_tracker
 npm install
+npm run build:shared
 ```
 
 ### Development
@@ -123,6 +125,16 @@ npm run dev:api
 
 # Terminal 2 — UI (http://localhost:3000)
 npm run dev:ui
+```
+
+### Test
+
+```bash
+# API tests
+npm run test:api
+
+# UI E2E tests
+npm run test:e2e
 ```
 
 ### Production Build
@@ -172,18 +184,23 @@ npm run migration:revert     # Roll back the last migration
 ## Features In Depth
 
 ### Vaults
+
 Organize your money into custom buckets — think of them as tagged envelopes. Each vault has a name, icon (from Lucide), background color, and can be marked as your default. Transactions without a vault fall into the default one.
 
 ### Recurring Quests
+
 Set a transaction to auto-repeat on a schedule (`daily` / `weekly` / `monthly` / `yearly`). The API scheduler restores all active quests on startup using node-cron, so nothing gets missed between restarts.
 
 ### Analytics
+
 Three views to understand your spending:
+
 - **Tag breakdown** — which labels are eating your budget
 - **Monthly report** — income vs. expenses by month
 - **Yearly report** — long-term trend across all months
 
 ### Authentication
+
 - Passwords hashed with bcryptjs (12 salt rounds)
 - JWT tokens with 30-day expiration stored in localStorage
 - Auth guard on all protected frontend routes
@@ -228,6 +245,7 @@ Contributions are what make open source awesome. All skill levels welcome — wh
 ### Reporting Bugs
 
 Open an issue with:
+
 - What you expected vs. what happened
 - Steps to reproduce
 - Your OS and Node.js version
@@ -236,18 +254,18 @@ Open an issue with:
 
 ## Roadmap
 
-| Status | Feature |
-|--------|---------|
-| ✅ | Transaction CRUD |
-| ✅ | Vaults & Tags |
-| ✅ | Recurring Quests |
-| ✅ | Monthly/Yearly Analytics |
-| ✅ | JWT Authentication |
-| 🚧 | Budget limits per vault |
-| 🚧 | CSV export |
-| 📋 | Multi-currency support |
-| 📋 | PWA / offline mode |
-| 📋 | Docker Compose setup |
+| Status | Feature                  |
+| ------ | ------------------------ |
+| ✅     | Transaction CRUD         |
+| ✅     | Vaults & Tags            |
+| ✅     | Recurring Quests         |
+| ✅     | Monthly/Yearly Analytics |
+| ✅     | JWT Authentication       |
+| 🚧     | Budget limits per vault  |
+| 🚧     | CSV export               |
+| 📋     | Multi-currency support   |
+| 📋     | PWA / offline mode       |
+| 📋     | Docker Compose setup     |
 
 ---
 

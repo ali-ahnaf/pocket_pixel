@@ -37,19 +37,14 @@ app.get('/health', (_req, res) => {
 
 app.use('/api/auth', authRouter);
 
-// authenticated endpoints below this that must have a bearer token
-app.use(requireAuth);
-
-app.use('/api/users', usersRouter);
-app.use('/api/users/:userId/prompt', promptRouter);
-app.use('/api/users/:userId/transactions', transactionsRouter);
-app.use('/api/users/:userId/analytics', analyticsRouter);
-app.use('/api/users/:userId/vaults', vaultsRouter);
-app.use('/api/users/:userId/tags', tagsRouter);
-app.use('/api/users/:userId/recurring', recurringRouter);
-app.use('/api/users/:userId/debts', debtsRouter);
-
-app.use(errorHandler); // global error handler
+app.use('/api/users', requireAuth, usersRouter);
+app.use('/api/users/:userId/prompt', requireAuth, promptRouter);
+app.use('/api/users/:userId/transactions', requireAuth, transactionsRouter);
+app.use('/api/users/:userId/analytics', requireAuth, analyticsRouter);
+app.use('/api/users/:userId/vaults', requireAuth, vaultsRouter);
+app.use('/api/users/:userId/tags', requireAuth, tagsRouter);
+app.use('/api/users/:userId/recurring', requireAuth, recurringRouter);
+app.use('/api/users/:userId/debts', requireAuth, debtsRouter);
 
 // Serve static files from the Next.js build
 const uiDir = path.join(__dirname, '../../ui/out');
@@ -59,6 +54,8 @@ if (fs.existsSync(uiDir)) {
     res.sendFile(path.join(uiDir, 'index.html'));
   });
 }
+
+app.use(errorHandler); // global error handler — must be last
 
 // Database connection and server startup
 AppDataSource.initialize()

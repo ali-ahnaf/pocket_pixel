@@ -133,6 +133,12 @@ jobs:
             --exclude '*.sqlite' \
             bundle/ "deploy-target:$VPS_APP_DIR/"
 
+      - name: Write API .env on VPS
+        env:
+          API_ENV: ${{ secrets.API_ENV }}
+        run: |
+          printf '%s' "$API_ENV" | ssh deploy-target "cat > '$VPS_APP_DIR/packages/api/.env'"
+
       - name: Run remote deploy commands
         run: |
           ssh deploy-target <<EOF
@@ -140,6 +146,6 @@ jobs:
           cd "$VPS_APP_DIR"
           npm ci --omit=dev --workspace=packages/api --workspace=packages/shared --include-workspace-root
           npm run migration:run-prod --workspace=packages/api
-          pm2 startOrRestart ecosystem.config.js --env production
+          pm2 startOrRestart ecosystem.config.js --only pocket-pixel --env production
           pm2 save
           EOF
