@@ -2,9 +2,9 @@ name: Build
 
 on:
   push:
-    branches: ["main", "develop"]
+    branches: ['main', 'develop']
   pull_request:
-    branches: ["**"]
+    branches: ['**']
 
 jobs:
   test:
@@ -85,6 +85,7 @@ jobs:
 
   deploy:
     name: Deploy to Hostinger VPS
+    environment: production
     needs: [build, test]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -146,6 +147,30 @@ jobs:
           cd "$VPS_APP_DIR"
           npm ci --omit=dev --workspace=packages/api --workspace=packages/shared --include-workspace-root
           npm run migration:run-prod --workspace=packages/api
-          pm2 startOrRestart ecosystem.config.js --only pocket-pixel --env production
-          pm2 save
+          pm2 startOrRestart ecosystem.config.js --only pocket-pixel --env production --silent > /dev/null
+          pm2 save --silent > /dev/null
+          echo "pocket-pixel restarted and process list saved"
           EOF
+
+  release:
+    name: Tag and release
+    needs: deploy
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create tag and release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          DATE="$(date -u +%Y.%m.%d)"
+          TAG="v${DATE}-${{ github.run_number }}"
+          gh release create "$TAG" \
+            --target "${{ github.sha }}" \
+            --title "Release ${DATE} (#${{ github.run_number }})" \
+            --generate-notes
