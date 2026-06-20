@@ -3,8 +3,16 @@ name: Build
 on:
   push:
     branches: ['main', 'develop']
+    paths-ignore:
+      - '**.md'
+      - '**.yml'
+      - '**.yaml'
   pull_request:
-    branches: ['**']
+    branches: ['main', 'develop']
+    paths-ignore:
+      - '**.md'
+      - '**.yml'
+      - '**.yaml'
 
 jobs:
   test:
