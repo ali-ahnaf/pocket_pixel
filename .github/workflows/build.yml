@@ -33,6 +33,38 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: 1
 
+      - name: Run API tests
+        run: npm run test:api -- --runInBand
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+        working-directory: packages/ui
+
+      - name: Run UI e2e tests (headless)
+        run: npm run test:ui:e2e
+        env:
+          CI: true
+          NEXT_TELEMETRY_DISABLED: 1
+
+      - name: Stage deploy bundle
+        run: |
+          mkdir -p bundle/packages/shared bundle/packages/api bundle/packages/ui
+          cp package.json package-lock.json ecosystem.config.js bundle/
+          cp packages/shared/package.json bundle/packages/shared/
+          cp -r packages/shared/dist bundle/packages/shared/dist
+          cp packages/api/package.json bundle/packages/api/
+          cp -r packages/api/dist bundle/packages/api/dist
+          cp packages/ui/package.json bundle/packages/ui/
+          cp -r packages/ui/out bundle/packages/ui/out
+
+      - name: Upload deploy bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-bundle
+          path: bundle/
+          include-hidden-files: true
+          retention-days: 1
+
   deploy:
     name: Deploy to Hostinger VPS
     needs: build
@@ -45,7 +77,11 @@ jobs:
       VPS_APP_DIR: ${{ secrets.HOSTINGER_VPS_APP_DIR }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Download deploy bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: deploy-bundle
+          path: bundle
 
       - name: Configure SSH
         run: |
@@ -70,27 +106,23 @@ jobs:
       - name: Verify SSH access
         run: ssh deploy-target "mkdir -p '$VPS_APP_DIR'"
 
-      - name: Sync project to VPS
+      - name: Sync build output to VPS
         run: |
           rsync -az --delete \
-            --exclude '.git/' \
-            --exclude '.github/' \
             --exclude 'node_modules/' \
             --exclude '.env' \
             --exclude '.env.*' \
-            --exclude 'pocket_pixel.sqlite' \
-            ./ "deploy-target:$VPS_APP_DIR/"
+            --exclude '*.sqlite' \
+            bundle/ "deploy-target:$VPS_APP_DIR/"
 
       - name: Run remote deploy commands
         run: |
           ssh deploy-target <<EOF
           set -eu
           cd "$VPS_APP_DIR"
-          npm install
-          npm run migration:run-prod
-          npm run build:shared
-          npm run build:api
-          npm run build:client
+          npm ci --omit=dev
+          cd "$VPS_APP_DIR/packages/api" && NODE_ENV=production ../../node_modules/.bin/typeorm -d dist/data-source.js migration:run
+          cd "$VPS_APP_DIR"
           pm2 startOrRestart ecosystem.config.js --env production
           pm2 save
           EOF
