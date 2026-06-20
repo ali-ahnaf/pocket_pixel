@@ -1,9 +1,7 @@
 'use client';
 
 import { useReducer, useEffect, useCallback } from 'react';
-import { AUTH_TOKEN_STORAGE_KEY } from '@/lib/api/ApiClient';
-
-const PROFILE_STORAGE_KEY = 'pocket_pixel_profile';
+import { AUTH_TOKEN_STORAGE_KEY, PROFILE_STORAGE_KEY } from '@/lib/api/ApiClient';
 
 export interface AuthUser {
   id: string;

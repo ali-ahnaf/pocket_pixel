@@ -1,10 +1,26 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, Method } from 'axios';
 
 export const AUTH_TOKEN_STORAGE_KEY = 'auth_token';
+export const PROFILE_STORAGE_KEY = 'pocket_pixel_profile';
+const SIGN_IN_PATH = '/signin';
 
 export function getStoredAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
   return window.localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+}
+
+/**
+ * Handle an expired/invalid session. Clears the stored credentials so a stale
+ * profile can no longer keep `userId` alive while the token is dead, then sends
+ * the user to sign in. Guards against redirect loops and SSR.
+ */
+function handleUnauthorized(): void {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+  window.localStorage.removeItem(PROFILE_STORAGE_KEY);
+  if (window.location.pathname !== SIGN_IN_PATH) {
+    window.location.href = SIGN_IN_PATH;
+  }
 }
 
 export default class ApiClient {
@@ -39,6 +55,9 @@ export default class ApiClient {
       return response.data;
     } catch (error: any) {
       console.log('error', error);
+      if (error.response?.status === 401) {
+        handleUnauthorized();
+      }
       if (error.response?.data instanceof Blob) {
         try {
           const text = await error.response.data.text();
