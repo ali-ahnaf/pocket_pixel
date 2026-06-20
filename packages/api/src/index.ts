@@ -14,7 +14,7 @@ import tagsRouter from './routes/tags.routes';
 import recurringRouter from './routes/recurring.routes';
 import debtsRouter from './routes/debts.routes';
 import promptRouter from './routes/prompt.routes';
-import { requireAuth } from './middleware/auth';
+import { authenticate, requireAuth } from './middleware/auth';
 import { errorHandler } from './middleware/error-handler';
 import { restoreAllRecurringJobs } from './scheduler/recurring-scheduler';
 
@@ -29,13 +29,17 @@ app.use(
   }),
 );
 app.use(express.json());
+app.use(authenticate);
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
 app.use('/api/auth', authRouter);
-app.use('/api/users/:userId', requireAuth);
+
+// authenticated endpoints below this that must have a bearer token
+app.use(requireAuth);
+
 app.use('/api/users', usersRouter);
 app.use('/api/users/:userId/prompt', promptRouter);
 app.use('/api/users/:userId/transactions', transactionsRouter);
@@ -44,8 +48,10 @@ app.use('/api/users/:userId/vaults', vaultsRouter);
 app.use('/api/users/:userId/tags', tagsRouter);
 app.use('/api/users/:userId/recurring', recurringRouter);
 app.use('/api/users/:userId/debts', debtsRouter);
-app.use(errorHandler);
 
+app.use(errorHandler); // global error handler
+
+// Serve static files from the Next.js build
 const uiDir = path.join(__dirname, '../../ui/out');
 if (fs.existsSync(uiDir)) {
   app.use(express.static(uiDir));
@@ -54,6 +60,7 @@ if (fs.existsSync(uiDir)) {
   });
 }
 
+// Database connection and server startup
 AppDataSource.initialize()
   .then(async () => {
     console.log('Database connected');

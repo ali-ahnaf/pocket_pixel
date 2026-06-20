@@ -1,15 +1,15 @@
-import { Request, Response, Router } from "express";
-import { asyncHandler } from "../../middleware/error-handler";
-import { debtsRepo, serializeDebt } from "./shared";
+import { Request, Response, Router } from 'express';
+import { debtsService, utilService } from '../../services';
+import { asyncHandler } from '../../middleware/error-handler';
 
 const router = Router({ mergeParams: true });
 
-router.get("/", asyncHandler(async (req: Request, res: Response) => {
-  const debts = await debtsRepo().find({
-    where: { userId: req.params.userId },
-    order: { createdAt: "DESC" },
-  });
-  return res.json(debts.map(serializeDebt));
-}));
+router.get(
+  '/',
+  asyncHandler(async (req: Request, res: Response) => {
+    const debts = await debtsService.list(req.user!.userId);
+    return utilService.replyOk(res, debts);
+  }),
+);
 
 export default router;

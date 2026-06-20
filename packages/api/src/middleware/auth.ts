@@ -1,28 +1,51 @@
 import { NextFunction, Request, Response } from 'express';
-import { verifyAuthToken } from '../routes/auth/shared';
+import { authService, logger, utilService } from '../services';
+import type { TokenPayload } from '../services/auth.service';
 
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
+declare global {
+  namespace Express {
+    interface Request {
+      user?: TokenPayload;
+    }
+  }
+}
+
+/**
+ * Global, best-effort authentication. Decodes a `Bearer` token into `req.user`
+ * when one is present and valid, and silently leaves `req.user` unset on a
+ * missing or invalid token. Never rejects — guarding is `requireAuth`'s job.
+ */
+export function authenticate(req: Request, _res: Response, next: NextFunction): void {
   const authorization = req.header('Authorization');
-
   if (!authorization) {
-    return res.status(401).json({ message: 'Authorization header is required' });
+    return next();
   }
 
   const [scheme, token] = authorization.split(' ');
   if (scheme !== 'Bearer' || !token) {
-    return res.status(401).json({ message: 'Invalid authorization header' });
+    return next();
   }
 
   try {
-    const payload = verifyAuthToken(token);
-
-    if (req.params.userId && req.params.userId !== payload.userId) {
-      return res.status(401).json({ message: 'Unauthorized' });
-    }
-
-    res.locals.authUser = payload;
-    return next();
+    req.user = authService.verifyToken(token);
   } catch {
-    return res.status(401).json({ message: 'Invalid or expired token' });
+    // Best-effort: an invalid/expired token simply leaves req.user unset.
+    logger.debug('Ignoring invalid auth token');
   }
+
+  return next();
+}
+
+/**
+ * Per-route guard. Replies `401 Unauthorized` when no authenticated user is
+ * present. Once this runs, downstream handlers can rely on `req.user` being set.
+ * Add it only to routes that require a logged-in user.
+ */
+export function requireAuth(req: Request, res: Response, next: NextFunction): void {
+  if (!req.user) {
+    utilService.replyError(res, 'Unauthorized', 401);
+    return;
+  }
+
+  return next();
 }

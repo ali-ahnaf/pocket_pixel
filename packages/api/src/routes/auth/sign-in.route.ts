@@ -1,10 +1,7 @@
 import { Request, Response, Router } from 'express';
 import Joi from 'joi';
-import bcrypt from 'bcryptjs';
 import type { SignInPayload } from '@expense-tracker/shared';
-import { createAuthToken } from './shared';
-import { AppDataSource } from '../../data-source';
-import { User } from '../../entities/User.entity';
+import { authService, utilService } from '../../services';
 import { asyncHandler } from '../../middleware/error-handler';
 
 const router = Router();
@@ -13,31 +10,14 @@ const signInSchema = Joi.object<SignInPayload>({
   password: Joi.string().required(),
 });
 
-const authRepo = () => AppDataSource.getRepository(User);
-
 router.post(
   '/sign-in',
   asyncHandler(async (req: Request, res: Response) => {
     const { error, value } = signInSchema.validate(req.body);
-    if (error) return res.status(400).json({ message: error.message });
+    if (error) return utilService.replyError(res, error.message);
 
-    const payload = value as SignInPayload;
-
-    const user = await authRepo().findOneBy({ email: payload.email });
-    if (!user) return res.status(401).json({ message: 'Invalid credentials' });
-
-    const passwordMatches = await bcrypt.compare(payload.password, user.password);
-    if (!passwordMatches) return res.status(401).json({ message: 'Invalid credentials' });
-
-    const token = createAuthToken({ userId: user.id, name: user.name, email: user.email, avatar: user.avatar });
-
-    return res.json({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      avatar: user.avatar,
-      token,
-    });
+    const result = await authService.signIn(value as SignInPayload);
+    return utilService.replyOk(res, result);
   }),
 );
 

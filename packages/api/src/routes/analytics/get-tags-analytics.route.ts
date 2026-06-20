@@ -1,31 +1,22 @@
-import { Request, Response, Router } from "express";
-import Joi from "joi";
-import { analyticsRepo } from "./shared";
-import { asyncHandler } from "../../middleware/error-handler";
+import { Request, Response, Router } from 'express';
+import Joi from 'joi';
+import { analyticsService, utilService } from '../../services';
+import { asyncHandler } from '../../middleware/error-handler';
 
 const router = Router({ mergeParams: true });
-const yearSchema = Joi.object({
+const yearSchema = Joi.object<{ year: number }>({
   year: Joi.number().integer().min(2000).max(2100).required(),
 });
 
-router.get("/tags", asyncHandler(async (req: Request, res: Response) => {
-  const { error, value } = yearSchema.validate(req.query);
-  if (error) return res.status(400).json({ message: error.message });
+router.get(
+  '/tags',
+  asyncHandler(async (req: Request, res: Response) => {
+    const { error, value } = yearSchema.validate(req.query);
+    if (error) return utilService.replyError(res, error.message);
 
-  const rows = await analyticsRepo()
-    .createQueryBuilder("e")
-    .select("e.tag", "tag")
-    .addSelect("e.type", "type")
-    .addSelect("SUM(e.amount)", "total")
-    .addSelect("COUNT(*)", "count")
-    .where("e.userId = :userId", { userId: req.params.userId })
-    .andWhere("strftime('%Y', e.date) = :year", { year: String(value.year) })
-    .groupBy("e.tag")
-    .addGroupBy("e.type")
-    .orderBy("total", "DESC")
-    .getRawMany();
-
-  return res.json(rows);
-}));
+    const rows = await analyticsService.tags(req.user!.userId, value.year);
+    return utilService.replyOk(res, rows);
+  }),
+);
 
 export default router;

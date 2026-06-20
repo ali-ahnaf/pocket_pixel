@@ -1,3 +1,5 @@
+export * from "./contracts";
+
 export interface User {
   id: string;
   name: string;

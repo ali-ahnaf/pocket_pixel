@@ -1,30 +1,25 @@
-import { Request, Response, Router } from "express";
-import Joi from "joi";
-import { usersRepo } from "./shared";
-import { asyncHandler } from "../../middleware/error-handler";
+import { Request, Response, Router } from 'express';
+import Joi from 'joi';
+import { usersService, utilService } from '../../services';
+import { UpdateUserInput } from '../../services/users.service';
+import { asyncHandler } from '../../middleware/error-handler';
 
 const router = Router();
-const updateUserSchema = Joi.object({
+const updateUserSchema = Joi.object<UpdateUserInput>({
   name: Joi.string().max(100),
   email: Joi.string().email().max(255),
   avatar: Joi.string().max(255).allow(''),
 }).min(1);
 
-router.put("/:userId", asyncHandler(async (req: Request, res: Response) => {
-  const { error, value } = updateUserSchema.validate(req.body);
-  if (error) return res.status(400).json({ message: error.message });
+router.put(
+  '/:userId',
+  asyncHandler(async (req: Request, res: Response) => {
+    const { error, value } = updateUserSchema.validate(req.body);
+    if (error) return utilService.replyError(res, error.message);
 
-  const user = await usersRepo().findOneBy({ id: req.params.userId });
-  if (!user) return res.status(404).json({ message: "User not found" });
-
-  if (value.email && value.email !== user.email) {
-    const existing = await usersRepo().findOneBy({ email: value.email });
-    if (existing) return res.status(409).json({ message: "Email already in use" });
-  }
-
-  Object.assign(user, value);
-  const saved = await usersRepo().save(user);
-  return res.json(saved);
-}));
+    const saved = await usersService.update(req.user!.userId, value as UpdateUserInput);
+    return utilService.replyOk(res, saved);
+  }),
+);
 
 export default router;

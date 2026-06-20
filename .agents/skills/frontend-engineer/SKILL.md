@@ -1,5 +1,5 @@
 ---
-name: pam
+name: frontend-engineer
 description: Use when building React applications in .tsx files. Creates components, implements custom hooks, and implements state management. Invoke for Server Components, Suspense boundaries, useActionState forms, performance optimization, or React 19 features.
 ---
 
@@ -66,9 +66,7 @@ If you need a custom block that isn't a `<Card>`, mimic the tactile border and s
 **Example of a custom tactile block:**
 
 ```tsx
-<div className="border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)] bg-surface-container">
-  {/* content */}
-</div>
+<div className="border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)] bg-surface-container">{/* content */}</div>
 ```
 
 **Images / Avatars:**
@@ -79,4 +77,3 @@ Always apply `[image-rendering:pixelated]` to images and avatars to preserve the
 - Basic reset and typography defaults are handled in the `@layer base`.
 - Selection color and scrollbar are customized to match the game aesthetic (`#a5d655` for primary accents).
 - Do not clutter `globals.css` with component-specific CSS if it can be achieved using Tailwind classes or abstracted into a React Component in `@/components`.
-

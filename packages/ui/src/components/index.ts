@@ -22,6 +22,7 @@ export { AppBar } from "./AppBar";
 export { AvatarPickerModal } from "./AvatarPickerModal";
 export { BottomNavBar } from "./BottomNavBar";
 export { Sidebar } from "./Sidebar";
+export { DesktopSidebar } from "./DesktopSidebar";
 export { AddDebtModal } from "./AddDebtModal";
 export { AddTagModal } from "./AddTagModal";
 export { DeleteTagModal } from "./DeleteTagModal";

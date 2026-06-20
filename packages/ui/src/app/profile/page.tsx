@@ -16,8 +16,9 @@ import {
   BottomNavBar,
   AddTagModal,
   DeleteTagModal,
+  DesktopSidebar,
 } from '@/components';
-import { Package, Award, Settings, HelpCircle, User, Briefcase, Plus, Pencil, Star, Trash2, Repeat, Calendar, CalendarDays, TrendingDown, TrendingUp, Tag, Coins } from 'lucide-react';
+import { User, Briefcase, Plus, Pencil, Star, Trash2, Repeat, Calendar, CalendarDays, TrendingDown, TrendingUp, Tag, Coins } from 'lucide-react';
 import { iconMapper } from '@/lib/iconMapper';
 import { profileApi } from '@/lib/api';
 import type { ApiVault, ApiTag, ApiRecurringQuest } from '@/lib/api/ProfileApi';
@@ -196,51 +197,7 @@ export default function ProfilePage() {
     <div className="bg-background px-3 text-on-background font-body-lg min-h-screen flex flex-col md:flex-row overflow-x-hidden selection:bg-primary selection:text-on-primary">
       <AppBar />
 
-      <aside className="hidden md:flex flex-col h-screen w-80 border-r-4 border-black bg-surface-container dark:bg-surface-container-high sticky top-0 z-50">
-        <div className="p-4 border-b-4 border-black flex items-center gap-4 bg-surface-container-lowest shadow-[inset_2px_2px_0_rgba(255,255,255,0.2),inset_-2px_-2px_0_rgba(0,0,0,0.4)] mb-8">
-          <div className="h-12 w-12 border-4 border-black shadow-[inset_-2px_-2px_0px_0px_rgba(0,0,0,0.3),_inset_2px_2px_0px_0px_rgba(255,255,255,0.2)] rounded-none bg-secondary-container overflow-hidden shrink-0">
-            <img alt="Player Avatar" className="object-cover w-full h-full [image-rendering:pixelated]" src={avatarUrl} />
-          </div>
-          <div className="flex flex-col overflow-hidden">
-            <h2 className="font-headline-md text-primary truncate">{playerName}</h2>
-            <p className="font-body-sm text-on-surface-variant truncate">Level 42 Budgeter</p>
-            <p className="font-label-caps text-secondary mt-1">Diamond Tier</p>
-          </div>
-        </div>
-
-        <nav className="flex-1 flex flex-col p-4 gap-2 overflow-y-auto">
-          <a
-            className="flex items-center gap-3 p-3 text-on-surface hover:bg-surface-container-highest hover:translate-x-1 active:scale-95 transition-transform border-4 border-transparent hover:border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]"
-            href="#"
-          >
-            <Package />
-            <span className="font-label-caps tracking-wider uppercase">Inventory</span>
-          </a>
-          <a
-            className="flex items-center gap-3 p-3 text-on-surface hover:bg-surface-container-highest hover:translate-x-1 active:scale-95 transition-transform border-4 border-transparent hover:border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]"
-            href="#"
-          >
-            <Award />
-            <span className="font-label-caps tracking-wider uppercase">Quests</span>
-          </a>
-          <a
-            className="flex items-center gap-3 p-3 bg-primary text-on-primary border-4 border-transparent border-r-4 border-r-primary-container btn shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]"
-            href="#"
-          >
-            <Settings />
-            <span className="font-label-caps tracking-wider uppercase">Settings</span>
-          </a>
-          <div className="mt-auto">
-            <a
-              className="flex items-center gap-3 p-3 text-on-surface hover:bg-surface-container-highest hover:translate-x-1 active:scale-95 transition-transform border-4 border-transparent hover:border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]"
-              href="#"
-            >
-              <HelpCircle />
-              <span className="font-label-caps tracking-wider uppercase">Help</span>
-            </a>
-          </div>
-        </nav>
-      </aside>
+      <DesktopSidebar name={playerName} avatar={avatarUrl} />
 
       <main className="flex-1 flex flex-col w-full relative pb-24 md:pb-0 overflow-y-auto overflow-x-hidden">
         <div className="max-w-5xl w-full mx-auto p-margin-mobile md:p-8 flex flex-col gap-3 md:gap-14">

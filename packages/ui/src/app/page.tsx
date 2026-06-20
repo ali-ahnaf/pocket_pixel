@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { Button, Card, ProgressBar, LogResourceModal, AppBar, BottomNavBar, EditTransactionModal } from '@/components';
+import { Button, Card, ProgressBar, LogResourceModal, AppBar, BottomNavBar, DesktopSidebar, EditTransactionModal } from '@/components';
 import { iconMapper } from '@/lib/iconMapper';
 import { profileApi } from '@/lib/api';
 import type { ApiUser, ApiTransaction, ApiRecurringOccurrence } from '@/lib/api/ProfileApi';
-import { Package, Award, Settings, HelpCircle, ChevronLeft, ChevronRight, ChevronDown, Plus, X } from 'lucide-react';
+import { Package, ChevronLeft, ChevronRight, ChevronDown, Plus, X } from 'lucide-react';
 
 const MONTH_NAMES = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
 
@@ -174,47 +174,7 @@ export default function DashboardPage() {
       <AppBar />
 
       {/* NavigationDrawer (Web) */}
-      <aside className="hidden md:flex flex-col h-screen w-80 border-r-4 border-black bg-surface-container dark:bg-surface-container-high sticky top-0 z-50">
-        <div className="p-4 border-b-4 border-black flex items-center gap-4 bg-surface-container-low">
-          <div className="h-16 w-16 border-4 border-black shadow-[inset_-2px_-2px_0px_0px_rgba(0,0,0,0.3),_inset_2px_2px_0px_0px_rgba(255,255,255,0.2)] rounded-none bg-secondary-container overflow-hidden shrink-0">
-            <img alt="Player Avatar" className="object-cover w-full h-full [image-rendering:pixelated]" src={profile?.avatar || '/avatars/avatar1.jpeg'} />
-          </div>
-          <div className="flex flex-col overflow-hidden">
-            <h2 className="font-headline-md text-primary truncate">{profile?.name ?? '...'}</h2>
-            <p className="font-body-sm text-on-surface-variant truncate">{profile?.email ?? ''}</p>
-          </div>
-        </div>
-
-        <nav className="flex-1 flex flex-col p-4 gap-2 overflow-y-auto">
-          <a className="flex items-center gap-3 p-3 bg-primary text-on-primary border-r-4 border-primary-container btn" href="#">
-            <Package />
-            <span className="font-label-caps tracking-wider uppercase">Inventory</span>
-          </a>
-          <a
-            className="flex items-center gap-3 p-3 text-on-surface hover:bg-surface-container-highest hover:translate-x-1 active:scale-95 transition-transform border-4 border-transparent hover:border-black"
-            href="#"
-          >
-            <Award />
-            <span className="font-label-caps tracking-wider uppercase">Quests</span>
-          </a>
-          <a
-            className="flex items-center gap-3 p-3 text-on-surface hover:bg-surface-container-highest hover:translate-x-1 active:scale-95 transition-transform border-4 border-transparent hover:border-black"
-            href="#"
-          >
-            <Settings />
-            <span className="font-label-caps tracking-wider uppercase">Settings</span>
-          </a>
-          <div className="mt-auto pt-4 border-t-4 border-black">
-            <a
-              className="flex items-center gap-3 p-3 text-on-surface hover:bg-surface-container-highest hover:translate-x-1 active:scale-95 transition-transform border-4 border-transparent hover:border-black"
-              href="#"
-            >
-              <HelpCircle />
-              <span className="font-label-caps tracking-wider uppercase">Help</span>
-            </a>
-          </div>
-        </nav>
-      </aside>
+      <DesktopSidebar name={profile?.name} email={profile?.email} avatar={profile?.avatar} />
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col w-full relative pb-24 md:pb-0 overflow-y-auto overflow-x-hidden">

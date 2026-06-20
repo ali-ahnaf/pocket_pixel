@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Plus, Check, Trash2, TrendingDown, TrendingUp, X, Coins, ChevronDown } from 'lucide-react';
-import { AppBar, BottomNavBar, Button, Card, AddDebtModal } from '@/components';
+import { AppBar, BottomNavBar, Button, Card, AddDebtModal, DesktopSidebar } from '@/components';
 import { useAuth } from '@/hooks/useAuth';
 import { profileApi } from '@/lib/api';
 import type { ApiDebt, ApiVault } from '@/lib/api/ProfileApi';
@@ -77,6 +77,8 @@ export default function DebtsPage() {
   return (
     <div className="bg-background px-3 text-on-background font-body-lg min-h-screen flex flex-col md:flex-row overflow-x-hidden selection:bg-primary selection:text-on-primary">
       <AppBar />
+
+      <DesktopSidebar />
 
       <main className="flex-1 flex flex-col w-full relative pb-24 md:pb-0 overflow-y-auto overflow-x-hidden">
         <div className="max-w-4xl w-full mx-auto p-margin-mobile md:p-8 flex flex-col gap-stack-md">

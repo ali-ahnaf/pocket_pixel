@@ -1,13 +1,12 @@
 import { Request, Response, Router } from 'express';
 import Joi from 'joi';
-import { Expense } from '../../entities/Expense.entity';
-import { ensureUserTagsExist, expensesRepo, findRecurringExpense, normalizeTagIds, replaceTransactionTags, serializeRecurringExpense } from './shared';
+import { recurringService, utilService } from '../../services';
+import { CreateRecurringInput } from '../../services/recurring.service';
 import { asyncHandler } from '../../middleware/error-handler';
-import { scheduleRecurring } from '../../scheduler/recurring-scheduler';
 
 const router = Router({ mergeParams: true });
 
-const createRecurringSchema = Joi.object({
+const createRecurringSchema = Joi.object<CreateRecurringInput>({
   title: Joi.string().max(200).required(),
   amount: Joi.number().positive().precision(2).required(),
   type: Joi.string().valid('expense', 'income').default('expense'),
@@ -18,41 +17,15 @@ const createRecurringSchema = Joi.object({
   vaultId: Joi.string().uuid().optional().allow(null),
 });
 
-router.post('/', asyncHandler(async (req: Request, res: Response) => {
-  const { error, value } = createRecurringSchema.validate(req.body);
-  if (error) return res.status(400).json({ message: error.message });
+router.post(
+  '/',
+  asyncHandler(async (req: Request, res: Response) => {
+    const { error, value } = createRecurringSchema.validate(req.body);
+    if (error) return utilService.replyError(res, error.message);
 
-  const tagIds = normalizeTagIds(value.tagIds);
-  const hasValidTags = await ensureUserTagsExist(req.params.userId, tagIds);
-  if (!hasValidTags) {
-    return res.status(400).json({ message: 'One or more tags are invalid' });
-  }
-
-  const startDate: string = value.startDate;
-  const endDate: string = value.endDate ?? (() => {
-    const d = new Date(startDate + 'T00:00:00');
-    d.setFullYear(d.getFullYear() + 1);
-    return d.toISOString().slice(0, 10);
-  })();
-
-  const expense = expensesRepo().create({
-    title: value.title,
-    amount: value.amount,
-    type: value.type,
-    interval: value.interval,
-    startDate,
-    endDate,
-    vaultId: value.vaultId,
-    userId: req.params.userId,
-  });
-
-  const saved = (await expensesRepo().save(expense)) as unknown as Expense;
-  await replaceTransactionTags(saved.id, tagIds);
-
-  scheduleRecurring(saved);
-
-  const withRelations = await findRecurringExpense(saved.id, req.params.userId);
-  return res.status(201).json(withRelations ? serializeRecurringExpense(withRelations) : null);
-}));
+    const created = await recurringService.create(req.user!.userId, value as CreateRecurringInput);
+    return utilService.replyCreated(res, created);
+  }),
+);
 
 export default router;

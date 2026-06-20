@@ -1,18 +1,15 @@
-import { Request, Response, Router } from "express";
-import { asyncHandler } from "../../middleware/error-handler";
-import { debtsRepo } from "./shared";
+import { Request, Response, Router } from 'express';
+import { debtsService, utilService } from '../../services';
+import { asyncHandler } from '../../middleware/error-handler';
 
 const router = Router({ mergeParams: true });
 
-router.delete("/:id", asyncHandler(async (req: Request, res: Response) => {
-  const debt = await debtsRepo().findOneBy({
-    id: req.params.id,
-    userId: req.params.userId,
-  });
-  if (!debt) return res.status(404).json({ message: "Due not found" });
-
-  await debtsRepo().remove(debt);
-  return res.status(204).send();
-}));
+router.delete(
+  '/:id',
+  asyncHandler(async (req: Request, res: Response) => {
+    await debtsService.remove(req.user!.userId, req.params.id);
+    return utilService.replyNoContent(res);
+  }),
+);
 
 export default router;

@@ -1,30 +1,26 @@
-import { Request, Response, Router } from "express";
-import Joi from "joi";
-import { tagsRepo, invalidateTagCache } from "./shared";
-import { asyncHandler } from "../../middleware/error-handler";
+import { Request, Response, Router } from 'express';
+import Joi from 'joi';
+import { tagsService, utilService } from '../../services';
+import { UpdateTagInput } from '../../services/tags.service';
+import { asyncHandler } from '../../middleware/error-handler';
 
 const router = Router({ mergeParams: true });
 
-const updateTagSchema = Joi.object({
+const updateTagSchema = Joi.object<UpdateTagInput>({
   name: Joi.string().max(100),
   icon: Joi.string().max(100).allow(null),
   backgroundColor: Joi.string().max(50).allow(null),
 }).min(1);
 
-router.put("/:id", asyncHandler(async (req: Request, res: Response) => {
-  const { error, value } = updateTagSchema.validate(req.body);
-  if (error) return res.status(400).json({ message: error.message });
+router.put(
+  '/:id',
+  asyncHandler(async (req: Request, res: Response) => {
+    const { error, value } = updateTagSchema.validate(req.body);
+    if (error) return utilService.replyError(res, error.message);
 
-  const tag = await tagsRepo().findOneBy({
-    id: req.params.id,
-    userId: req.params.userId,
-  });
-  if (!tag) return res.status(404).json({ message: "Tag not found" });
-
-  Object.assign(tag, value);
-  const saved = await tagsRepo().save(tag);
-  invalidateTagCache(req.params.userId);
-  return res.json(saved);
-}));
+    const saved = await tagsService.update(req.user!.userId, req.params.id, value as UpdateTagInput);
+    return utilService.replyOk(res, saved);
+  }),
+);
 
 export default router;

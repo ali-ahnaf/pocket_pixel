@@ -1,14 +1,10 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { AppBar, Card, ProgressBar, Button, BottomNavBar } from '@/components';
+import { AppBar, Card, ProgressBar, Button, BottomNavBar, DesktopSidebar } from '@/components';
 import { useAuth } from '@/hooks/useAuth';
 import {
   Package,
-  Award,
-  BarChart,
-  Settings,
-  HelpCircle,
   ChevronDown,
   TrendingUp,
   TrendingDown,
@@ -35,13 +31,6 @@ const CURRENT_MONTH_YEAR = (() => {
 
 const ALL_TIME_PERIOD = 'all-time';
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-const NAV_ITEMS = [
-  { label: 'Inventory', icon: Package, href: '/', active: false },
-  { label: 'Quests', icon: Award, href: '#', active: false },
-  { label: 'Stats', icon: BarChart, href: '/stats', active: true },
-  { label: 'Settings', icon: Settings, href: '#', active: false },
-];
 
 const TAG_COLORS = ['bg-error', 'bg-tertiary', 'bg-secondary', 'bg-outline', 'bg-primary'];
 
@@ -298,47 +287,7 @@ export default function StatsPage() {
       <AppBar />
 
       {/* NavigationDrawer (Desktop) */}
-      <aside className="hidden md:flex flex-col h-screen w-80 border-r-4 border-black bg-surface-container dark:bg-surface-container-high sticky top-0 z-50">
-        <div className="p-4 border-b-4 border-black flex items-center gap-4 bg-surface-container-low">
-          <div className="h-16 w-16 border-4 border-black shadow-[inset_-2px_-2px_0px_0px_rgba(0,0,0,0.3),_inset_2px_2px_0px_0px_rgba(255,255,255,0.2)] rounded-none bg-secondary-container overflow-hidden shrink-0">
-            <img alt="Player Avatar" className="object-cover w-full h-full [image-rendering:pixelated]" src={profile?.avatar || '/avatars/avatar1.jpeg'} />
-          </div>
-          <div className="flex flex-col overflow-hidden">
-            <h2 className="font-headline-md text-primary truncate">{profile?.name ?? '...'}</h2>
-            <p className="font-body-sm text-on-surface-variant truncate">{profile?.email ?? ''}</p>
-          </div>
-        </div>
-
-        <nav className="flex-1 flex flex-col p-4 gap-2 overflow-y-auto">
-          {NAV_ITEMS.map(({ label, icon: Icon, href, active }) =>
-            active ? (
-              <a key={label} className="flex items-center gap-3 p-3 bg-primary text-on-primary border-r-4 border-primary-container btn" href={href}>
-                <Icon />
-                <span className="font-label-caps tracking-wider uppercase">{label}</span>
-              </a>
-            ) : (
-              <a
-                key={label}
-                className="flex items-center gap-3 p-3 text-on-surface hover:bg-surface-container-highest hover:translate-x-1 active:scale-95 transition-transform border-4 border-transparent hover:border-black"
-                href={href}
-              >
-                <Icon />
-                <span className="font-label-caps tracking-wider uppercase">{label}</span>
-              </a>
-            ),
-          )}
-
-          <div className="mt-auto pt-4 border-t-4 border-black">
-            <a
-              className="flex items-center gap-3 p-3 text-on-surface hover:bg-surface-container-highest hover:translate-x-1 active:scale-95 transition-transform border-4 border-transparent hover:border-black"
-              href="#"
-            >
-              <HelpCircle />
-              <span className="font-label-caps tracking-wider uppercase">Help</span>
-            </a>
-          </div>
-        </nav>
-      </aside>
+      <DesktopSidebar name={profile?.name} email={profile?.email} avatar={profile?.avatar} />
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col w-full relative pb-24 md:pb-0 overflow-y-auto overflow-x-hidden">
