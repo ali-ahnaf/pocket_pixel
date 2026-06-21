@@ -115,6 +115,13 @@ npm install
 npm run build:shared
 ```
 
+### Create .env files
+
+Create `.env` files for both the api and the ui
+
+- Copy `.env.example` to `.env` for both the api and the ui
+- Fill the .env files with the appropriate values (or keep the defaults for local development)
+
 ### Development
 
 Run the API and UI in separate terminals:
