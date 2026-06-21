@@ -2,9 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Home, BarChart, User, Coins, LogOut, type LucideIcon } from 'lucide-react';
-import { AUTH_TOKEN_STORAGE_KEY } from '@/lib/api/ApiClient';
+import { Home, BarChart, User, Coins, type LucideIcon } from 'lucide-react';
 
 const PROFILE_STORAGE_KEY = 'pocket_pixel_profile';
 
@@ -29,8 +27,6 @@ interface DesktopSidebarProps {
 }
 
 export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ name, email, avatar }) => {
-  const router = useRouter();
-
   const [storedProfile, setStoredProfile] = useState<{ name?: string; email?: string; avatar?: string } | null>(null);
 
   useEffect(() => {
@@ -47,12 +43,6 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ name, email, ava
   const displayName = name ?? storedProfile?.name ?? '...';
   const displayEmail = email ?? storedProfile?.email ?? '';
   const displayAvatar = avatar ?? storedProfile?.avatar ?? '/avatars/avatar1.jpeg';
-
-  const handleLogout = () => {
-    localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
-    localStorage.removeItem(PROFILE_STORAGE_KEY);
-    router.replace('/signin');
-  };
 
   return (
     <aside className="hidden md:flex flex-col h-screen w-80 border-r-4 border-black bg-surface-container dark:bg-surface-container-high sticky top-0 z-50">
@@ -85,16 +75,6 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ name, email, ava
             </Link>
           );
         })}
-
-        <div className="mt-auto pt-4 border-t-4 border-black">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 p-3 text-on-surface hover:bg-error-container hover:text-on-error-container hover:translate-x-1 active:scale-95 transition-transform border-4 border-transparent hover:border-black"
-          >
-            <LogOut />
-            <span className="font-label-caps tracking-wider uppercase">Logout</span>
-          </button>
-        </div>
       </nav>
     </aside>
   );
