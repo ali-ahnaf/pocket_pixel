@@ -36,6 +36,9 @@ jobs:
       - name: Run API tests
         run: npm run test:api -- --runInBand
 
+      - name: Run UI unit tests
+        run: npm run test:ui:unit
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
         working-directory: packages/ui
