@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Mail, Lock, LogIn, Coins } from 'lucide-react';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
@@ -89,9 +90,16 @@ export default function SignInPage() {
             </div>
 
             <div className="relative">
+              <div className="flex items-center justify-between mb-1">
+                <label className="font-label-caps text-[11px] tracking-wider uppercase">Password</label>
+                <Link href="/forgot-password" className="font-label-caps text-outline text-[11px] hover:text-primary hover:underline">
+                  Forgot Password?
+                </Link>
+              </div>
+
               <Lock className="absolute left-3 top-[38px] w-4 h-4 text-outline z-10 pointer-events-none" />
+
               <Input
-                label="Password"
                 type="password"
                 placeholder="••••••••"
                 value={password}
@@ -100,7 +108,7 @@ export default function SignInPage() {
                   setErrors((prev) => ({ ...prev, password: undefined }));
                 }}
                 error={errors.password}
-                className="pl-9 mt-1"
+                className="pl-9"
                 autoComplete="current-password"
               />
             </div>
@@ -112,10 +120,6 @@ export default function SignInPage() {
                 <LogIn className="w-5 h-5 group-active:scale-90 transition-transform" />
                 <span className="font-headline-sm uppercase tracking-wider">Enter the World</span>
               </Button>
-
-              {/* <button type="button" className="font-label-caps text-outline text-[11px] hover:text-primary transition-colors tracking-wider uppercase self-center">
-                Forgot Password?
-              </button> */}
             </div>
           </form>
 
@@ -133,9 +137,9 @@ export default function SignInPage() {
         {/* Switch to signup */}
         <p className="text-center font-body-sm text-on-surface-variant">
           New adventurer? <br />
-          <a href="/signup" className="font-label-caps text-primary hover:underline uppercase tracking-wider">
+          <Link href="/signup" className="font-label-caps text-primary hover:underline uppercase tracking-wider">
             Create Account
-          </a>
+          </Link>
         </p>
       </div>
     </div>
