@@ -3,34 +3,23 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, User, BarChart } from 'lucide-react';
+import { Home, User, BarChart, Coins } from 'lucide-react';
 
 export const BottomNavBar: React.FC = () => {
   const rawPathname = usePathname();
-  const pathname = rawPathname.replace(/\/$/, '') || '/';
+  const pathname = rawPathname?.replace(/\/$/, '') || '/';
 
   const navItems = [
-    {
-      label: 'HOME',
-      href: '/',
-      icon: Home,
-    },
-    {
-      label: 'PROFILE',
-      href: '/profile',
-      icon: User,
-    },
-    {
-      label: 'STATS',
-      href: '/stats',
-      icon: BarChart,
-    },
+    { label: 'HOME', href: '/', icon: Home },
+    { label: 'STATS', href: '/stats', icon: BarChart },
+    { label: 'DEBTS', href: '/debts', icon: Coins },
+    { label: 'PROFILE', href: '/profile', icon: User },
   ];
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 w-full flex justify-around items-center h-20 bg-surface-container-low px-2 border-t-4 border-black z-40 shadow-[0_-4px_0_0_rgba(0,0,0,1)]">
       {navItems.map((item) => {
-        const isActive = pathname === item.href;
+        const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
         const Icon = item.icon;
 
         return (

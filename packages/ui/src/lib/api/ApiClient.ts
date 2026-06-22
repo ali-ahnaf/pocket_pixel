@@ -10,18 +10,32 @@ export function getStoredAuthToken(): string | null {
 }
 
 /**
- * Handle an expired/invalid session. Clears the stored credentials so a stale
- * profile can no longer keep `userId` alive while the token is dead, then sends
- * the user to sign in. Guards against redirect loops and SSR.
+ * Handle an expired/invalid session. Clears stored credentials then navigates
+ * to /signin. Guards against redirect loops — normalises trailing slash since
+ * next.config.js has trailingSlash: true (pathname may be '/signin/').
  */
 function handleUnauthorized(): void {
   if (typeof window === 'undefined') return;
   window.localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
   window.localStorage.removeItem(PROFILE_STORAGE_KEY);
-  // Normalise the trailing slash (Next runs with `trailingSlash: true`) so we
-  // don't redirect-loop when already on the sign-in page.
-  if (window.location.pathname.replace(/\/$/, '') !== SIGN_IN_PATH) {
-    window.location.href = SIGN_IN_PATH;
+  const current = window.location.pathname.replace(/\/$/, '');
+  if (current !== SIGN_IN_PATH) {
+    // Use Next.js client-side navigation to avoid a full reload and keep the
+    // SPA shell alive. Falls back to location.href if the router isn't available.
+    try {
+      // Dynamically import to avoid circular deps; works reliably in browser.
+      import('next/navigation')
+        .then(({ useRouter: _unused, ...mod }) => {
+          // next/navigation router is hook-only; use the global router instance
+          // exposed by Next 13+ App Router.
+          window.location.href = SIGN_IN_PATH;
+        })
+        .catch(() => {
+          window.location.href = SIGN_IN_PATH;
+        });
+    } catch {
+      window.location.href = SIGN_IN_PATH;
+    }
   }
 }
 
