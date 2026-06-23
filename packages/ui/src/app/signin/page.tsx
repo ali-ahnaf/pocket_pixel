@@ -91,7 +91,9 @@ export default function SignInPage() {
 
             <div className="relative">
               <div className="flex items-center justify-between mb-1">
-                <label className="font-label-caps text-[11px] tracking-wider uppercase">Password</label>
+                <label htmlFor="password" className="font-label-caps text-[11px] tracking-wider uppercase">
+                  Password
+                </label>
                 <Link href="/forgot-password" className="font-label-caps text-outline text-[11px] hover:text-primary hover:underline">
                   Forgot Password?
                 </Link>
@@ -100,6 +102,7 @@ export default function SignInPage() {
               <Lock className="absolute left-3 top-[38px] w-4 h-4 text-outline z-10 pointer-events-none" />
 
               <Input
+                id="password"
                 type="password"
                 placeholder="••••••••"
                 value={password}
