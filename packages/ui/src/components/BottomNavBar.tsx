@@ -28,7 +28,7 @@ export const BottomNavBar: React.FC = () => {
             href={item.href}
             className={`flex flex-col items-center justify-center h-16 w-16 border-4 transition-all duration-75 ${
               isActive
-                ? 'bg-primary text-on-primary border-black border-b-4 border-primary-fixed-dim translate-y-[-2px] shadow-[inset_-2px_-2px_0px_0px_rgba(0,0,0,0.3),_inset_2px_2px_0px_0px_rgba(255,255,255,0.2)]'
+                ? 'bg-primary text-on-primary border-black border-b-4 border-b-primary-fixed-dim translate-y-[-2px] shadow-[inset_-2px_-2px_0px_0px_rgba(0,0,0,0.3),_inset_2px_2px_0px_0px_rgba(255,255,255,0.2)]'
                 : 'text-outline opacity-80 border-transparent hover:bg-surface-container-highest active:translate-y-0.5'
             }`}
           >
