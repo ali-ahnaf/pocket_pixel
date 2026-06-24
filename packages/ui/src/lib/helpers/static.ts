@@ -35,4 +35,19 @@ export const AVAILABLE_ICONS = [
 
 export const AVAILABLE_COLORS = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e', '#10b981', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#ec4899', '#f43f5e'];
 
-export const AVATARS = ['/avatars/avatar1.jpeg', '/avatars/avatar2.jpeg', '/avatars/avatar3.jpeg', '/avatars/avatar4.jpeg', '/avatars/avatar5.jpeg', '/avatars/avatar6.png'];
+export const AVATARS = [
+  '/avatars/avatar1.jpeg',
+  '/avatars/avatar2.jpeg',
+  '/avatars/avatar3.jpeg',
+  '/avatars/avatar4.jpeg',
+  '/avatars/avatar5.jpeg',
+  '/avatars/avatar6.png',
+  '/avatars/Avatar7.png',
+  '/avatars/Avatar8.png',
+  '/avatars/Avatar9.png',
+  '/avatars/Avatar10.png',
+  '/avatars/Avatar11.png',
+  '/avatars/Avatar12.png',
+  '/avatars/Avatar13.png',
+  '/avatars/Avatar14.png',
+];
