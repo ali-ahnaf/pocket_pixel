@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Save, User } from 'lucide-react';
+import { X, Save, User, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from './Button';
-import Image from 'next/image';
+import { AVATARS } from '../lib/helpers/static';
 
 interface AvatarPickerModalProps {
   isOpen: boolean;
@@ -12,23 +12,20 @@ interface AvatarPickerModalProps {
   onSelect: (avatar: string) => void;
 }
 
-const AVATARS = [
-  '/avatars/avatar1.jpeg',
-  '/avatars/avatar2.jpeg',
-  '/avatars/avatar3.jpeg',
-  '/avatars/avatar4.jpeg',
-  '/avatars/avatar5.jpeg',
-  '/avatars/avatar6.png',
-];
+const PAGE_SIZE = 6;
+const totalPages = Math.ceil(AVATARS.length / PAGE_SIZE);
 
 export function AvatarPickerModal({ isOpen, onClose, currentAvatar, onSelect }: AvatarPickerModalProps) {
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isVisible, setIsVisible] = useState(false);
   const [selectedAvatar, setSelectedAvatar] = useState(currentAvatar);
+  const [page, setPage] = useState(0);
 
   useEffect(() => {
     if (isOpen) {
       setSelectedAvatar(currentAvatar);
+      const idx = AVATARS.indexOf(currentAvatar);
+      setPage(idx >= 0 ? Math.floor(idx / PAGE_SIZE) : 0);
       setShouldRender(true);
       const timer = setTimeout(() => setIsVisible(true), 20);
       return () => clearTimeout(timer);
@@ -41,18 +38,20 @@ export function AvatarPickerModal({ isOpen, onClose, currentAvatar, onSelect }: 
 
   if (!shouldRender) return null;
 
+  const pageAvatars = AVATARS.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
   return (
     <>
       {/* Backdrop */}
-      <div 
+      <div
         className={`fixed inset-0 bg-black/70 z-[100] transition-opacity duration-300 ease-in-out ${
           isVisible ? 'opacity-100' : 'opacity-0'
         }`}
         onClick={onClose}
       />
-      
+
       {/* Bottom Sheet / Modal */}
-      <div 
+      <div
         className={`fixed bottom-0 left-0 right-0 md:bottom-auto md:top-1/2 md:-translate-y-1/2 md:left-1/2 md:-translate-x-1/2 z-[110] w-full max-w-md bg-surface-container-high border-4 border-black shadow-[inset_2px_2px_0px_rgba(255,255,255,0.1),_inset_-2px_-2px_0px_rgba(0,0,0,0.4)] flex flex-col mt-auto mx-auto max-h-[90vh] overflow-y-auto rounded-t-xl md:rounded-xl transition-all duration-300 ease-in-out ${
           isVisible ? 'translate-y-0 opacity-100' : 'translate-y-full md:translate-y-[60%] opacity-0'
         }`}
@@ -69,7 +68,7 @@ export function AvatarPickerModal({ isOpen, onClose, currentAvatar, onSelect }: 
               <User className="w-6 h-6" />
               Select Avatar
             </h2>
-            <button 
+            <button
               onClick={onClose}
               className="w-10 h-10 bg-surface-container-highest border-4 border-black flex items-center justify-center active:translate-y-0.5 active:shadow-none hover:bg-error-container hover:text-on-error-container transition-colors"
             >
@@ -81,19 +80,19 @@ export function AvatarPickerModal({ isOpen, onClose, currentAvatar, onSelect }: 
         {/* Content */}
         <main className="px-6 py-6 pt-0 space-y-6">
           <div className="grid grid-cols-3 gap-4 py-4">
-            {AVATARS.map((avatar) => (
+            {pageAvatars.map((avatar) => (
               <button
                 key={avatar}
                 onClick={() => setSelectedAvatar(avatar)}
                 className={`relative aspect-square border-4 transition-all overflow-hidden ${
-                  selectedAvatar === avatar 
-                    ? 'border-primary shadow-[4px_4px_0_0_rgba(0,0,0,1)] scale-105 z-10' 
+                  selectedAvatar === avatar
+                    ? 'border-primary shadow-[4px_4px_0_0_rgba(0,0,0,1)] scale-105 z-10'
                     : 'border-black hover:border-primary-container opacity-70 hover:opacity-100'
                 }`}
               >
-                <img 
-                  src={avatar} 
-                  alt="Avatar option" 
+                <img
+                  src={avatar}
+                  alt="Avatar option"
                   className="w-full h-full object-cover [image-rendering:pixelated]"
                 />
                 {selectedAvatar === avatar && (
@@ -107,9 +106,38 @@ export function AvatarPickerModal({ isOpen, onClose, currentAvatar, onSelect }: 
             ))}
           </div>
 
+          {/* Pagination */}
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setPage((p) => p - 1)}
+              disabled={page === 0}
+              className="w-8 h-8 border-4 border-black flex items-center justify-center disabled:opacity-30 hover:bg-primary-container active:translate-y-0.5 transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <div className="flex gap-2">
+              {Array.from({ length: totalPages }).map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setPage(i)}
+                  className={`w-3 h-3 border-2 border-black transition-colors ${
+                    i === page ? 'bg-primary' : 'bg-surface-container-highest'
+                  }`}
+                />
+              ))}
+            </div>
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              disabled={page === totalPages - 1}
+              className="w-8 h-8 border-4 border-black flex items-center justify-center disabled:opacity-30 hover:bg-primary-container active:translate-y-0.5 transition-colors"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
           <div className="pt-2">
-            <Button 
-              variant="primary" 
+            <Button
+              variant="primary"
               className="w-full py-3 flex items-center justify-center gap-2 group"
               onClick={() => {
                 onSelect(selectedAvatar);
