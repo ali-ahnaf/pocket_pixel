@@ -47,7 +47,7 @@ export const AppBar: React.FC = () => {
   const displayAvatarUrl = localAvatarUrl || '/avatars/avatar1.jpeg';
 
   return (
-    <header className="md:hidden bg-surface dark:bg-surface-dim text-primary dark:text-primary-fixed w-full border-b-4 border-black flex justify-between items-center px-margin-mobile h-16 sticky top-0 z-40">
+    <header className="md:hidden bg-surface dark:bg-surface-dim text-primary dark:text-primary-fixed w-full border-b-4 border-black flex justify-between items-center px-margin-mobile px-4 h-16 sticky top-0 z-40">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onLogout={handleLogout} />
       <Button
         variant="ghost"
