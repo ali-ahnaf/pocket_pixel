@@ -8,6 +8,7 @@ const router = Router({ mergeParams: true });
 
 const applyDebtSchema = Joi.object<ApplyDebtInput>({
   vaultId: Joi.string().uuid().allow(null).optional(),
+  skipTransaction: Joi.boolean().optional(),
 });
 
 router.post(
