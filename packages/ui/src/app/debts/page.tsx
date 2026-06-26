@@ -7,6 +7,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { profileApi } from '@/lib/api';
 import type { ApiDebt, ApiVault } from '@/lib/api/ProfileApi';
 import { iconMapper } from '@/lib/iconMapper';
+export const DebtTypes = {
+  INCOMPLETE: 'incomplete',
+  COMPLETED: 'completed',
+  ALL: 'all',
+} as const;
+
+export type DebtType = typeof DebtTypes[keyof typeof DebtTypes];
 
 function formatCurrency(amount: number): string {
   return `⛁ ${Math.abs(amount).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
@@ -20,19 +27,19 @@ export default function DebtsPage() {
   const [vaults, setVaults] = useState<ApiVault[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
-  const [status, setStatus] = useState<'incomplete' | 'completed' | 'all'>('incomplete');
+  const [status, setStatus] = useState<DebtType>(DebtTypes.INCOMPLETE);
 
   const [applyDebt, setApplyDebt] = useState<ApiDebt | null>(null);
   const [applyVaultId, setApplyVaultId] = useState<string>('');
   const [vaultDropdownOpen, setVaultDropdownOpen] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
-
     setIsLoading(true);
 
-    Promise.all([profileApi.getDebts(userId, status), profileApi.getVaults(userId)])
+    Promise.all([profileApi.getDebts(userId), profileApi.getVaults(userId)])
       .then(([d, v]) => {
         setDebts(d);
         setVaults(v);
@@ -91,15 +98,75 @@ export default function DebtsPage() {
               <p className="font-body-sm text-on-surface-variant">Templates you can apply as expenses or income whenever they come due.</p>
             </div>
             <div className="flex items-center gap-2">
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as 'incomplete' | 'completed' | 'all')}
-                className="border-4 border-black bg-surface-container-low px-3 py-2 font-body-sm"
-              >
-                <option value="incomplete">Incomplete</option>
-                <option value="completed">Completed</option>
-                <option value="all">All</option>
-              </select>
+              <div className="relative">
+                <button
+                  onClick={() => setStatusDropdownOpen(!statusDropdownOpen)}
+                  className={`h-14 px-4 border-4 border-black flex items-center justify-between font-body-lg transition-all active:translate-y-0.5 active:shadow-none group bg-surface-container-lowest hover:bg-surface-container-low ${
+                    statusDropdownOpen ? 'ring-4 ring-primary/20' : ''
+                  }`}
+                >
+                  <span className="text-primary font-bold">
+                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                  </span>
+
+                  <div className="flex items-center gap-2">
+                    <div className="w-1 h-6 bg-black/10 rounded-full" />
+                    <ChevronDown
+                      className={`text-outline transition-transform duration-300 ${
+                        statusDropdownOpen ? 'rotate-180' : ''
+                    }`}
+                    size={20}
+                  />
+                </div>
+              </button>
+
+              {statusDropdownOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-[115]"
+                  onClick={() => setStatusDropdownOpen(false)}
+                />
+
+                <div className="absolute top-[calc(100%+4px)] left-0 right-0 z-[120] bg-surface-container-high border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] transition-all duration-200">
+                  <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                    {Object.values(DebtTypes).map((type) => {
+                      const isSelected = status === type;
+
+                        return (
+                          <button
+                            key={type}
+                              onClick={() => {
+                                setStatus(type);
+                                setStatusDropdownOpen(false);
+                              }}
+                              className={`w-full h-14 px-4 flex items-center justify-between font-body-lg transition-colors hover:bg-surface-container-highest group ${
+                                isSelected
+                                  ? 'bg-surface-container-highest'
+                                  : 'bg-surface-container-low'
+                              }`}
+                            >
+                              <span
+                                className={`font-body-lg ${
+                                  isSelected
+                                    ? 'text-primary font-bold'
+                                    : 'text-on-surface'
+                                }`}
+                              >
+                                {type.charAt(0).toUpperCase() + type.slice(1)}
+                              </span>
+
+                              {isSelected && (
+                                <div className="w-4 h-4 bg-primary border-2 border-black" />
+                              )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
 
               <Button variant="primary" className="flex items-center gap-2" onClick={() => setAddOpen(true)}>
                 <Plus className="w-5 h-5" />
@@ -139,7 +206,6 @@ export default function DebtsPage() {
                           {debt.completed && <span className="text-xs bg-green-200 px-2 py-1 rounded">✓ Completed</span>}
                         </div>
                         <span className={`font-label-caps text-[11px] uppercase ${isIncome ? 'text-primary' : 'text-error'}`}>
-                          {isIncome ? '+' : '-'}
                           {formatCurrency(debt.amount)} · {debt.type}
                         </span>
                       </div>
