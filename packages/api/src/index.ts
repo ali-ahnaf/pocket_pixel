@@ -17,7 +17,7 @@ import promptRouter from './routes/prompt.routes';
 import { authenticate, requireAuth } from './middleware/auth';
 import { errorHandler } from './middleware/error-handler';
 import { restoreAllRecurringJobs } from './scheduler/recurring-scheduler';
-
+import { logger } from './services/logger.service';
 const app = express();
 const PORT = process.env.PORT || 4000;
 const isDev = process.env.NODE_ENV !== 'production';
@@ -60,19 +60,18 @@ app.use(errorHandler); // global error handler — must be last
 // Database connection and server startup
 AppDataSource.initialize()
   .then(async () => {
-    console.log('Database connected');
+    logger.log('Database connected');
     try {
       await restoreAllRecurringJobs();
     } catch (err) {
-      console.error('Failed to restore recurring jobs:', err);
+      logger.error('Failed to restore recurring jobs:', err);
     }
     app.listen(PORT, () => {
-      console.log(`Node env: ${process.env.NODE_ENV}`);
-      console.log(`API running at http://localhost:${PORT}`);
+      logger.log(`Node env: ${process.env.NODE_ENV}`);
+      logger.log(`API running at http://localhost:${PORT}`);
     });
   })
   .catch((err) => {
-    console.error('Database connection failed during initialization:', err);
-    console.error(err.stack);
+    logger.error('Database connection failed during initialization:', err);
     process.exit(1);
   });
