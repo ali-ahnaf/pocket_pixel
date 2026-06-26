@@ -14,6 +14,7 @@ export interface CreateDebtInput {
 
 export interface ApplyDebtInput {
   vaultId?: string | null;
+  skipTransaction?: boolean;
 }
 
 export interface DebtDto {
@@ -71,7 +72,16 @@ export class DebtsService {
     if (!debt) {
       throw new AppError('Due not found', 404);
     }
+    if (input.skipTransaction) {
+    await this.debts.remove(debt);
 
+    logger.info('Applied debt without transaction', {
+      userId,
+      debtId: id,
+    });
+
+    return { id: debt.id };
+    }
     const date = new Date().toISOString().split('T')[0];
     const expense = this.transactions.createEntity({
       userId,
