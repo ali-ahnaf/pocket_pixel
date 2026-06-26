@@ -4,7 +4,7 @@ import { Expense, RecurrenceInterval } from '../entities/Expense.entity';
 import { TransactionTag } from '../entities/TransactionTag.entity';
 import { RecurringOccurrenceSkip } from '../entities/RecurringOccurrenceSkip.entity';
 import { IsNull, Not } from 'typeorm';
-
+import { logger } from '../services/logger.service';
 const activeJobs = new Map<string, ScheduledTask>();
 
 function buildCronExpression(interval: RecurrenceInterval, startDate: string): string {
@@ -73,7 +73,7 @@ async function fireRecurringTransaction(expenseId: string): Promise<void> {
     sourceRecurringId: recurring.id,
   });
 
-  const saved = await repo.save(transaction) as unknown as Expense;
+  const saved = (await repo.save(transaction)) as unknown as Expense;
 
   const tagIds = (recurring.transactionTags ?? []).map((tt) => tt.tagId);
   if (tagIds.length > 0) {
@@ -87,9 +87,7 @@ export function scheduleRecurring(expense: Expense): void {
   const expression = buildCronExpression(expense.interval, expense.startDate);
 
   const task = cron.schedule(expression, () => {
-    fireRecurringTransaction(expense.id).catch((err) =>
-      console.error(`Recurring job ${expense.id} failed:`, err),
-    );
+    fireRecurringTransaction(expense.id).catch((err) => logger.error(`Recurring job ${expense.id} failed:`, err));
   });
 
   activeJobs.set(expense.id, task);
@@ -119,5 +117,5 @@ export async function restoreAllRecurringJobs(): Promise<void> {
     scheduled++;
   }
 
-  console.log(`Restored ${scheduled} recurring job(s)`);
+  logger.log(`Restored ${scheduled} recurring job(s)`);
 }

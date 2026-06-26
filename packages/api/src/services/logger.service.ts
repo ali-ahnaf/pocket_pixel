@@ -40,3 +40,4 @@ export class Logger {
     this.write('error', message, meta);
   }
 }
+export const logger = new Logger();
