@@ -10,6 +10,7 @@ const createVaultSchema = Joi.object<CreateVaultInput>({
   description: Joi.string().max(255).allow('').default(''),
   icon: Joi.string().max(100).optional(),
   backgroundColor: Joi.string().max(50).optional(),
+  monthlyBudget: Joi.number().positive().precision(2).allow(null).optional(),
 });
 
 router.post(
