@@ -20,6 +20,7 @@ export default function DebtsPage() {
   const [vaults, setVaults] = useState<ApiVault[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [status, setStatus] = useState<'incomplete' | 'completed' | 'all'>('incomplete');
 
   const [applyDebt, setApplyDebt] = useState<ApiDebt | null>(null);
   const [applyVaultId, setApplyVaultId] = useState<string>('');
@@ -28,15 +29,17 @@ export default function DebtsPage() {
 
   useEffect(() => {
     if (!userId) return;
+
     setIsLoading(true);
-    Promise.all([profileApi.getDebts(userId), profileApi.getVaults(userId)])
+
+    Promise.all([profileApi.getDebts(userId, status), profileApi.getVaults(userId)])
       .then(([d, v]) => {
         setDebts(d);
         setVaults(v);
       })
       .catch(console.error)
       .finally(() => setIsLoading(false));
-  }, [userId]);
+  }, [userId, status]);
 
   const handleCreate = async (data: { title: string; amount: number; type: 'expense' | 'income' }) => {
     if (!userId) return;
@@ -87,14 +90,22 @@ export default function DebtsPage() {
               <h2 className="font-headline-lg text-headline-lg text-primary">Debts</h2>
               <p className="font-body-sm text-on-surface-variant">Templates you can apply as expenses or income whenever they come due.</p>
             </div>
-            <Button
-              variant="primary"
-              className="flex items-center gap-2"
-              onClick={() => setAddOpen(true)}
-            >
-              <Plus className="w-5 h-5" />
-              <span className="font-label-caps uppercase tracking-wider">New Due</span>
-            </Button>
+            <div className="flex items-center gap-2">
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value as 'incomplete' | 'completed' | 'all')}
+                className="border-4 border-black bg-surface-container-low px-3 py-2 font-body-sm"
+              >
+                <option value="incomplete">Incomplete</option>
+                <option value="completed">Completed</option>
+                <option value="all">All</option>
+              </select>
+
+              <Button variant="primary" className="flex items-center gap-2" onClick={() => setAddOpen(true)}>
+                <Plus className="w-5 h-5" />
+                <span className="font-label-caps uppercase tracking-wider">New Due</span>
+              </Button>
+            </div>
           </div>
 
           {isLoading ? (
@@ -116,32 +127,29 @@ export default function DebtsPage() {
                 return (
                   <Card key={debt.id} className="flex flex-col sm:flex-row sm:items-center gap-3 !p-3">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className={`w-12 h-12 shrink-0 border-4 border-black flex items-center justify-center ${isIncome ? 'bg-primary-container text-on-primary-container' : 'bg-error-container text-on-error-container'}`}>
+                      <div
+                        className={`w-12 h-12 shrink-0 border-4 border-black flex items-center justify-center ${isIncome ? 'bg-primary-container text-on-primary-container' : 'bg-error-container text-on-error-container'}`}
+                      >
                         {isIncome ? <TrendingUp /> : <TrendingDown />}
                       </div>
                       <div className="flex flex-col min-w-0">
-                        <span className="font-headline-sm text-on-surface truncate">{debt.title}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-headline-sm text-on-surface truncate">{debt.title}</span>
+
+                          {debt.completed && <span className="text-xs bg-green-200 px-2 py-1 rounded">✓ Completed</span>}
+                        </div>
                         <span className={`font-label-caps text-[11px] uppercase ${isIncome ? 'text-primary' : 'text-error'}`}>
-                          {isIncome ? '+' : '-'}{formatCurrency(debt.amount)} · {debt.type}
+                          {isIncome ? '+' : '-'}
+                          {formatCurrency(debt.amount)} · {debt.type}
                         </span>
                       </div>
                     </div>
                     <div className="flex gap-2 shrink-0">
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        className="flex items-center gap-1"
-                        onClick={() => openApplyDialog(debt)}
-                      >
+                      <Button variant="primary" size="sm" className="flex items-center gap-1" onClick={() => openApplyDialog(debt)}>
                         <Check className="w-4 h-4" />
                         <span className="font-label-caps uppercase">Apply</span>
                       </Button>
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        className="flex items-center gap-1"
-                        onClick={() => handleDiscard(debt)}
-                      >
+                      <Button variant="danger" size="sm" className="flex items-center gap-1" onClick={() => handleDiscard(debt)}>
                         <Trash2 className="w-4 h-4" />
                         <span className="font-label-caps uppercase">Discard</span>
                       </Button>
@@ -160,10 +168,7 @@ export default function DebtsPage() {
 
       {applyDebt && (
         <>
-          <div
-            className="fixed inset-0 bg-black/70 z-[100]"
-            onClick={() => !applying && setApplyDebt(null)}
-          />
+          <div className="fixed inset-0 bg-black/70 z-[100]" onClick={() => !applying && setApplyDebt(null)} />
           <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[110] w-full max-w-md bg-surface-container-high border-4 border-black shadow-[8px_8px_0_0_rgba(0,0,0,1)]">
             <header className="px-6 py-4 border-b-4 border-black flex justify-between items-center">
               <h2 className="font-headline-md text-primary uppercase">Apply Due</h2>
@@ -178,7 +183,8 @@ export default function DebtsPage() {
 
             <div className="p-6 space-y-4">
               <p className="font-body-sm text-on-surface-variant">
-                This will create a {applyDebt.type} of <span className="font-bold text-on-surface">{formatCurrency(applyDebt.amount)}</span> for <span className="font-bold text-on-surface">{applyDebt.title}</span> in the current month and remove the due.
+                This will create a {applyDebt.type} of <span className="font-bold text-on-surface">{formatCurrency(applyDebt.amount)}</span> for{' '}
+                <span className="font-bold text-on-surface">{applyDebt.title}</span> in the current month and remove the due.
               </p>
 
               <div className="space-y-2">
@@ -233,20 +239,10 @@ export default function DebtsPage() {
               </div>
 
               <div className="flex gap-2 pt-2">
-                <Button
-                  variant="ghost"
-                  className="flex-1"
-                  onClick={() => setApplyDebt(null)}
-                  disabled={applying}
-                >
+                <Button variant="ghost" className="flex-1" onClick={() => setApplyDebt(null)} disabled={applying}>
                   <span className="font-label-caps uppercase">Cancel</span>
                 </Button>
-                <Button
-                  variant="primary"
-                  className="flex-1 flex items-center justify-center gap-2"
-                  onClick={handleConfirmApply}
-                  disabled={applying}
-                >
+                <Button variant="primary" className="flex-1 flex items-center justify-center gap-2" onClick={handleConfirmApply} disabled={applying}>
                   <Check className="w-4 h-4" />
                   <span className="font-label-caps uppercase">{applying ? 'Applying...' : 'Confirm'}</span>
                 </Button>
