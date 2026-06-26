@@ -6,7 +6,8 @@
     "target": "ES2017",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "strictPropertyInitialization": false
+    "strictPropertyInitialization": false,
+    "types": ["node", "jest"]
   },
   "include": ["src"]
 }
