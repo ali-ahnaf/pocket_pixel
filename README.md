@@ -63,12 +63,7 @@ This project was entirely **vibe coded** with claude, gemini models, and codex. 
 
 ## Agentic coding
 
-The repository has a bunch of skills defined in `.agents`. These are supported by codex and gemini models.
-To use it with claude, run:
-
-```bash
-ln -s .agents .claude
-```
+The repository has a bunch of skills/rules defined in `.agents` or `.claude` folders. These are supported by codex and gemini models.
 
 ---
 
@@ -218,19 +213,6 @@ Three views to understand your spending:
 
 Contributions are what make open source awesome. All skill levels welcome — whether it's fixing a typo, adding a new feature, or improving the docs.
 
-### Good First Issues to Tackle
-
-- [ ] Add dark/light theme toggle
-- [ ] Export transactions as CSV
-- [ ] Add a budget limit per vault with progress bar
-- [ ] Multi-currency support with conversion
-- [ ] Better mobile responsiveness
-- [ ] E2E tests (Playwright or Cypress)
-- [ ] Docker Compose setup for easier local dev
-- [ ] Add more avatar options
-- [ ] Keyboard shortcuts for power users
-- [ ] PWA support (installable on mobile)
-
 ### How to Contribute
 
 1. **Fork** the repository
@@ -244,10 +226,11 @@ Contributions are what make open source awesome. All skill levels welcome — wh
 
 ### Code Style
 
-- Prettier is configured — run `npm run format` before committing
+- Prettier is configured
 - TypeScript strict mode is enforced
 - Keep components small and single-purpose
 - Name things clearly — no abbreviations unless obvious
+- Do not make changes in the file that are not relevant to the task at hand.
 
 ### Reporting Bugs
 
@@ -256,23 +239,6 @@ Open an issue with:
 - What you expected vs. what happened
 - Steps to reproduce
 - Your OS and Node.js version
-
----
-
-## Roadmap
-
-| Status | Feature                  |
-| ------ | ------------------------ |
-| ✅     | Transaction CRUD         |
-| ✅     | Vaults & Tags            |
-| ✅     | Recurring Quests         |
-| ✅     | Monthly/Yearly Analytics |
-| ✅     | JWT Authentication       |
-| 🚧     | Budget limits per vault  |
-| 🚧     | CSV export               |
-| 📋     | Multi-currency support   |
-| 📋     | PWA / offline mode       |
-| 📋     | Docker Compose setup     |
 
 ---
 

@@ -1,6 +1,7 @@
 ---
 name: backend-engineer
 description: Builds and updates the API in `packages/api` using this repo's module layout, shared DTOs, response envelope, guards, services, entities, and e2e test conventions. Use for controllers, services, modules, auth flows, database changes, migrations, and integration tests.
+memory: project
 ---
 
 Use this skill for work in `api`. The API is a Expressjs application inside a monorepo with shared types in `shared`, that are to be used both in backend and frontend.
@@ -17,8 +18,6 @@ Read the following reference files based on the task context:
   - Read [service-style.md](references/service-style.md) when implementing business logic in services.
 - **Persistence**: Read [database.md](references/database.md) when adding entities or migrations.
 - **Security**: Read [auth.md](references/auth.md) when working with authentication, permissions (CASL), or subscription gating.
-- **Testing**: Read [testing.md](references/testing.md) for E2E testing conventions and setup.
-- **Execution**: Read [commands.md](references/commands.md) for common scripts to build, test, or run migrations.
 
 ## Database
 

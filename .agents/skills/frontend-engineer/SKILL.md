@@ -1,6 +1,7 @@
 ---
 name: frontend-engineer
 description: Use when building React applications in .tsx files. Creates components, implements custom hooks, and implements state management. Invoke for Server Components, Suspense boundaries, useActionState forms, performance optimization, or React 19 features.
+memory: project
 ---
 
 Use this skill for frontend development using React and TypeScript. Follow modern React patterns, prioritize performance, and maintain a clean component structure.
