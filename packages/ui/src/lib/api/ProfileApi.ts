@@ -95,6 +95,8 @@ export interface ApiDebt {
   amount: number;
   type: 'expense' | 'income';
   createdAt: string;
+
+  completed: boolean;
 }
 
 export default class ProfileApi extends ApiClient {
@@ -170,7 +172,11 @@ export default class ProfileApi extends ApiClient {
     return this.post<{ id: string }>(`/users/${userId}/transactions`, data);
   }
 
-  updateTransaction(userId: string, transactionId: string, data: { amount?: number; type?: string; tagIds?: string[]; title?: string | null; vaultId?: string | null; date?: string }): Promise<ApiTransaction> {
+  updateTransaction(
+    userId: string,
+    transactionId: string,
+    data: { amount?: number; type?: string; tagIds?: string[]; title?: string | null; vaultId?: string | null; date?: string },
+  ): Promise<ApiTransaction> {
     return this.put<ApiTransaction>(`/users/${userId}/transactions/${transactionId}`, data);
   }
 
@@ -215,8 +221,8 @@ export default class ProfileApi extends ApiClient {
   }
 
   // Debts (dues)
-  getDebts(userId: string): Promise<ApiDebt[]> {
-    return this.get<ApiDebt[]>(`/users/${userId}/debts`);
+  getDebts(userId: string, status: 'incomplete' | 'completed' | 'all' = 'incomplete'): Promise<ApiDebt[]> {
+    return this.get<ApiDebt[]>(`/users/${userId}/debts?status=${status}`);
   }
 
   createDebt(userId: string, data: { title: string; amount: number; type: 'expense' | 'income' }): Promise<ApiDebt> {
