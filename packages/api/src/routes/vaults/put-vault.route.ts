@@ -10,6 +10,7 @@ const updateVaultSchema = Joi.object<UpdateVaultInput>({
   description: Joi.string().max(255).allow(''),
   icon: Joi.string().max(100).allow(null),
   backgroundColor: Joi.string().max(50).allow(null),
+  monthlyBudget: Joi.number().positive().precision(2).allow(null).optional(),
 }).min(1);
 
 router.put(

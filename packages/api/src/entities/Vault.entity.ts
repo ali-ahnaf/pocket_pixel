@@ -13,6 +13,9 @@ export class Vault extends BaseEntity {
   @Column({ type: 'varchar', length: 100 })
   name: string;
 
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  monthlyBudget: number | null;
+
   @Column({ type: 'varchar', length: 255 })
   description: string;
 

@@ -10,6 +10,7 @@ export interface CreateVaultInput {
   description?: string;
   icon?: string | null;
   backgroundColor?: string | null;
+  monthlyBudget?: number | null;
 }
 
 export interface UpdateVaultInput {
@@ -17,6 +18,7 @@ export interface UpdateVaultInput {
   description?: string;
   icon?: string | null;
   backgroundColor?: string | null;
+  monthlyBudget?: number | null;
 }
 
 /**
@@ -46,6 +48,7 @@ export class VaultsService {
       icon: input.icon ?? null,
       backgroundColor: input.backgroundColor ?? null,
       isDefault: false,
+      monthlyBudget: input.monthlyBudget ?? null,
     });
     const saved = await this.vaults.save(vault);
     logger.info('Created vault', { userId, vaultId: saved.id });
@@ -62,6 +65,7 @@ export class VaultsService {
     if (input.description !== undefined) vault.description = input.description;
     if (input.icon !== undefined) vault.icon = input.icon;
     if (input.backgroundColor !== undefined) vault.backgroundColor = input.backgroundColor;
+    if (input.monthlyBudget !== undefined) vault.monthlyBudget = input.monthlyBudget;
 
     const saved = await this.vaults.save(vault);
     logger.info('Updated vault', { userId, vaultId: saved.id });
