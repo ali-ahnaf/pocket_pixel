@@ -60,15 +60,15 @@ app.use(errorHandler); // global error handler — must be last
 // Database connection and server startup
 AppDataSource.initialize()
   .then(async () => {
-    logger.log('Database connected');
+    logger.info('Database connected');
     try {
       await restoreAllRecurringJobs();
     } catch (err) {
       logger.error('Failed to restore recurring jobs:', err);
     }
     app.listen(PORT, () => {
-      logger.log(`Node env: ${process.env.NODE_ENV}`);
-      logger.log(`API running at http://localhost:${PORT}`);
+      logger.info(`Node env: ${process.env.NODE_ENV}`);
+      logger.info(`API running at http://localhost:${PORT}`);
     });
   })
   .catch((err) => {

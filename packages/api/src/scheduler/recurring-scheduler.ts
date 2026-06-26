@@ -117,5 +117,5 @@ export async function restoreAllRecurringJobs(): Promise<void> {
     scheduled++;
   }
 
-  logger.log(`Restored ${scheduled} recurring job(s)`);
+  logger.info(`Restored ${scheduled} recurring job(s)`);
 }
