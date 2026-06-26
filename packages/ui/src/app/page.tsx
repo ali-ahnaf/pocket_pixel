@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { Button, Card, ProgressBar, LogResourceModal, AppBar, BottomNavBar, DesktopSidebar, EditTransactionModal } from '@/components';
 import { iconMapper } from '@/lib/iconMapper';
 import { profileApi } from '@/lib/api';
 import type { ApiUser, ApiTransaction, ApiRecurringOccurrence } from '@/lib/api/ProfileApi';
-import { Package, ChevronLeft, ChevronRight, ChevronDown, Plus, X } from 'lucide-react';
+import { Package, ChevronLeft, ChevronRight, ChevronDown, Plus, X, Repeat } from 'lucide-react';
 
 const MONTH_NAMES = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
 
@@ -172,6 +173,7 @@ export default function DashboardPage() {
   return (
     <div className="bg-background text-on-background font-body-lg min-h-screen flex flex-col md:flex-row overflow-x-hidden selection:bg-primary selection:text-on-primary">
       <AppBar />
+
 
       {/* NavigationDrawer (Web) */}
       <DesktopSidebar name={profile?.name} email={profile?.email} avatar={profile?.avatar} />
@@ -431,6 +433,24 @@ export default function DashboardPage() {
                   })}
                 </div>
               )}
+            </Card>
+
+            {/* Recurring Quests Management Link */}
+            <Card className="lg:col-span-3 flex items-center justify-between gap-4 !p-4 bg-surface-container">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 border-2 border-black flex items-center justify-center shrink-0 bg-secondary-container">
+                  <Repeat size={20} />
+                </div>
+                <div>
+                  <h3 className="font-body-sm font-bold text-on-surface">Recurring Quests</h3>
+                  <p className="text-[12px] text-on-surface-variant">Create, edit, or delete recurring transactions</p>
+                </div>
+              </div>
+              <Link href="/profile">
+                <Button variant="primary" className="font-label-caps px-4 py-2 shrink-0">
+                  Manage Recurring Quests
+                </Button>
+              </Link>
             </Card>
           </div>
         </div>
