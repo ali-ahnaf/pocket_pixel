@@ -39,7 +39,7 @@ export default function DebtsPage() {
     if (!userId) return;
     setIsLoading(true);
 
-    Promise.all([profileApi.getDebts(userId), profileApi.getVaults(userId)])
+    Promise.all([profileApi.getDebts(userId,status), profileApi.getVaults(userId)])
       .then(([d, v]) => {
         setDebts(d);
         setVaults(v);
@@ -98,12 +98,15 @@ export default function DebtsPage() {
               <p className="font-body-sm text-on-surface-variant">Templates you can apply as expenses or income whenever they come due.</p>
             </div>
             <div className="flex items-center gap-2">
-              <div className="relative">
+              <div className="relative w-56">
                 <button
                   onClick={() => setStatusDropdownOpen(!statusDropdownOpen)}
-                  className={`h-14 px-4 border-4 border-black flex items-center justify-between font-body-lg transition-all active:translate-y-0.5 active:shadow-none group bg-surface-container-lowest hover:bg-surface-container-low ${
-                    statusDropdownOpen ? 'ring-4 ring-primary/20' : ''
-                  }`}
+                  className={`w-full h-14 px-4 border-4 border-black flex items-center justify-between font-body-lg transition-all active:translate-y-0.5 active:shadow-none group bg-surface-container-lowest hover:bg-surface-container-low
+                    ${statusDropdownOpen
+                        ? 'ring-4 ring-primary/20'
+                        : ''
+                    }
+                  `}
                 >
                   <span className="text-primary font-bold">
                     {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -127,8 +130,14 @@ export default function DebtsPage() {
                   onClick={() => setStatusDropdownOpen(false)}
                 />
 
-                <div className="absolute top-[calc(100%+4px)] left-0 right-0 z-[120] bg-surface-container-high border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] transition-all duration-200">
-                  <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                <div className={`absolute top-[calc(100%+4px)] left-0 right-0 z-[120] bg-surface-container-high border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] transition-all duration-200
+                  ${statusDropdownOpen
+                      ? 'opacity-100 translate-y-0'
+                      : 'opacity-0 -translate-y-2 pointer-events-none'
+                    }
+                  `}
+                >
+                  <div className="max-h-60 overflow-y-auto">
                     {Object.values(DebtTypes).map((type) => {
                       const isSelected = status === type;
 
