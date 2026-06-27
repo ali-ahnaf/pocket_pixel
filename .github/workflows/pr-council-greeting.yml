@@ -1,0 +1,78 @@
+name: PR Council Greeting
+
+on:
+  pull_request_target:
+    types: [opened, reopened]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  council-greeting:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Summon the council for clean pull requests
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+            const common = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            };
+
+            // GitHub computes `mergeable` asynchronously. Poll until it settles.
+            const resolveMergeable = async (number) => {
+              for (let attempt = 0; attempt < 5; attempt += 1) {
+                const { data: pr } = await github.rest.pulls.get({
+                  ...common,
+                  pull_number: number,
+                });
+                if (pr.mergeable !== null) {
+                  return pr;
+                }
+                core.info(`PR #${number} mergeable state unknown. Awaiting the omens... (attempt ${attempt + 1})`);
+                await sleep(3000);
+              }
+              core.info(`PR #${number} mergeable state never settled. Skipping.`);
+              return null;
+            };
+
+            const number = context.payload.pull_request.number;
+
+            // The council's seal, so reopened scrolls are not greeted twice.
+            const MARKER = '<!-- council-greeting -->';
+
+            const pr = await resolveMergeable(number);
+            if (!pr || pr.state !== 'open' || pr.draft) {
+              return;
+            }
+
+            const hasConflict = pr.mergeable === false || pr.mergeable_state === 'dirty';
+            if (hasConflict) {
+              core.info(`PR #${number} bears a merge conflict. The council holds its tongue.`);
+              return;
+            }
+
+            // Do not greet the same scroll twice.
+            const { data: comments } = await github.rest.issues.listComments({
+              ...common,
+              issue_number: number,
+              per_page: 100,
+            });
+            const alreadyGreeted = comments.some((comment) => (comment.body || '').includes(MARKER));
+            if (alreadyGreeted) {
+              core.info(`PR #${number} has already been greeted by the council. Skipping.`);
+              return;
+            }
+
+            const author = pr.user.login;
+            await github.rest.issues.createComment({
+              ...common,
+              issue_number: number,
+              body: `${MARKER}\nGreetings, @${author}. Thy scroll hath arrived unblemished — the runes align and no conflict bars the path. The council shall now convene over its contents, weighing each incantation by candlelight. Tarry a while, brave adventurer; we shall investigate and return to thee with our verdict.`,
+            });
+
+            core.info(`Council greeted @${author} on clean PR #${number}.`);
