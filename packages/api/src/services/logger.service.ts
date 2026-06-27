@@ -1,19 +1,34 @@
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
+const RESET = '\x1b[0m';
+const DIM = '\x1b[2m';
+const LEVEL_COLOR: Record<LogLevel, string> = {
+  debug: '\x1b[90m', // gray
+  info: '\x1b[32m', // green
+  warn: '\x1b[33m', // yellow
+  error: '\x1b[31m', // red
+};
+
 /**
  * Minimal structured logger. Exported as a pre-built singleton instance
  * (per conventions, already-built instances are not wrapped in a class).
  * Swap the implementation for winston/pino later without touching call sites.
+ *
+ * Colors are applied only when stdout is a TTY, so piped/redirected logs
+ * (files, CI, PM2) stay free of ANSI escape codes.
  */
 export class Logger {
+  private readonly useColor = process.stdout.isTTY === true;
+
+  private paint(color: string, text: string): string {
+    return this.useColor ? `${color}${text}${RESET}` : text;
+  }
+
   private write(level: LogLevel, message: string, meta?: unknown): void {
-    const entry = {
-      level,
-      time: new Date().toISOString(),
-      message,
-      ...(meta !== undefined ? { meta } : {}),
-    };
-    const line = JSON.stringify(entry);
+    const time = this.paint(DIM, new Date().toISOString());
+    const levelLabel = this.paint(LEVEL_COLOR[level], level.toUpperCase().padEnd(5));
+    const metaText = meta !== undefined ? ` ${typeof meta === 'string' ? meta : JSON.stringify(meta)}` : '';
+    const line = `${time} ${levelLabel} ${message}${metaText}`;
 
     if (level === 'error') {
       console.error(line);
