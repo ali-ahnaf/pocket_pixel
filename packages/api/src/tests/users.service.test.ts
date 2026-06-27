@@ -17,6 +17,7 @@ const buildUser = (overrides: Partial<User> = {}): User =>
     email: 'ada@example.com',
     avatar: 'avatar.png',
     password: 'hashed-password',
+    disableAiPrompt: false,
     ...overrides,
   }) as User;
 
@@ -151,6 +152,29 @@ describe('UsersService', () => {
 
       expect(users.save).toHaveBeenCalledTimes(1);
       expect(result).toBe(saved);
+    });
+
+    it('updates disableAiPrompt when provided', async () => {
+      const user = buildUser();
+      const saved = buildUser({ disableAiPrompt: true });
+
+      users.findById.mockResolvedValue(user);
+      users.save.mockResolvedValue(saved);
+
+      const result = await service.update('user-1', { disableAiPrompt: true });
+
+      expect(result).toBe(saved);
+    });
+
+    it('does not change disableAiPrompt when omitted', async () => {
+      const user = buildUser();
+
+      users.findById.mockResolvedValue(user);
+      users.save.mockResolvedValue(user);
+
+      await service.update('user-1', { name: 'Grace Hopper' });
+
+      expect(user.disableAiPrompt).toBe(false);
     });
   });
 });

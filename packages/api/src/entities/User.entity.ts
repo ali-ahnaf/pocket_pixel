@@ -22,6 +22,9 @@ export class User extends BaseEntity {
   @Column({ type: 'varchar', length: 255 })
   password: string;
 
+  @Column({ type: 'boolean', default: false })
+  disableAiPrompt: boolean;
+
   @OneToMany(() => Expense, (expense) => expense.user)
   expenses: Expense[];
 

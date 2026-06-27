@@ -2,17 +2,12 @@ import { User } from '../entities/User.entity';
 import { AppError } from '../errors/app-error';
 import { UsersRepository } from '../repositories/users.repository';
 import { usersRepository } from '../repositories';
+import { UpdateUserInput } from '@expense-tracker/shared';
 import { logger } from '.';
 
 export interface CreateUserInput {
   name: string;
   email: string;
-}
-
-export interface UpdateUserInput {
-  name?: string;
-  email?: string;
-  avatar?: string;
 }
 
 /**
@@ -58,6 +53,7 @@ export class UsersService {
     if (input.name !== undefined) user.name = input.name;
     if (input.email !== undefined) user.email = input.email;
     if (input.avatar !== undefined) user.avatar = input.avatar;
+    if (input.disableAiPrompt !== undefined) user.disableAiPrompt = input.disableAiPrompt;
 
     const saved = await this.users.save(user);
     logger.info('Updated user', { userId: saved.id });

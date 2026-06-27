@@ -1,12 +1,5 @@
 export * from "./contracts";
 
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  avatar: string;
-}
-
 export interface SignUpPayload {
   name: string;
   email: string;
