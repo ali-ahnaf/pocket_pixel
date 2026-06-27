@@ -100,6 +100,7 @@ export default function StatsPage() {
   const [transactions, setTransactions] = useState<ApiTransaction[]>([]);
   const [vaults, setVaults] = useState<ApiVault[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [refetchKey, setRefetchKey] = useState(0);
 
   const [tokenUsage, setTokenUsage] = useState<ApiTokenUsage | null>(null);
   const [tokenUsageLoading, setTokenUsageLoading] = useState(false);
@@ -126,7 +127,17 @@ export default function StatsPage() {
       })
       .catch(console.error)
       .finally(() => setIsLoading(false));
-  }, [userId, selectedMonthYear, isAllTime]);
+  }, [userId, selectedMonthYear, isAllTime, refetchKey]);
+
+  useEffect(() => {
+    const handleSuccessEvent = () => {
+      setRefetchKey((k) => k + 1);
+    };
+    window.addEventListener('transaction-success', handleSuccessEvent);
+    return () => {
+      window.removeEventListener('transaction-success', handleSuccessEvent);
+    };
+  }, []);
 
   useEffect(() => {
     if (!userId) return;

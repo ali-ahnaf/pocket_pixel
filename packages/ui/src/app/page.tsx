@@ -103,7 +103,19 @@ export default function DashboardPage() {
       .finally(() => setIsLoading(false));
   }, [userId, selectedMonth, selectedYear, refetchKey]);
 
-  const handleTransactionSuccess = useCallback(() => setRefetchKey((k) => k + 1), []);
+  const handleTransactionSuccess = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('transaction-success'));
+  }, []);
+
+  useEffect(() => {
+    const handleSuccessEvent = () => {
+      setRefetchKey((k) => k + 1);
+    };
+    window.addEventListener('transaction-success', handleSuccessEvent);
+    return () => {
+      window.removeEventListener('transaction-success', handleSuccessEvent);
+    };
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -458,8 +470,8 @@ export default function DashboardPage() {
 
       <BottomNavBar />
 
-      {/* FAB */}
-      <div className="fixed bottom-24 md:bottom-8 right-4 md:right-8 z-50">
+      {/* FAB - Mobile only */}
+      <div className="md:hidden fixed bottom-24 right-4 z-50">
         <Button
           onClick={() => setIsModalOpen(true)}
           variant="primary"
