@@ -1,0 +1,96 @@
+name: PR Merge Conflict Sentinel
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main, develop]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  conflict-watch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Warn authors of conflicted pull requests
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+            const common = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            };
+
+            // GitHub computes `mergeable` asynchronously. Poll until it settles.
+            const resolveMergeable = async (number) => {
+              for (let attempt = 0; attempt < 5; attempt += 1) {
+                const { data: pr } = await github.rest.pulls.get({
+                  ...common,
+                  pull_number: number,
+                });
+                if (pr.mergeable !== null) {
+                  return pr;
+                }
+                core.info(`PR #${number} mergeable state unknown. Awaiting the omens... (attempt ${attempt + 1})`);
+                await sleep(3000);
+              }
+              core.info(`PR #${number} mergeable state never settled. Skipping.`);
+              return null;
+            };
+
+            // Collect the pull requests to inspect for this event.
+            let targets = [];
+            if (context.eventName === 'push') {
+              const { data: openPrs } = await github.rest.pulls.list({
+                ...common,
+                state: 'open',
+                base: context.ref.replace('refs/heads/', ''),
+                per_page: 100,
+              });
+              targets = openPrs.map((pr) => pr.number);
+            } else {
+              targets = [context.payload.pull_request.number];
+            }
+
+            // The wizard's seal, so repeated runs do not re-curse the same scroll.
+            const MARKER = '<!-- merge-conflict-sentinel -->';
+
+            for (const number of targets) {
+              const pr = await resolveMergeable(number);
+              if (!pr || pr.state !== 'open' || pr.draft) {
+                continue;
+              }
+
+              const hasConflict = pr.mergeable === false || pr.mergeable_state === 'dirty';
+              const author = pr.user.login;
+
+              // Find any prior warning so we do not nag twice.
+              const { data: comments } = await github.rest.issues.listComments({
+                ...common,
+                issue_number: number,
+                per_page: 100,
+              });
+              const priorWarning = comments.find((comment) => (comment.body || '').includes(MARKER));
+
+              if (!hasConflict) {
+                core.info(`PR #${number} merges cleanly. No curse to lift.`);
+                continue;
+              }
+
+              if (priorWarning) {
+                core.info(`PR #${number} already bears the sentinel's warning. Skipping.`);
+                continue;
+              }
+
+              await github.rest.issues.createComment({
+                ...common,
+                issue_number: number,
+                body: `${MARKER}\nHark, @${author}! Thy branch hath drifted from the main path and the runes no longer align — a merge conflict bars the way. Thou must rebase the base branch and mend the tangled incantations before this quest may be sealed. The gates of merge remain shut until the conflict is banished.`,
+              });
+
+              core.info(`Warned @${author} of merge conflict on PR #${number}.`);
+            }
