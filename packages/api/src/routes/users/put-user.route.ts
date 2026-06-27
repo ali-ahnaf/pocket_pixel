@@ -1,7 +1,7 @@
 import { Request, Response, Router } from 'express';
 import Joi from 'joi';
 import { usersService, utilService } from '../../services';
-import { UpdateUserInput } from '../../services/users.service';
+import { UpdateUserInput } from '@expense-tracker/shared';
 import { asyncHandler } from '../../middleware/error-handler';
 
 const router = Router();
@@ -9,6 +9,7 @@ const updateUserSchema = Joi.object<UpdateUserInput>({
   name: Joi.string().max(100),
   email: Joi.string().email().max(255),
   avatar: Joi.string().max(255).allow(''),
+  disableAiPrompt: Joi.boolean(),
 }).min(1);
 
 router.put(
