@@ -73,7 +73,7 @@ export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, trans
   const handleKeyDown = async (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && tagInput.trim() && userId) {
       e.preventDefault();
-      const tagName = tagInput.trim().toUpperCase();
+      const tagName = tagInput.trim();
       if (selectedTags.some((t) => t.name === tagName)) return;
       const existing = availableTags.find((t) => t.name === tagName);
       if (existing) {
@@ -325,13 +325,13 @@ export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, trans
                 </div>
               )}
 
-              {tagInput && !suggestions.some((t) => t.name === tagInput.toUpperCase()) && !selectedTags.some((t) => t.name === tagInput.toUpperCase()) && (
+              {tagInput && !suggestions.some((t) => t.name.toLowerCase() === tagInput.toLowerCase()) && !selectedTags.some((t) => t.name.toLowerCase() === tagInput.toLowerCase()) && (
                 <div className="mt-3">
                   <span
                     onClick={() => handleKeyDown({ key: 'Enter', preventDefault: () => {} } as React.KeyboardEvent)}
                     className="bg-surface-container-highest border-4 border-black px-3 py-1 font-label-caps text-primary flex items-center w-fit gap-1 active:translate-y-0.5 cursor-pointer"
                   >
-                    CREATE: {tagInput.toUpperCase()} <Plus size={14} />
+                    CREATE: {tagInput} <Plus size={14} />
                   </span>
                 </div>
               )}
