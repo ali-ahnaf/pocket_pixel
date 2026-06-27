@@ -19,11 +19,11 @@ export default class ProfileApi extends ApiClient {
     return this.get<VaultDto[]>(`/users/${userId}/vaults`);
   }
 
-  createVault(userId: string, data: { name: string; description: string; icon?: string; backgroundColor?: string }): Promise<VaultDto> {
+  createVault(userId: string, data: { name: string; description: string; icon?: string; backgroundColor?: string; monthlyBudget?: number | null }): Promise<VaultDto> {
     return this.post<VaultDto>(`/users/${userId}/vaults`, data);
   }
 
-  updateVault(userId: string, vaultId: string, data: { name?: string; description?: string; icon?: string | null; backgroundColor?: string | null }): Promise<VaultDto> {
+  updateVault(userId: string, vaultId: string, data: { name?: string; description?: string; icon?: string | null; monthlyBudget?: number | null }): Promise<VaultDto> {
     return this.put<VaultDto>(`/users/${userId}/vaults/${vaultId}`, data);
   }
 
