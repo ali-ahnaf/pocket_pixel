@@ -76,7 +76,7 @@ export default function ProfilePage() {
   const [playerName, setPlayerName] = useState('');
 
   const [vaults, setVaults] = useState<UiVault[]>([]);
-  const [vaultToEdit, setVaultToEdit] = useState<{ id?: string; name: string; description: string; icon?: string; color?: string } | undefined>(undefined);
+  const [vaultToEdit, setVaultToEdit] = useState<{ id?: string; name: string; description: string; icon?: string; color?: string; budget?: number | null } | undefined>(undefined);
   const [vaultToDelete, setVaultToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const [recurringQuests, setRecurringQuests] = useState<UiQuest[]>([]);
@@ -109,9 +109,9 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSaveVault = async (data: { id?: string; name: string; description: string; icon?: string; color?: string }) => {
+  const handleSaveVault = async (data: { id?: string; name: string; description: string; icon?: string; color?: string; budget: number | null }) => {
     if (!userId) return;
-    const payload = { name: data.name, description: data.description, icon: data.icon, backgroundColor: data.color };
+    const payload = { name: data.name, description: data.description, icon: data.icon, backgroundColor: data.color, monthlyBudget: data.budget };
     if (data.id) {
       const res = await profileApi.updateVault(userId, data.id, payload);
       if (res) setVaults((prev) => prev.map((v) => (v.id === data.id ? toUiVault(res) : v)));
@@ -278,7 +278,7 @@ export default function ProfilePage() {
                             variant="ghost"
                             className="p-1 w-8 h-8 border-b-black bg-surface-container-highest text-on-surface flex items-center justify-center"
                             onClick={() => {
-                              setVaultToEdit({ id: vault.id, name: vault.name, description: vault.description, icon: vault.icon, color: vault.color });
+                              setVaultToEdit({ id: vault.id, name: vault.name, description: vault.description, icon: vault.icon, color: vault.color, budget: vault.monthlyBudget });
                               setIsVaultModalOpen(true);
                             }}
                           >
@@ -295,7 +295,7 @@ export default function ProfilePage() {
                               variant="ghost"
                               className="p-1 w-8 h-8 border-b-black bg-surface-container-highest text-on-surface flex items-center justify-center"
                               onClick={() => {
-                                setVaultToEdit({ id: vault.id, name: vault.name, description: vault.description, icon: vault.icon, color: vault.color });
+                                setVaultToEdit({ id: vault.id, name: vault.name, description: vault.description, icon: vault.icon, color: vault.color, budget: vault.monthlyBudget });
                                 setIsVaultModalOpen(true);
                               }}
                             >

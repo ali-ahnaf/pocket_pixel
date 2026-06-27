@@ -11,8 +11,8 @@ interface AddVaultModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
-  initialData?: { id?: string; name: string; description: string; icon?: string; color?: string };
-  onSave?: (data: { id?: string; name: string; description: string; icon: string; color: string }) => void;
+  initialData?: { id?: string; name: string; description: string; icon?: string; color?: string; budget?: number | null };
+  onSave?: (data: { id?: string; name: string; description: string; icon: string; color: string; budget: number | null }) => void;
 }
 
 export function AddVaultModal({ isOpen, onClose, title, initialData, onSave }: AddVaultModalProps) {
@@ -22,6 +22,7 @@ export function AddVaultModal({ isOpen, onClose, title, initialData, onSave }: A
   const [description, setDescription] = useState('');
   const [color, setColor] = useState('#3b82f6');
   const [icon, setIcon] = useState('Briefcase');
+  const [budget, setBudget] = useState<string>('');
 
   useEffect(() => {
     if (isOpen) {
@@ -30,11 +31,13 @@ export function AddVaultModal({ isOpen, onClose, title, initialData, onSave }: A
         setDescription(initialData.description);
         setColor(initialData.color || '#3b82f6');
         setIcon(initialData.icon || 'Briefcase');
+        setBudget(initialData.budget != null ? String(initialData.budget) : '');
       } else {
         setName('');
         setDescription('');
         setColor('#3b82f6');
         setIcon('Briefcase');
+        setBudget('');
       }
       setShouldRender(true);
       const timer = setTimeout(() => setIsVisible(true), 20);
@@ -132,6 +135,11 @@ export function AddVaultModal({ isOpen, onClose, title, initialData, onSave }: A
             </div>
 
             <div className="space-y-2">
+              <label className="pixel-input-label ml-1">MONTHLY BUDGET (OPTIONAL)</label>
+              <Input type="number" min="0" step="0.01" placeholder="e.g. 500" value={budget} onChange={(e) => setBudget(e.target.value)} className="w-full" />
+            </div>
+
+            <div className="space-y-2">
               <label className="pixel-input-label ml-1">DESCRIPTION</label>
               <textarea
                 className="w-full min-h-[120px] p-3 bg-surface-container-lowest text-on-surface border-4 border-black font-inter text-base outline-none focus:border-primary transition-colors resize-none shadow-[inset_0_2px_0_rgba(0,0,0,0.9),inset_2px_0_0_rgba(0,0,0,0.4)]"
@@ -147,7 +155,7 @@ export function AddVaultModal({ isOpen, onClose, title, initialData, onSave }: A
               variant="primary"
               className="w-full py-3 flex items-center justify-center gap-2 group"
               onClick={() => {
-                onSave?.({ id: initialData?.id, name, description, icon, color });
+                onSave?.({ id: initialData?.id, name, description, icon, color, budget: budget.trim() === '' ? null : Number(budget) });
                 onClose();
               }}
             >
