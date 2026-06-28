@@ -1,6 +1,7 @@
 import type { Debt } from '../entities/Debt.entity';
 import type { Expense } from '../entities/Expense.entity';
 import { TransactionType } from '../entities/Expense.entity';
+import { AppError } from '../errors/app-error';
 import type { DebtsRepository } from '../repositories/debts.repository';
 import type { TransactionsRepository } from '../repositories/transactions.repository';
 import { DebtsService } from '../services/debts.service';
@@ -15,7 +16,7 @@ jest.mock('../services', () => ({
 }));
 
 type DebtsRepositoryMock = jest.Mocked<
-  Pick<DebtsRepository, 'findOneForUser' | 'remove'>
+  Pick<DebtsRepository, 'findManyForUser' | 'findOneForUser' | 'createEntity' | 'remove' | 'save'>
 >;
 
 type TransactionsRepositoryMock = jest.Mocked<
@@ -54,8 +55,11 @@ describe('DebtsService', () => {
 
   beforeEach(() => {
     debts = {
+      findManyForUser: jest.fn(),
       findOneForUser: jest.fn(),
+      createEntity: jest.fn((data) => data as Debt),
       remove: jest.fn(),
+      save: jest.fn(),
     } as DebtsRepositoryMock;
 
     transactions = {
@@ -67,6 +71,92 @@ describe('DebtsService', () => {
       debts as unknown as DebtsRepository,
       transactions as unknown as TransactionsRepository,
     );
+  });
+
+  describe('list', () => {
+    it("returns the user's debts", async () => {
+      const debt = buildDebt();
+      debts.findManyForUser.mockResolvedValue([debt]);
+
+      const result = await service.list('user-1');
+
+      expect(result).toEqual([debt]);
+      expect(debts.findManyForUser).toHaveBeenCalledWith('user-1');
+    });
+
+    it('returns an empty array if no debt is found', async () => {
+      const emptyDebts = [] as Debt[];
+      debts.findManyForUser.mockResolvedValue(emptyDebts);
+
+      const result = await service.list('user-1');
+
+      expect(result).toEqual(emptyDebts);
+      expect(debts.findManyForUser).toHaveBeenCalledWith('user-1');
+    });
+  });
+
+  describe('create', () => {
+    const input = {title: 'Internet Bill', amount: 1000, type: 'expense' as TransactionType};
+    it('creates a new debt and returns it as a DTO', async () => {
+      const saved = buildDebt();
+      debts.save.mockResolvedValue(saved);
+
+      const result = await service.create('user-1', input);
+      expect(debts.createEntity).toHaveBeenCalledWith(
+        expect.objectContaining({title: input.title, amount: input.amount, type: input.type})
+      );
+      expect(debts.save).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({
+        id: saved.id,
+        userId: saved.userId,
+        title: saved.title,
+        amount: saved.amount,
+        type: saved.type,
+        createdAt: saved.createdAt,
+      });
+    });
+
+    it('persists only the expected fields even when extra input is present', async () => {
+      const saved = buildDebt();
+      const inputWithExtra = {
+        ...input,
+        unexpected: 'ignore me',
+      };
+      debts.save.mockResolvedValue(saved);
+
+      await service.create('user-1', inputWithExtra);
+
+      expect(debts.createEntity).toHaveBeenCalledWith({
+        userId: 'user-1',
+        title: input.title,
+        amount: input.amount,
+        type: input.type,
+      });
+    });
+  });
+
+  describe('remove', () => {
+    it('remove the debt when it exists', async () => {
+      const debt = buildDebt();
+
+      debts.findOneForUser.mockResolvedValue(debt);
+      debts.remove.mockResolvedValue(debt);
+
+      const result = await service.remove('user-1', 'debt-1');
+
+      expect(result).toBeUndefined();
+      expect(debts.remove).toHaveBeenCalledTimes(1);
+      expect(debts.remove).toHaveBeenCalledWith(debt);
+    });
+
+    it('throws the right error when the debt is missing', async () => {
+      debts.findOneForUser.mockResolvedValue(null);
+
+      await expect(service.remove('user-1', 'debe-1')).rejects.toMatchObject({
+        constructor: AppError,
+        statusCode: 404,
+      });
+    });
   });
 
   describe('apply', () => {
@@ -119,6 +209,15 @@ describe('DebtsService', () => {
 
       expect(result).toEqual({
         id: expense.id,
+      });
+    });
+
+    it('throws when the debt is missing', async () => {
+      debts.findOneForUser.mockResolvedValue(null);
+
+      await expect(service.apply('user-1', 'debt-1', {})).rejects.toMatchObject({
+        constructor: AppError,
+        statusCode: 404,
       });
     });
   });
