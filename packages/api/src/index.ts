@@ -14,6 +14,7 @@ import tagsRouter from './routes/tags.routes';
 import recurringRouter from './routes/recurring.routes';
 import debtsRouter from './routes/debts.routes';
 import promptRouter from './routes/prompt.routes';
+import wizardRouter from './routes/wizard.routes';
 import { authenticate, requireAuth } from './middleware/auth';
 import { errorHandler } from './middleware/error-handler';
 import { restoreAllRecurringJobs } from './scheduler/recurring-scheduler';
@@ -39,6 +40,7 @@ app.use('/api/auth', authRouter);
 
 app.use('/api/users', requireAuth, usersRouter);
 app.use('/api/users/:userId/prompt', requireAuth, promptRouter);
+app.use('/api/users/:userId/wizard', requireAuth, wizardRouter);
 app.use('/api/users/:userId/transactions', requireAuth, transactionsRouter);
 app.use('/api/users/:userId/analytics', requireAuth, analyticsRouter);
 app.use('/api/users/:userId/vaults', requireAuth, vaultsRouter);
