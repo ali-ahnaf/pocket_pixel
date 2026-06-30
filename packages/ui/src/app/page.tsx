@@ -103,6 +103,17 @@ export default function DashboardPage() {
       .finally(() => setIsLoading(false));
   }, [userId, selectedMonth, selectedYear, refetchKey]);
 
+  const calculateProgress = (vault: any, transactions: any[]) => {
+  if (!vault || !vault.id) return { spent: 0, progress: 0 };
+  const budget = vault.monthlyBudget; 
+  
+  const spent = transactions
+    .filter(t => t.vaultId === vault.id)
+    .reduce((sum, t) => sum + (t.amount || 0), 0);
+    
+  return { spent, progress: budget > 0 ? (spent / budget) * 100 : 0 };
+};
+
   const handleTransactionSuccess = useCallback(() => setRefetchKey((k) => k + 1), []);
 
   useEffect(() => {
@@ -169,6 +180,13 @@ export default function DashboardPage() {
   const totalExpenses = filteredDrops.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
   const netYield = totalIncome - totalExpenses;
   const budgetProgress = totalIncome > 0 ? Math.min((totalExpenses / totalIncome) * 100, 100) : 0;
+  const primaryVault = vaults.find((v) => v.isDefault);
+  const primaryVaultSpent = primaryVault
+    ? transactions.filter((t) => t.vaultId === primaryVault.id).reduce((sum, t) => sum + (t.amount || 0), 0)
+    : 0;
+  const primaryVaultUsagePercent = primaryVault 
+  ? Math.min(((primaryVaultSpent || 0) / ((primaryVault as any).monthlyBudget || 1)) * 100, 100) 
+  : 0;
 
   return (
     <div className="bg-background text-on-background font-body-lg min-h-screen flex flex-col md:flex-row overflow-x-hidden selection:bg-primary selection:text-on-primary">
@@ -248,6 +266,18 @@ export default function DashboardPage() {
                 <div className="mt-4">
                   <ProgressBar value={isLoading ? 0 : budgetProgress} max={100} variant="primary" />
                 </div>
+
+                {primaryVault && (
+                  <div className="mt-4 pt-4 border-t border-black">
+                    <div className="flex justify-between mb-1">
+                      <span className="font-label-caps text-[10px] text-outline">Budget Usage</span>
+                      <span className="font-label-caps text-[10px] text-on-surface">{primaryVaultUsagePercent.toFixed(0)}%</span>
+                    </div>
+                    <div className="w-full bg-surface-container-highest h-2 rounded-full overflow-hidden">
+                      <div className="bg-primary h-full" style={{ width: `${primaryVaultUsagePercent}%` }} />
+                    </div>
+                  </div>
+                )}
               </div>
             </Card>
 
