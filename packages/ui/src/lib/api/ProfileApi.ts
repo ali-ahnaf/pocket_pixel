@@ -234,7 +234,7 @@ export default class ProfileApi extends ApiClient {
     return this.delete<void>(`/users/${userId}/debts/${debtId}`);
   }
 
-  applyDebt(userId: string, debtId: string, vaultId: string | null): Promise<{ id: string }> {
-    return this.post<{ id: string }>(`/users/${userId}/debts/${debtId}/apply`, { vaultId });
+  applyDebt(userId: string, debtId: string, vaultId: string | null, skipTransaction?: boolean): Promise<{ id: string }> {
+    return this.post<{ id: string }>(`/users/${userId}/debts/${debtId}/apply`, skipTransaction === undefined ? { vaultId } : { vaultId, skipTransaction });
   }
 }
