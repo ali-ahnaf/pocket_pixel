@@ -60,9 +60,8 @@ export function AddVaultModal({ isOpen, onClose, title, initialData, onSave }: A
 
       {/* Bottom Sheet */}
       <div
-        className={`fixed bottom-0 left-0 right-0 md:left-1/2 md:-translate-x-1/2 z-[110] w-full max-w-md bg-surface-container-high border-4 border-black shadow-[inset_2px_2px_0px_rgba(255,255,255,0.1),_inset_-2px_-2px_0px_rgba(0,0,0,0.4)] flex flex-col mt-auto mx-auto max-h-[90vh] overflow-y-auto rounded-t-xl transition-transform duration-300 ease-in-out ${
-          isVisible ? 'translate-y-0' : 'translate-y-full'
-        }`}
+        className={`fixed bottom-0 left-0 right-0 md:left-1/2 md:-translate-x-1/2 z-[110] w-full max-w-md bg-surface-container-high border-4 border-black shadow-[inset_2px_2px_0px_rgba(255,255,255,0.1),_inset_-2px_-2px_0px_rgba(0,0,0,0.4)] flex flex-col mt-auto mx-auto max-h-[90vh] overflow-y-auto rounded-t-xl transition-transform duration-300 ease-in-out ${isVisible ? 'translate-y-0' : 'translate-y-full'
+          }`}
       >
         {/* Handle */}
         <div className="flex justify-center py-2 shrink-0">
@@ -121,11 +120,10 @@ export function AddVaultModal({ isOpen, onClose, title, initialData, onSave }: A
                       key={iconName}
                       type="button"
                       onClick={() => setIcon(iconName)}
-                      className={`shrink-0 w-12 h-12 flex items-center justify-center border-4 transition-all ${
-                        isSelected
+                      className={`shrink-0 w-12 h-12 flex items-center justify-center border-4 transition-all ${isSelected
                           ? 'border-primary bg-primary-container text-on-primary-container scale-110 shadow-[inset_2px_2px_0_rgba(255,255,255,0.3),inset_-2px_-2px_0_rgba(0,0,0,0.4)]'
                           : 'border-black bg-surface-container-lowest text-on-surface hover:bg-surface-container-highest shadow-[inset_2px_2px_0_rgba(255,255,255,0.1),inset_-2px_-2px_0_rgba(0,0,0,0.3)]'
-                      }`}
+                        }`}
                     >
                       <IconComp size={24} />
                     </button>
@@ -155,7 +153,11 @@ export function AddVaultModal({ isOpen, onClose, title, initialData, onSave }: A
               variant="primary"
               className="w-full py-3 flex items-center justify-center gap-2 group"
               onClick={() => {
-                onSave?.({ id: initialData?.id, name, description, icon, color, budget: budget.trim() === '' ? null : Number(budget) });
+                const parsedBudget = budget.trim() === '' ? null : Number(budget);
+                if (parsedBudget !== null && (isNaN(parsedBudget) || parsedBudget < 0)) {
+                  return;
+                }
+                onSave?.({ id: initialData?.id, name, description, icon, color, budget: parsedBudget });
                 onClose();
               }}
             >
