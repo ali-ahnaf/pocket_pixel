@@ -1,5 +1,6 @@
 import AuthApi from './AuthApi';
 import ProfileApi from './ProfileApi';
+import WizardApi from './WizardApi';
 
 // In production the API serves the UI static export from the same origin, so a
 // relative `/api` is correct. In dev the UI (Next, port 3000) and API (port 4000)
@@ -10,3 +11,4 @@ const apiUrl = `${apiBaseUrl}/api`;
 
 export const authApi = new AuthApi(apiUrl);
 export const profileApi = new ProfileApi(apiUrl);
+export const wizardApi = new WizardApi(apiUrl);
