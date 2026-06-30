@@ -15,6 +15,7 @@ export interface ApiVault {
   icon: string | null;
   backgroundColor: string | null;
   isDefault: boolean;
+  monthlyBudget: number | null;
 }
 
 export interface ApiTag {

@@ -1,23 +1,9 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { AppBar, Card, ProgressBar, Button, BottomNavBar, DesktopSidebar } from '@/components';
+import { AppBar, Card, ProgressBar, Button, BottomNavBar, DesktopSidebar, WizardFab, WizardChatSheet } from '@/components';
 import { useAuth } from '@/hooks/useAuth';
-import {
-  Package,
-  ChevronDown,
-  TrendingUp,
-  TrendingDown,
-  CircleDollarSign,
-  Flame,
-  Gem,
-  Calendar,
-  ChevronLeft,
-  ChevronRight,
-  Vault,
-  LineChart,
-  Cpu,
-} from 'lucide-react';
+import { Package, ChevronDown, TrendingUp, TrendingDown, CircleDollarSign, Flame, Gem, Calendar, ChevronLeft, ChevronRight, Vault, LineChart, Cpu } from 'lucide-react';
 import { iconMapper } from '@/lib/iconMapper';
 import { profileApi } from '@/lib/api';
 import type { ApiUser, ApiTransaction, ApiVault, ApiTokenUsage } from '@/lib/api/ProfileApi';
@@ -230,6 +216,7 @@ export default function StatsPage() {
   }, [transactions, vaults]);
 
   const [selectedLineVaultId, setSelectedLineVaultId] = useState<string>('all');
+  const [wizardOpen, setWizardOpen] = useState(false);
 
   const lineChartPoints = useMemo(() => {
     const vaultIds = selectedLineVaultId === 'all' ? vaults.map((v) => v.id) : [selectedLineVaultId];
@@ -725,6 +712,9 @@ export default function StatsPage() {
           </div>
         </div>
       </main>
+
+      <WizardFab onClick={() => setWizardOpen(true)} />
+      <WizardChatSheet isOpen={wizardOpen} onClose={() => setWizardOpen(false)} userId={userId} />
 
       <BottomNavBar />
     </div>
