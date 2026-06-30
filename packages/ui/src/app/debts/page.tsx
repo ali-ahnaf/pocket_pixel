@@ -7,13 +7,14 @@ import { useAuth } from '@/hooks/useAuth';
 import { profileApi } from '@/lib/api';
 import type { ApiDebt, ApiVault } from '@/lib/api/ProfileApi';
 import { iconMapper } from '@/lib/iconMapper';
-export const DebtTypes = {
+
+const DebtTypes = {
   INCOMPLETE: 'incomplete',
   COMPLETED: 'completed',
   ALL: 'all',
 } as const;
 
-export type DebtType = typeof DebtTypes[keyof typeof DebtTypes];
+type DebtType = (typeof DebtTypes)[keyof typeof DebtTypes];
 
 function formatCurrency(amount: number): string {
   return `⛁ ${Math.abs(amount).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
@@ -32,14 +33,15 @@ export default function DebtsPage() {
   const [applyDebt, setApplyDebt] = useState<ApiDebt | null>(null);
   const [applyVaultId, setApplyVaultId] = useState<string>('');
   const [vaultDropdownOpen, setVaultDropdownOpen] = useState(false);
-  const [applying, setApplying] = useState(false);
+  const [applyingAction, setApplyingAction] = useState<'confirm' | 'withoutTransaction' | null>(null);
+  const applying = applyingAction !== null;
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
     setIsLoading(true);
 
-    Promise.all([profileApi.getDebts(userId,status), profileApi.getVaults(userId)])
+    Promise.all([profileApi.getDebts(userId, status), profileApi.getVaults(userId)])
       .then(([d, v]) => {
         setDebts(d);
         setVaults(v);
@@ -60,17 +62,20 @@ export default function DebtsPage() {
     setApplyDebt(debt);
   };
 
-  const handleConfirmApply = async () => {
+  const handleApply = async (skipTransaction?: boolean) => {
     if (!userId || !applyDebt) return;
-    setApplying(true);
+
+    setApplyingAction(skipTransaction ? 'withoutTransaction' : 'confirm');
+
     try {
-      await profileApi.applyDebt(userId, applyDebt.id, applyVaultId || null);
+      await profileApi.applyDebt(userId, applyDebt.id, applyVaultId || null, skipTransaction);
       setDebts((prev) => prev.filter((d) => d.id !== applyDebt.id));
       setApplyDebt(null);
+      setVaultDropdownOpen(false);
     } catch (e) {
       console.error(e);
     } finally {
-      setApplying(false);
+      setApplyingAction(null);
     }
   };
 
@@ -102,80 +107,52 @@ export default function DebtsPage() {
                 <button
                   onClick={() => setStatusDropdownOpen(!statusDropdownOpen)}
                   className={`w-full h-14 px-4 border-4 border-black flex items-center justify-between font-body-lg transition-all active:translate-y-0.5 active:shadow-none group bg-surface-container-lowest hover:bg-surface-container-low
-                    ${statusDropdownOpen
-                        ? 'ring-4 ring-primary/20'
-                        : ''
-                    }
+                    ${statusDropdownOpen ? 'ring-4 ring-primary/20' : ''}
                   `}
                 >
-                  <span className="text-primary font-bold">
-                    {status.charAt(0).toUpperCase() + status.slice(1)}
-                  </span>
+                  <span className="text-primary font-bold">{status.charAt(0).toUpperCase() + status.slice(1)}</span>
 
                   <div className="flex items-center gap-2">
                     <div className="w-1 h-6 bg-black/10 rounded-full" />
-                    <ChevronDown
-                      className={`text-outline transition-transform duration-300 ${
-                        statusDropdownOpen ? 'rotate-180' : ''
-                    }`}
-                    size={20}
-                  />
-                </div>
-              </button>
+                    <ChevronDown className={`text-outline transition-transform duration-300 ${statusDropdownOpen ? 'rotate-180' : ''}`} size={20} />
+                  </div>
+                </button>
 
-              {statusDropdownOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-[115]"
-                  onClick={() => setStatusDropdownOpen(false)}
-                />
+                {statusDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-[115]" onClick={() => setStatusDropdownOpen(false)} />
 
-                <div className={`absolute top-[calc(100%+4px)] left-0 right-0 z-[120] bg-surface-container-high border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] transition-all duration-200
-                  ${statusDropdownOpen
-                      ? 'opacity-100 translate-y-0'
-                      : 'opacity-0 -translate-y-2 pointer-events-none'
-                    }
+                    <div
+                      className={`absolute top-[calc(100%+4px)] left-0 right-0 z-[120] bg-surface-container-high border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] transition-all duration-200
+                  ${statusDropdownOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}
                   `}
-                >
-                  <div className="max-h-60 overflow-y-auto">
-                    {Object.values(DebtTypes).map((type) => {
-                      const isSelected = status === type;
+                    >
+                      <div className="max-h-60 overflow-y-auto">
+                        {Object.values(DebtTypes).map((type) => {
+                          const isSelected = status === type;
 
-                        return (
-                          <button
-                            key={type}
+                          return (
+                            <button
+                              key={type}
                               onClick={() => {
                                 setStatus(type);
                                 setStatusDropdownOpen(false);
                               }}
                               className={`w-full h-14 px-4 flex items-center justify-between font-body-lg transition-colors hover:bg-surface-container-highest group ${
-                                isSelected
-                                  ? 'bg-surface-container-highest'
-                                  : 'bg-surface-container-low'
+                                isSelected ? 'bg-surface-container-highest' : 'bg-surface-container-low'
                               }`}
                             >
-                              <span
-                                className={`font-body-lg ${
-                                  isSelected
-                                    ? 'text-primary font-bold'
-                                    : 'text-on-surface'
-                                }`}
-                              >
-                                {type.charAt(0).toUpperCase() + type.slice(1)}
-                              </span>
+                              <span className={`font-body-lg ${isSelected ? 'text-primary font-bold' : 'text-on-surface'}`}>{type.charAt(0).toUpperCase() + type.slice(1)}</span>
 
-                              {isSelected && (
-                                <div className="w-4 h-4 bg-primary border-2 border-black" />
-                              )}
-                          </button>
-                        );
-                      })}
+                              {isSelected && <div className="w-4 h-4 bg-primary border-2 border-black" />}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                </>
-              )}
-            </div>
-
+                  </>
+                )}
+              </div>
 
               <Button variant="primary" className="flex items-center gap-2" onClick={() => setAddOpen(true)}>
                 <Plus className="w-5 h-5" />
@@ -258,8 +235,9 @@ export default function DebtsPage() {
 
             <div className="p-6 space-y-4">
               <p className="font-body-sm text-on-surface-variant">
-                This will create a {applyDebt.type} of <span className="font-bold text-on-surface">{formatCurrency(applyDebt.amount)}</span> for{' '}
-                <span className="font-bold text-on-surface">{applyDebt.title}</span> in the current month and remove the due.
+                Confirm will create a {applyDebt.type} of <span className="font-bold text-on-surface">{formatCurrency(applyDebt.amount)}</span> for{' '}
+                <span className="font-bold text-on-surface">{applyDebt.title}</span> in the current month and remove the due. Apply without transaction will remove the due without creating a
+                transaction.
               </p>
 
               <div className="space-y-2">
@@ -317,9 +295,9 @@ export default function DebtsPage() {
                 <Button variant="ghost" className="flex-1" onClick={() => setApplyDebt(null)} disabled={applying}>
                   <span className="font-label-caps uppercase">Cancel</span>
                 </Button>
-                <Button variant="primary" className="flex-1 flex items-center justify-center gap-2" onClick={handleConfirmApply} disabled={applying}>
+                <Button variant="primary" className="w-full flex items-center justify-center gap-2" onClick={() => handleApply()} disabled={applying}>
                   <Check className="w-4 h-4" />
-                  <span className="font-label-caps uppercase">{applying ? 'Applying...' : 'Confirm'}</span>
+                  <span className="font-label-caps uppercase">{applyingAction === 'confirm' ? 'Applying...' : 'Confirm'}</span>
                 </Button>
               </div>
             </div>
