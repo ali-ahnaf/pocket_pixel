@@ -23,7 +23,7 @@ export default class ProfileApi extends ApiClient {
     return this.post<VaultDto>(`/users/${userId}/vaults`, data);
   }
 
-  updateVault(userId: string, vaultId: string, data: { name?: string; description?: string; icon?: string | null; monthlyBudget?: number | null }): Promise<VaultDto> {
+  updateVault(userId: string, vaultId: string, data: { name?: string; description?: string; icon?: string | null; backgroundColor?: string | null; monthlyBudget?: number | null }): Promise<VaultDto> {
     return this.put<VaultDto>(`/users/${userId}/vaults/${vaultId}`, data);
   }
 
