@@ -10,6 +10,7 @@ const createDebtSchema = Joi.object<CreateDebtInput>({
   title: Joi.string().max(200).required(),
   amount: Joi.number().positive().precision(2).required(),
   type: Joi.string().valid('expense', 'income').default('expense'),
+  notes: Joi.string().allow(null, '').max(2000).optional(),
 });
 
 router.post(
