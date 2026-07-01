@@ -26,16 +26,8 @@ export class TransactionsRepository {
     return this.dataSource.getRepository(TransactionTag);
   }
 
-  /**
-   * Base filter shared by every transaction read: scope to the user and
-   * exclude recurring templates (those carry an `interval`).
-   */
-  private baseWhere(userId: string): FindOptionsWhere<Expense> {
-    return { userId, interval: IsNull() };
-  }
-
   findManyForUser(userId: string, filter: TransactionDateFilter): Promise<Expense[]> {
-    const where = this.baseWhere(userId);
+    const where: FindOptionsWhere<Expense> = { userId, interval: IsNull() };
 
     if (filter.allTime) {
       where.date = Not(IsNull());
@@ -51,7 +43,7 @@ export class TransactionsRepository {
   }
 
   findOneForUser(userId: string, id: string): Promise<Expense | null> {
-    return this.repo.findOneBy({ ...this.baseWhere(userId), id });
+    return this.repo.findOneBy({ userId, interval: IsNull(), id });
   }
 
   createEntity(data: Partial<Expense>): Expense {
