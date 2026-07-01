@@ -21,21 +21,21 @@ import {
 import { User, Briefcase, Plus, Pencil, Star, Trash2, Repeat, Calendar, CalendarDays, TrendingDown, TrendingUp, Tag, Coins } from 'lucide-react';
 import { iconMapper } from '@/lib/iconMapper';
 import { profileApi } from '@/lib/api';
-import type { ApiVault, ApiTag, ApiRecurringQuest } from '@/lib/api/ProfileApi';
+import type { VaultDto, TagDto, RecurringDto } from '@expense-tracker/shared';
 
 function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-function toUiVault(v: ApiVault) {
+function toUiVault(v: VaultDto) {
   return { ...v, color: v.backgroundColor || '#3b82f6', icon: v.icon || 'Briefcase' };
 }
 
-function toUiTag(t: ApiTag) {
+function toUiTag(t: TagDto) {
   return { ...t, color: t.backgroundColor || '#3b82f6', icon: t.icon || 'Tag' };
 }
 
-function toUiQuest(q: ApiRecurringQuest) {
+function toUiQuest(q: RecurringDto) {
   const tagNames = (q.tags || []).map((tag) => tag.name);
 
   return {
@@ -157,7 +157,7 @@ export default function ProfilePage() {
     }
   };
 
-  const handleCreateTagForQuest = async (name: string): Promise<ApiTag | null> => {
+  const handleCreateTagForQuest = async (name: string): Promise<TagDto | null> => {
     if (!userId) return null;
     const res = await profileApi.createTag(userId, { name });
     if (res) {
