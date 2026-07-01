@@ -1,4 +1,4 @@
-import { DataSource, FindOptionsWhere, Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { AppDataSource } from '../data-source';
 import { Debt } from '../entities/Debt.entity';
 
@@ -13,17 +13,12 @@ export class DebtsRepository {
     return this.dataSource.getRepository(Debt);
   }
 
-  /** Base filter shared by every debt read: scope to the owning user. */
-  private baseWhere(userId: string): FindOptionsWhere<Debt> {
-    return { userId };
-  }
-
   findManyForUser(userId: string): Promise<Debt[]> {
-    return this.repo.find({ where: this.baseWhere(userId), order: { createdAt: 'DESC' } });
+    return this.repo.find({ where: { userId }, order: { createdAt: 'DESC' } });
   }
 
   findOneForUser(userId: string, id: string): Promise<Debt | null> {
-    return this.repo.findOneBy({ ...this.baseWhere(userId), id });
+    return this.repo.findOneBy({ userId, id });
   }
 
   createEntity(data: Partial<Debt>): Debt {

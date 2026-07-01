@@ -1,4 +1,4 @@
-import { DataSource, FindOptionsWhere, In, IsNull, Not, Repository } from 'typeorm';
+import { DataSource, In, IsNull, Not, Repository } from 'typeorm';
 import { AppDataSource } from '../data-source';
 import { Expense } from '../entities/Expense.entity';
 import { TransactionTag } from '../entities/TransactionTag.entity';
@@ -26,17 +26,9 @@ export class RecurringRepository {
     return this.dataSource.getRepository(RecurringOccurrenceSkip);
   }
 
-  /**
-   * Base filter shared by every recurring read: scope to the user and keep only
-   * templates (those that carry an `interval`).
-   */
-  private baseWhere(userId: string): FindOptionsWhere<Expense> {
-    return { userId, interval: Not(IsNull()) };
-  }
-
   findManyForUser(userId: string): Promise<Expense[]> {
     return this.repo.find({
-      where: this.baseWhere(userId),
+      where: { userId, interval: Not(IsNull()) },
       relations: [...RECURRING_RELATIONS],
       order: { title: 'ASC' },
       withDeleted: false,
@@ -45,7 +37,7 @@ export class RecurringRepository {
 
   findActiveForUser(userId: string): Promise<Expense[]> {
     return this.repo.find({
-      where: { ...this.baseWhere(userId), deletedAt: IsNull() },
+      where: { userId, interval: Not(IsNull()), deletedAt: IsNull() },
       relations: [...RECURRING_RELATIONS],
     });
   }

@@ -1,4 +1,4 @@
-import { DataSource, FindOptionsWhere, In, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { AppDataSource } from '../data-source';
 import { Tag } from '../entities/Tag.entity';
 
@@ -13,21 +13,16 @@ export class TagsRepository {
     return this.dataSource.getRepository(Tag);
   }
 
-  /** Base filter shared by every tag read: scope to the owning user. */
-  private baseWhere(userId: string): FindOptionsWhere<Tag> {
-    return { userId };
-  }
-
   findManyForUser(userId: string): Promise<Tag[]> {
-    return this.repo.find({ where: this.baseWhere(userId), order: { name: 'ASC' } });
+    return this.repo.find({ where: { userId }, order: { name: 'ASC' } });
   }
 
   findOneForUser(userId: string, id: string): Promise<Tag | null> {
-    return this.repo.findOneBy({ ...this.baseWhere(userId), id });
+    return this.repo.findOneBy({ userId, id });
   }
 
   countForUser(userId: string, ids: string[]): Promise<number> {
-    return this.repo.count({ where: { ...this.baseWhere(userId), id: In(ids) } });
+    return this.repo.count({ where: { userId, id: In(ids) } });
   }
 
   createEntity(data: Partial<Tag>): Tag {
