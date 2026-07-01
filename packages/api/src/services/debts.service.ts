@@ -1,30 +1,11 @@
-import { Debt } from '../entities/Debt.entity';
-import { TransactionType } from '../entities/Expense.entity';
+import { CreateDebtInput, UpdateDebtInput, ApplyDebtInput, DebtDto } from '@expense-tracker/shared';
 import { AppError } from '../errors/app-error';
 import { DebtsRepository } from '../repositories/debts.repository';
 import { TransactionsRepository } from '../repositories/transactions.repository';
 import { debtsRepository, transactionsRepository } from '../repositories';
 import { logger } from '.';
 
-export interface CreateDebtInput {
-  title: string;
-  amount: number;
-  type: TransactionType;
-}
-
-export interface ApplyDebtInput {
-  vaultId?: string | null;
-  skipTransaction?: boolean;
-}
-
-export interface DebtDto {
-  id: string;
-  userId: string;
-  title: string;
-  amount: number;
-  type: TransactionType;
-  createdAt: Date;
-}
+export type { CreateDebtInput, UpdateDebtInput, ApplyDebtInput, DebtDto };
 
 /**
  * Business logic for debts (dues). Repositories are injected (default to the
@@ -38,7 +19,15 @@ export class DebtsService {
 
   async list(userId: string): Promise<DebtDto[]> {
     const debts = await this.debts.findManyForUser(userId);
-    return debts.map((debt) => this.toDto(debt));
+    return debts.map((debt) => ({
+      id: debt.id,
+      userId: debt.userId,
+      title: debt.title,
+      amount: Number(debt.amount),
+      type: debt.type,
+      notes: debt.notes ?? null,
+      createdAt: debt.createdAt,
+    }));
   }
 
   async create(userId: string, input: CreateDebtInput): Promise<DebtDto> {
@@ -47,10 +36,43 @@ export class DebtsService {
       title: input.title,
       amount: input.amount,
       type: input.type,
+      notes: input.notes ?? null,
     });
     const saved = await this.debts.save(debt);
     logger.info('Created debt', { userId, debtId: saved.id });
-    return this.toDto(saved);
+    return {
+      id: saved.id,
+      userId: saved.userId,
+      title: saved.title,
+      amount: Number(saved.amount),
+      type: saved.type,
+      notes: saved.notes ?? null,
+      createdAt: saved.createdAt,
+    };
+  }
+
+  async update(userId: string, id: string, input: UpdateDebtInput): Promise<DebtDto> {
+    const debt = await this.debts.findOneForUser(userId, id);
+    if (!debt) {
+      throw new AppError('Due not found', 404);
+    }
+
+    if (input.title !== undefined) debt.title = input.title;
+    if (input.amount !== undefined) debt.amount = input.amount;
+    if (input.type !== undefined) debt.type = input.type;
+    if (input.notes !== undefined) debt.notes = input.notes;
+
+    const saved = await this.debts.save(debt);
+    logger.info('Updated debt', { userId, debtId: id });
+    return {
+      id: saved.id,
+      userId: saved.userId,
+      title: saved.title,
+      amount: Number(saved.amount),
+      type: saved.type,
+      notes: saved.notes ?? null,
+      createdAt: saved.createdAt,
+    };
   }
 
   async remove(userId: string, id: string): Promise<void> {
@@ -73,14 +95,14 @@ export class DebtsService {
       throw new AppError('Due not found', 404);
     }
     if (input.skipTransaction) {
-    await this.debts.remove(debt);
+      await this.debts.remove(debt);
 
-    logger.info('Applied debt without transaction', {
-      userId,
-      debtId: id,
-    });
+      logger.info('Applied debt without transaction', {
+        userId,
+        debtId: id,
+      });
 
-    return { id: debt.id };
+      return { id: debt.id };
     }
     const date = new Date().toISOString().split('T')[0];
     const expense = this.transactions.createEntity({
@@ -96,16 +118,5 @@ export class DebtsService {
     await this.debts.remove(debt);
     logger.info('Applied debt', { userId, debtId: id, transactionId: saved.id });
     return { id: saved.id };
-  }
-
-  private toDto(debt: Debt): DebtDto {
-    return {
-      id: debt.id,
-      userId: debt.userId,
-      title: debt.title,
-      amount: Number(debt.amount),
-      type: debt.type,
-      createdAt: debt.createdAt,
-    };
   }
 }

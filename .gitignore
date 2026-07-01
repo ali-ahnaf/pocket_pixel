@@ -6,3 +6,4 @@
 .env
 .env.local
 **/*.sqlite
+**/tsconfig.tsbuildinfo

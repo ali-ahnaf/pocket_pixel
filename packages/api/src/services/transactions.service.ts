@@ -23,7 +23,19 @@ export class TransactionsService {
     const transactions = await this.transactions.findManyForUser(userId, filter);
     logger.debug('Listed transactions', { userId, count: transactions.length, allTime });
 
-    return transactions.map((tx) => this.toDto(tx));
+    return transactions.map((tx) => ({
+      id: tx.id,
+      userId: tx.userId,
+      title: tx.title,
+      amount: parseFloat(String(tx.amount)),
+      type: tx.type,
+      date: tx.date,
+      vaultId: tx.vaultId,
+      vault: tx.vault ? { id: tx.vault.id, name: tx.vault.name, icon: tx.vault.icon } : null,
+      tags: tx.transactionTags?.map((tt) => tt.tag) ?? [],
+      createdAt: tx.createdAt.toISOString(),
+      updatedAt: tx.updatedAt.toISOString(),
+    }));
   }
 
   async create(userId: string, input: CreateTransactionInput): Promise<Expense> {
@@ -69,21 +81,5 @@ export class TransactionsService {
 
     await this.transactions.softDelete(id);
     logger.info('Deleted transaction', { userId, transactionId: id });
-  }
-
-  private toDto(tx: Expense): TransactionDto {
-    return {
-      id: tx.id,
-      userId: tx.userId,
-      title: tx.title,
-      amount: parseFloat(String(tx.amount)),
-      type: tx.type,
-      date: tx.date,
-      vaultId: tx.vaultId,
-      vault: tx.vault ? { id: tx.vault.id, name: tx.vault.name, icon: tx.vault.icon } : null,
-      tags: tx.transactionTags?.map((tt) => tt.tag) ?? [],
-      createdAt: tx.createdAt,
-      updatedAt: tx.updatedAt,
-    };
   }
 }

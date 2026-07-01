@@ -1,4 +1,4 @@
-import { DataSource, FindOptionsWhere, Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { AppDataSource } from '../data-source';
 import { Vault } from '../entities/Vault.entity';
 
@@ -13,17 +13,12 @@ export class VaultsRepository {
     return this.dataSource.getRepository(Vault);
   }
 
-  /** Base filter shared by every vault read: scope to the owning user. */
-  private baseWhere(userId: string): FindOptionsWhere<Vault> {
-    return { userId };
-  }
-
   findManyForUser(userId: string): Promise<Vault[]> {
-    return this.repo.find({ where: this.baseWhere(userId), order: { name: 'ASC' } });
+    return this.repo.find({ where: { userId }, order: { name: 'ASC' } });
   }
 
   findOneForUser(userId: string, id: string): Promise<Vault | null> {
-    return this.repo.findOneBy({ ...this.baseWhere(userId), id });
+    return this.repo.findOneBy({ userId, id });
   }
 
   createEntity(data: Partial<Vault>): Vault {

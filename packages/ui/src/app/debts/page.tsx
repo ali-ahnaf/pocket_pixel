@@ -5,7 +5,7 @@ import { Plus, Check, Trash2, TrendingDown, TrendingUp, X, Coins, ChevronDown } 
 import { AppBar, BottomNavBar, Button, Card, AddDebtModal, DesktopSidebar } from '@/components';
 import { useAuth } from '@/hooks/useAuth';
 import { profileApi } from '@/lib/api';
-import type { ApiDebt, ApiVault } from '@/lib/api/ProfileApi';
+import type { DebtDto, VaultDto } from '@expense-tracker/shared';
 import { iconMapper } from '@/lib/iconMapper';
 
 const DebtTypes = {
@@ -24,13 +24,14 @@ export default function DebtsPage() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
 
-  const [debts, setDebts] = useState<ApiDebt[]>([]);
-  const [vaults, setVaults] = useState<ApiVault[]>([]);
+  const [debts, setDebts] = useState<DebtDto[]>([]);
+  const [vaults, setVaults] = useState<VaultDto[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [editDebt, setEditDebt] = useState<DebtDto | null>(null);
   const [status, setStatus] = useState<DebtType>(DebtTypes.INCOMPLETE);
 
-  const [applyDebt, setApplyDebt] = useState<ApiDebt | null>(null);
+  const [applyDebt, setApplyDebt] = useState<DebtDto | null>(null);
   const [applyVaultId, setApplyVaultId] = useState<string>('');
   const [vaultDropdownOpen, setVaultDropdownOpen] = useState(false);
   const [applyingAction, setApplyingAction] = useState<'confirm' | 'withoutTransaction' | null>(null);
@@ -50,13 +51,19 @@ export default function DebtsPage() {
       .finally(() => setIsLoading(false));
   }, [userId, status]);
 
-  const handleCreate = async (data: { title: string; amount: number; type: 'expense' | 'income' }) => {
+  const handleCreate = async (data: { title: string; amount: number; type: 'expense' | 'income'; notes: string | null }) => {
     if (!userId) return;
     const created = await profileApi.createDebt(userId, data);
     setDebts((prev) => [created, ...prev]);
   };
 
-  const openApplyDialog = (debt: ApiDebt) => {
+  const handleUpdate = async (data: { title: string; amount: number; type: 'expense' | 'income'; notes: string | null }) => {
+    if (!userId || !editDebt) return;
+    const updated = await profileApi.updateDebt(userId, editDebt.id, data);
+    setDebts((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
+  };
+
+  const openApplyDialog = (debt: DebtDto) => {
     const defaultVault = vaults.find((v) => v.isDefault) ?? vaults[0];
     setApplyVaultId(defaultVault?.id ?? '');
     setApplyDebt(debt);
@@ -79,7 +86,7 @@ export default function DebtsPage() {
     }
   };
 
-  const handleDiscard = async (debt: ApiDebt) => {
+  const handleDiscard = async (debt: DebtDto) => {
     if (!userId) return;
     if (!confirm(`Discard "${debt.title}"?`)) return;
     await profileApi.deleteDebt(userId, debt.id);
@@ -179,7 +186,12 @@ export default function DebtsPage() {
                 const isIncome = debt.type === 'income';
                 return (
                   <Card key={debt.id} className="flex flex-col sm:flex-row sm:items-center gap-3 !p-3">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => setEditDebt(debt)}
+                      className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer group focus:outline-none"
+                      aria-label={`Edit ${debt.title}`}
+                    >
                       <div
                         className={`w-12 h-12 shrink-0 border-4 border-black flex items-center justify-center ${isIncome ? 'bg-primary-container text-on-primary-container' : 'bg-error-container text-on-error-container'}`}
                       >
@@ -187,15 +199,16 @@ export default function DebtsPage() {
                       </div>
                       <div className="flex flex-col min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="font-headline-sm text-on-surface truncate">{debt.title}</span>
+                          <span className="font-headline-sm text-on-surface truncate group-hover:text-primary transition-colors">{debt.title}</span>
 
                           {debt.completed && <span className="text-xs bg-green-200 px-2 py-1 rounded">✓ Completed</span>}
                         </div>
                         <span className={`font-label-caps text-[11px] uppercase ${isIncome ? 'text-primary' : 'text-error'}`}>
                           {formatCurrency(debt.amount)} · {debt.type}
                         </span>
+                        {debt.notes && <span className="font-body-sm text-on-surface-variant truncate mt-0.5">{debt.notes}</span>}
                       </div>
-                    </div>
+                    </button>
                     <div className="flex gap-2 shrink-0">
                       <Button variant="primary" size="sm" className="flex items-center gap-1" onClick={() => openApplyDialog(debt)}>
                         <Check className="w-4 h-4" />
@@ -217,6 +230,8 @@ export default function DebtsPage() {
       <BottomNavBar />
 
       <AddDebtModal isOpen={addOpen} onClose={() => setAddOpen(false)} onSave={handleCreate} />
+
+      <AddDebtModal isOpen={editDebt !== null} onClose={() => setEditDebt(null)} onSave={handleUpdate} debt={editDebt} />
 
       {applyDebt && (
         <>

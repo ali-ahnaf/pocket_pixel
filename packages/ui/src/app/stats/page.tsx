@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Package, ChevronDown, TrendingUp, TrendingDown, CircleDollarSign, Flame, Gem, Calendar, ChevronLeft, ChevronRight, Vault, LineChart, Cpu } from 'lucide-react';
 import { iconMapper } from '@/lib/iconMapper';
 import { profileApi } from '@/lib/api';
-import type { ApiUser, ApiTransaction, ApiVault, ApiTokenUsage } from '@/lib/api/ProfileApi';
+import type { User, VaultDto, UsageReport, TransactionDto } from '@expense-tracker/shared';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -37,7 +37,7 @@ function getMonthKey(date: string): string | null {
   return `${year}-${month}`;
 }
 
-function getMonthRange(transactions: ApiTransaction[]): string[] {
+function getMonthRange(transactions: TransactionDto[]): string[] {
   const months = transactions
     .map((t) => getMonthKey(t.date))
     .filter((month): month is string => Boolean(month))
@@ -82,12 +82,12 @@ function valuesToPolyline(values: number[]): string {
 export default function StatsPage() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
-  const [profile, setProfile] = useState<ApiUser | null>(null);
-  const [transactions, setTransactions] = useState<ApiTransaction[]>([]);
-  const [vaults, setVaults] = useState<ApiVault[]>([]);
+  const [profile, setProfile] = useState<User | null>(null);
+  const [transactions, setTransactions] = useState<TransactionDto[]>([]);
+  const [vaults, setVaults] = useState<VaultDto[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const [tokenUsage, setTokenUsage] = useState<ApiTokenUsage | null>(null);
+  const [tokenUsage, setTokenUsage] = useState<UsageReport | null>(null);
   const [tokenUsageLoading, setTokenUsageLoading] = useState(false);
   const [tokenUsageError, setTokenUsageError] = useState<string | null>(null);
 
