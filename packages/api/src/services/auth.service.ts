@@ -1,30 +1,17 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import type { SignInPayload, SignUpPayload } from '@expense-tracker/shared';
+import type { SignInPayload, SignUpPayload, TokenPayload, AuthResult } from '@expense-tracker/shared';
 import { AppError } from '../errors/app-error';
 import { UsersRepository } from '../repositories/users.repository';
 import { VaultsRepository } from '../repositories/vaults.repository';
 import { usersRepository, vaultsRepository } from '../repositories';
 import { logger } from '.';
 
+export type { TokenPayload, AuthResult };
+
 export const AUTH_TOKEN_KEY = 'auth_token';
 const SALT_ROUNDS = 12;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-jwt-secret-change-in-prod';
-
-export interface TokenPayload {
-  userId: string;
-  name: string;
-  email: string;
-  avatar: string;
-}
-
-export interface AuthResult {
-  id: string;
-  name: string;
-  email: string;
-  avatar: string;
-  token: string;
-}
 
 /**
  * Authentication: password hashing, JWT issuing/verification and the sign-up /

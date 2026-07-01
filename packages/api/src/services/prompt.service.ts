@@ -1,6 +1,9 @@
 import OpenAI from 'openai';
+import { ParsedTransaction, ModelUsage, UsageReport } from '@expense-tracker/shared';
 import { AppError } from '../errors/app-error';
 import { logger, tagsService } from '.';
+
+export type { ParsedTransaction, ModelUsage, UsageReport };
 
 export const OPENAI_MODEL = 'gpt-5.4-nano';
 
@@ -10,31 +13,6 @@ interface ModelTransaction {
   amount: number;
   type: 'expense' | 'income';
   tags: string[];
-}
-
-// What we return to the client: tags resolved back to ids.
-export interface ParsedTransaction {
-  title: string;
-  amount: number;
-  type: 'expense' | 'income';
-  tagIds: string[];
-}
-
-export interface ModelUsage {
-  model: string;
-  inputTokens: number;
-  outputTokens: number;
-  totalTokens: number;
-  requests: number;
-}
-
-export interface UsageReport {
-  periodStart: number;
-  inputTokens: number;
-  outputTokens: number;
-  totalTokens: number;
-  requests: number;
-  models: ModelUsage[];
 }
 
 /**

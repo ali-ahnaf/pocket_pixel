@@ -1,20 +1,11 @@
+import { CreateTagInput, UpdateTagInput } from '@expense-tracker/shared';
 import { Tag } from '../entities/Tag.entity';
 import { AppError } from '../errors/app-error';
 import { TagsRepository } from '../repositories/tags.repository';
 import { tagsRepository } from '../repositories';
 import { logger } from '.';
 
-export interface CreateTagInput {
-  name: string;
-  icon?: string | null;
-  backgroundColor?: string | null;
-}
-
-export interface UpdateTagInput {
-  name?: string;
-  icon?: string | null;
-  backgroundColor?: string | null;
-}
+export type { CreateTagInput, UpdateTagInput };
 
 const TAG_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 

@@ -1,3 +1,4 @@
+import { CreateVaultInput, UpdateVaultInput } from '@expense-tracker/shared';
 import { Vault } from '../entities/Vault.entity';
 import { AppError } from '../errors/app-error';
 import { VaultsRepository } from '../repositories/vaults.repository';
@@ -5,21 +6,7 @@ import { UsersRepository } from '../repositories/users.repository';
 import { vaultsRepository, usersRepository } from '../repositories';
 import { logger } from '.';
 
-export interface CreateVaultInput {
-  name: string;
-  description?: string;
-  icon?: string | null;
-  backgroundColor?: string | null;
-  monthlyBudget?: number | null;
-}
-
-export interface UpdateVaultInput {
-  name?: string;
-  description?: string;
-  icon?: string | null;
-  backgroundColor?: string | null;
-  monthlyBudget?: number | null;
-}
+export type { CreateVaultInput, UpdateVaultInput };
 
 /**
  * Business logic for vaults. Repositories are injected (default to the shared
