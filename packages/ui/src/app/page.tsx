@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button, Card, ProgressBar, LogResourceModal, AppBar, BottomNavBar, DesktopSidebar, EditTransactionModal } from '@/components';
 import { iconMapper } from '@/lib/iconMapper';
 import { profileApi } from '@/lib/api';
-import type { ApiUser, ApiTransaction, ApiRecurringOccurrence } from '@/lib/api/ProfileApi';
+import type { User, VaultDto, TagDto, TransactionDto, OccurrenceDto } from '@expense-tracker/shared';
 import { Package, ChevronLeft, ChevronRight, ChevronDown, Plus, X, Repeat } from 'lucide-react';
 
 const MONTH_NAMES = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
@@ -24,31 +24,31 @@ function formatTime(dateStr: string): string {
   return new Date(dateStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
-function getTransactionIconName(tx: ApiTransaction): string {
+function getTransactionIconName(tx: TransactionDto): string {
   if (tx.type === 'expense') {
     return tx.tags?.[0]?.icon || tx.vault?.icon || 'ShoppingCart';
   }
   return tx.vault?.icon || 'CircleDollarSign';
 }
 
-function getTransactionCategory(tx: ApiTransaction): string {
+function getTransactionCategory(tx: TransactionDto): string {
   return tx.tags?.[0]?.name || (tx.type === 'income' ? 'Income' : 'Expense');
 }
 
-function getTransactionTitle(tx: ApiTransaction): string {
+function getTransactionTitle(tx: TransactionDto): string {
   return tx.title || (tx.type === 'income' ? 'Unnamed Income' : 'Unnamed Expense');
 }
 
-function getOccurrenceIconName(o: ApiRecurringOccurrence): string {
+function getOccurrenceIconName(o: OccurrenceDto): string {
   if (o.type === 'expense') return o.tags?.[0]?.icon || o.vault?.icon || 'ShoppingCart';
   return o.vault?.icon || 'CircleDollarSign';
 }
 
-function getOccurrenceCategory(o: ApiRecurringOccurrence): string {
+function getOccurrenceCategory(o: OccurrenceDto): string {
   return o.tags?.[0]?.name || (o.type === 'income' ? 'Income' : 'Expense');
 }
 
-function getOccurrenceTitle(o: ApiRecurringOccurrence): string {
+function getOccurrenceTitle(o: OccurrenceDto): string {
   return o.title || (o.type === 'income' ? 'Unnamed Income' : 'Unnamed Expense');
 }
 
@@ -56,17 +56,17 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingTransaction, setEditingTransaction] = useState<ApiTransaction | null>(null);
-  const [profile, setProfile] = useState<ApiUser | null>(null);
-  const [transactions, setTransactions] = useState<ApiTransaction[]>([]);
-  const [occurrences, setOccurrences] = useState<ApiRecurringOccurrence[]>([]);
+  const [editingTransaction, setEditingTransaction] = useState<TransactionDto | null>(null);
+  const [profile, setProfile] = useState<User | null>(null);
+  const [transactions, setTransactions] = useState<TransactionDto[]>([]);
+  const [occurrences, setOccurrences] = useState<OccurrenceDto[]>([]);
   const [applyingOccurrence, setApplyingOccurrence] = useState<string | null>(null);
-  const [vaults, setVaults] = useState<import('@/lib/api/ProfileApi').ApiVault[]>([]);
+  const [vaults, setVaults] = useState<VaultDto[]>([]);
   const [selectedVaultFilter, setSelectedVaultFilter] = useState<string[]>([]);
   const [vaultDropdownOpen, setVaultDropdownOpen] = useState(false);
   const vaultDropdownRef = useRef<HTMLDivElement>(null);
   const didInitVaultFilter = useRef(false);
-  const [tags, setTags] = useState<import('@/lib/api/ProfileApi').ApiTag[]>([]);
+  const [tags, setTags] = useState<TagDto[]>([]);
   const [selectedTagFilter, setSelectedTagFilter] = useState<string[]>([]);
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
   const tagDropdownRef = useRef<HTMLDivElement>(null);
@@ -140,7 +140,7 @@ export default function DashboardPage() {
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   const filteredOccurrences = occurrences.filter((o) => matchesVault(o.vaultId) && matchesTag(o.tags));
 
-  const handleApplyOccurrence = async (occ: ApiRecurringOccurrence) => {
+  const handleApplyOccurrence = async (occ: OccurrenceDto) => {
     if (!userId) return;
     const key = `${occ.recurringId}:${occ.date}`;
     setApplyingOccurrence(key);
@@ -154,7 +154,7 @@ export default function DashboardPage() {
     }
   };
 
-  const handleSkipOccurrence = async (occ: ApiRecurringOccurrence) => {
+  const handleSkipOccurrence = async (occ: OccurrenceDto) => {
     if (!userId) return;
     const key = `${occ.recurringId}:${occ.date}`;
     setOccurrences((prev) => prev.filter((o) => `${o.recurringId}:${o.date}` !== key));

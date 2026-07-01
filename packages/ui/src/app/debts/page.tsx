@@ -5,7 +5,7 @@ import { Plus, Check, Trash2, TrendingDown, TrendingUp, X, Coins, ChevronDown } 
 import { AppBar, BottomNavBar, Button, Card, AddDebtModal, DesktopSidebar } from '@/components';
 import { useAuth } from '@/hooks/useAuth';
 import { profileApi } from '@/lib/api';
-import type { ApiDebt, ApiVault } from '@/lib/api/ProfileApi';
+import type { DebtDto, VaultDto } from '@expense-tracker/shared';
 import { iconMapper } from '@/lib/iconMapper';
 
 const DebtTypes = {
@@ -24,14 +24,14 @@ export default function DebtsPage() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
 
-  const [debts, setDebts] = useState<ApiDebt[]>([]);
-  const [vaults, setVaults] = useState<ApiVault[]>([]);
+  const [debts, setDebts] = useState<DebtDto[]>([]);
+  const [vaults, setVaults] = useState<VaultDto[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
-  const [editDebt, setEditDebt] = useState<ApiDebt | null>(null);
+  const [editDebt, setEditDebt] = useState<DebtDto | null>(null);
   const [status, setStatus] = useState<DebtType>(DebtTypes.INCOMPLETE);
 
-  const [applyDebt, setApplyDebt] = useState<ApiDebt | null>(null);
+  const [applyDebt, setApplyDebt] = useState<DebtDto | null>(null);
   const [applyVaultId, setApplyVaultId] = useState<string>('');
   const [vaultDropdownOpen, setVaultDropdownOpen] = useState(false);
   const [applyingAction, setApplyingAction] = useState<'confirm' | 'withoutTransaction' | null>(null);
@@ -63,7 +63,7 @@ export default function DebtsPage() {
     setDebts((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
   };
 
-  const openApplyDialog = (debt: ApiDebt) => {
+  const openApplyDialog = (debt: DebtDto) => {
     const defaultVault = vaults.find((v) => v.isDefault) ?? vaults[0];
     setApplyVaultId(defaultVault?.id ?? '');
     setApplyDebt(debt);
@@ -86,7 +86,7 @@ export default function DebtsPage() {
     }
   };
 
-  const handleDiscard = async (debt: ApiDebt) => {
+  const handleDiscard = async (debt: DebtDto) => {
     if (!userId) return;
     if (!confirm(`Discard "${debt.title}"?`)) return;
     await profileApi.deleteDebt(userId, debt.id);
