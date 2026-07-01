@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Plus, Save, TrendingDown, TrendingUp, Coins, CalendarDays, ChevronDown } from 'lucide-react';
+import { X, Plus, Save, Coins, CalendarDays, ChevronDown } from 'lucide-react';
 import { iconMapper } from '../lib/iconMapper';
 import { Button } from './Button';
 import { Input } from './Input';
-import type { ApiTag, ApiVault } from '../lib/api/ProfileApi';
+import { TransactionTypeToggle } from './TransactionTypeToggle';
+import type { TagDto, VaultDto } from '@expense-tracker/shared';
 
 interface AddRecurringQuestModalProps {
   isOpen: boolean;
@@ -13,9 +14,9 @@ interface AddRecurringQuestModalProps {
   title: string;
   initialData?: any;
   onSave?: (data: any) => void;
-  availableTags?: ApiTag[];
-  availableVaults?: ApiVault[];
-  onCreateTag?: (name: string) => Promise<ApiTag | null>;
+  availableTags?: TagDto[];
+  availableVaults?: VaultDto[];
+  onCreateTag?: (name: string) => Promise<TagDto | null>;
 }
 
 const INTERVALS = ['Daily', 'Weekly', 'Monthly', 'Yearly'];
@@ -236,30 +237,7 @@ export function AddRecurringQuestModal({ isOpen, onClose, title, initialData, on
           {/* Transaction Type Toggle */}
           <div className="space-y-2">
             <label className="pixel-input-label ml-1">TYPE</label>
-            <div className="grid grid-cols-2 gap-1 bg-black p-1 border-4 border-black">
-              <button
-                onClick={() => setIsExpense(true)}
-                className={`py-3 px-4 font-label-caps flex items-center justify-center gap-2 ${
-                  isExpense
-                    ? 'bg-error-container text-on-error-container border-4 border-black shadow-[inset_2px_2px_0px_rgba(255,255,255,0.1),_inset_-2px_-2px_0px_rgba(0,0,0,0.4)]'
-                    : 'bg-surface-container-low text-outline hover:bg-surface-container-highest transition-colors'
-                }`}
-              >
-                <TrendingDown size={18} />
-                EXPENSE
-              </button>
-              <button
-                onClick={() => setIsExpense(false)}
-                className={`py-3 px-4 font-label-caps flex items-center justify-center gap-2 ${
-                  !isExpense
-                    ? 'bg-primary-container text-on-primary-container border-4 border-black shadow-[inset_2px_2px_0px_rgba(255,255,255,0.1),_inset_-2px_-2px_0px_rgba(0,0,0,0.4)]'
-                    : 'bg-surface-container-low text-outline hover:bg-surface-container-highest transition-colors'
-                }`}
-              >
-                <TrendingUp size={18} />
-                INCOME
-              </button>
-            </div>
+            <TransactionTypeToggle isExpense={isExpense} onChange={setIsExpense} />
           </div>
 
           {/* Tags Autocomplete Section */}
