@@ -1,16 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, Plus, Save, TrendingDown, TrendingUp, Coins, Pencil } from 'lucide-react';
+import { X, Plus, Save, Coins, Pencil } from 'lucide-react';
 import { Button } from './Button';
 import { Input } from './Input';
-import type { ApiDebt } from '@/lib/api/ProfileApi';
+import { TransactionTypeToggle } from './TransactionTypeToggle';
+import type { DebtDto } from '@expense-tracker/shared';
 
 interface AddDebtModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: { title: string; amount: number; type: 'expense' | 'income'; notes: string | null }) => void;
-  debt?: ApiDebt | null;
+  debt?: DebtDto | null;
 }
 
 export function AddDebtModal({ isOpen, onClose, onSave, debt = null }: AddDebtModalProps) {
@@ -107,37 +108,14 @@ export function AddDebtModal({ isOpen, onClose, onSave, debt = null }: AddDebtMo
 
           <div className="space-y-2">
             <label className="pixel-input-label ml-1">TYPE</label>
-            <div className="grid grid-cols-2 gap-1 bg-black p-1 border-4 border-black">
-              <button
-                onClick={() => setIsExpense(true)}
-                className={`py-3 px-4 font-label-caps flex items-center justify-center gap-2 ${
-                  isExpense
-                    ? 'bg-error-container text-on-error-container border-4 border-black shadow-[inset_2px_2px_0px_rgba(255,255,255,0.1),_inset_-2px_-2px_0px_rgba(0,0,0,0.4)]'
-                    : 'bg-surface-container-low text-outline hover:bg-surface-container-highest transition-colors'
-                }`}
-              >
-                <TrendingDown size={18} />
-                EXPENSE
-              </button>
-              <button
-                onClick={() => setIsExpense(false)}
-                className={`py-3 px-4 font-label-caps flex items-center justify-center gap-2 ${
-                  !isExpense
-                    ? 'bg-primary-container text-on-primary-container border-4 border-black shadow-[inset_2px_2px_0px_rgba(255,255,255,0.1),_inset_-2px_-2px_0px_rgba(0,0,0,0.4)]'
-                    : 'bg-surface-container-low text-outline hover:bg-surface-container-highest transition-colors'
-                }`}
-              >
-                <TrendingUp size={18} />
-                INCOME
-              </button>
-            </div>
+            <TransactionTypeToggle isExpense={isExpense} onChange={setIsExpense} />
           </div>
 
           <div className="space-y-2">
             <label className="pixel-input-label ml-1">NOTES</label>
             <textarea
               className="w-full min-h-[96px] p-4 bg-surface-container-lowest border-4 border-black shadow-[inset_4px_4px_0px_rgba(0,0,0,0.6),_inset_-2px_-2px_0px_rgba(255,255,255,0.05)] font-body-lg text-on-surface placeholder:text-surface-variant focus:outline-none focus:ring-0 resize-y custom-scrollbar"
-              placeholder="Optional — e.g. borrowed for concert tickets, pay back by August"
+              placeholder="e.g - Borrowed for concert tickets, pay back by August"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               maxLength={2000}
