@@ -10,6 +10,14 @@ export interface CreateDebtInput {
   title: string;
   amount: number;
   type: TransactionType;
+  notes?: string | null;
+}
+
+export interface UpdateDebtInput {
+  title?: string;
+  amount?: number;
+  type?: TransactionType;
+  notes?: string | null;
 }
 
 export interface ApplyDebtInput {
@@ -23,6 +31,7 @@ export interface DebtDto {
   title: string;
   amount: number;
   type: TransactionType;
+  notes: string | null;
   createdAt: Date;
 }
 
@@ -47,9 +56,26 @@ export class DebtsService {
       title: input.title,
       amount: input.amount,
       type: input.type,
+      notes: input.notes ?? null,
     });
     const saved = await this.debts.save(debt);
     logger.info('Created debt', { userId, debtId: saved.id });
+    return this.toDto(saved);
+  }
+
+  async update(userId: string, id: string, input: UpdateDebtInput): Promise<DebtDto> {
+    const debt = await this.debts.findOneForUser(userId, id);
+    if (!debt) {
+      throw new AppError('Due not found', 404);
+    }
+
+    if (input.title !== undefined) debt.title = input.title;
+    if (input.amount !== undefined) debt.amount = input.amount;
+    if (input.type !== undefined) debt.type = input.type;
+    if (input.notes !== undefined) debt.notes = input.notes;
+
+    const saved = await this.debts.save(debt);
+    logger.info('Updated debt', { userId, debtId: id });
     return this.toDto(saved);
   }
 
@@ -73,14 +99,14 @@ export class DebtsService {
       throw new AppError('Due not found', 404);
     }
     if (input.skipTransaction) {
-    await this.debts.remove(debt);
+      await this.debts.remove(debt);
 
-    logger.info('Applied debt without transaction', {
-      userId,
-      debtId: id,
-    });
+      logger.info('Applied debt without transaction', {
+        userId,
+        debtId: id,
+      });
 
-    return { id: debt.id };
+      return { id: debt.id };
     }
     const date = new Date().toISOString().split('T')[0];
     const expense = this.transactions.createEntity({
@@ -105,6 +131,7 @@ export class DebtsService {
       title: debt.title,
       amount: Number(debt.amount),
       type: debt.type,
+      notes: debt.notes ?? null,
       createdAt: debt.createdAt,
     };
   }

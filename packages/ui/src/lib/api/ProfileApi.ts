@@ -95,6 +95,7 @@ export interface ApiDebt {
   title: string;
   amount: number;
   type: 'expense' | 'income';
+  notes: string | null;
   createdAt: string;
 
   completed: boolean;
@@ -226,8 +227,12 @@ export default class ProfileApi extends ApiClient {
     return this.get<ApiDebt[]>(`/users/${userId}/debts?status=${status}`);
   }
 
-  createDebt(userId: string, data: { title: string; amount: number; type: 'expense' | 'income' }): Promise<ApiDebt> {
+  createDebt(userId: string, data: { title: string; amount: number; type: 'expense' | 'income'; notes?: string | null }): Promise<ApiDebt> {
     return this.post<ApiDebt>(`/users/${userId}/debts`, data);
+  }
+
+  updateDebt(userId: string, debtId: string, data: { title?: string; amount?: number; type?: 'expense' | 'income'; notes?: string | null }): Promise<ApiDebt> {
+    return this.put<ApiDebt>(`/users/${userId}/debts/${debtId}`, data);
   }
 
   deleteDebt(userId: string, debtId: string): Promise<void> {
