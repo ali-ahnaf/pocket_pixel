@@ -1,5 +1,5 @@
 <div align="center">
- 
+
 # Pocket Pixel — Expense Tracker
 
 **Level up your finances. Track every coin, quest every habit.**
@@ -104,10 +104,11 @@ pocket_pixel/
 ### Clone the repo
 
 ```bash
-git clone https://github.com/propo41/expense_tracker.git
-cd expense_tracker
+git clone git@github.com:ali-ahnaf/pocket_pixel.git
+cd pocket_pixel
 npm install
-npm run build:shared
+npm run build:shared # builds shared dependencies
+npm run migration:run # creates/updates the .sql file
 ```
 
 ### Create .env files
@@ -165,14 +166,6 @@ All endpoints are prefixed with `/api`. Protected routes require an `Authorizati
 
 SQLite database managed via TypeORM with migrations.
 
-```
-users            — id, name, email, password, avatar
-expenses         — id, userId, title, amount, type, date, interval, vaultId, deletedAt
-vaults           — id, userId, name, description, icon, backgroundColor, isDefault, deletedAt
-tags             — id, userId, name, icon, backgroundColor
-transaction_tags — transactionId, tagId  (junction table)
-```
-
 Run migrations:
 
 ```bash
@@ -201,11 +194,6 @@ Three views to understand your spending:
 - **Monthly report** — income vs. expenses by month
 - **Yearly report** — long-term trend across all months
 
-### Authentication
-
-- Passwords hashed with bcryptjs (12 salt rounds)
-- JWT tokens with 30-day expiration stored in localStorage
-- Auth guard on all protected frontend routes
 
 ---
 
@@ -239,6 +227,154 @@ Open an issue with:
 - What you expected vs. what happened
 - Steps to reproduce
 - Your OS and Node.js version
+
+---
+
+## ⚔️ The Adventuring Party
+
+```
+    ╔═══════════════════════════════════════════════════╗
+    ║   ★  P A R T Y   R O S T E R  ★                    ║
+    ║   These brave heroes joined the quest to slay      ║
+    ║   the dreaded budget-goblins of Pocket Pixel.      ║
+    ╚═══════════════════════════════════════════════════╝
+```
+
+<div align="center">
+
+<!-- CONTRIBUTORS:START -->
+<img src="https://img.shields.io/badge/PARTY_SIZE-16_HEROES-2ea44f?style=for-the-badge&logo=github&logoColor=white" alt="party size"/>
+<img src="https://img.shields.io/badge/QUEST-EXPENSE_TRACKER-8B5CF6?style=for-the-badge" alt="quest"/>
+
+<table>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/ali-ahnaf">
+        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/46298019&w=100&h=100&fit=cover" width="100" alt="ali-ahnaf"/><br/>
+        <sub><b>ali-ahnaf</b></sub>
+      </a><br/>
+      <img src="https://img.shields.io/badge/LVL_62-GUILD_MASTER-FFD700?style=for-the-badge&labelColor=1a1a1a" alt="Guild Master"/>
+    </td>
+    <td align="center">
+      <a href="https://github.com/namahu">
+        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/6575515&w=100&h=100&fit=cover" width="100" alt="namahu"/><br/>
+        <sub><b>namahu</b></sub>
+      </a><br/>
+      <img src="https://img.shields.io/badge/LVL_6-KNIGHT-C0C0C0?style=for-the-badge&labelColor=1a1a1a" alt="Knight"/>
+    </td>
+    <td align="center">
+      <a href="https://github.com/uttam12331">
+        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/159913047&w=100&h=100&fit=cover" width="100" alt="uttam12331"/><br/>
+        <sub><b>uttam12331</b></sub>
+      </a><br/>
+      <img src="https://img.shields.io/badge/LVL_4-MAGE-8B5CF6?style=for-the-badge&labelColor=1a1a1a" alt="Mage"/>
+    </td>
+    <td align="center">
+      <a href="https://github.com/Wasif123-rgb">
+        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/199018168&w=100&h=100&fit=cover" width="100" alt="Wasif123-rgb"/><br/>
+        <sub><b>Wasif123-rgb</b></sub>
+      </a><br/>
+      <img src="https://img.shields.io/badge/LVL_3-ROGUE-2F855A?style=for-the-badge&labelColor=1a1a1a" alt="Rogue"/>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/sihab-hasan">
+        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/190931179&w=100&h=100&fit=cover" width="100" alt="sihab-hasan"/><br/>
+        <sub><b>sihab-hasan</b></sub>
+      </a><br/>
+      <img src="https://img.shields.io/badge/LVL_5-RANGER-38A169?style=for-the-badge&labelColor=1a1a1a" alt="Ranger"/>
+    </td>
+    <td align="center">
+      <a href="https://github.com/Diyaaa-12">
+        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/189824242&w=100&h=100&fit=cover" width="100" alt="Diyaaa-12"/><br/>
+        <sub><b>Diyaaa-12</b></sub>
+      </a><br/>
+      <img src="https://img.shields.io/badge/LVL_2-CLERIC-F6E05E?style=for-the-badge&labelColor=1a1a1a" alt="Cleric"/>
+    </td>
+    <td align="center">
+      <a href="https://github.com/developmentwithparth1311">
+        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/255421661&w=100&h=100&fit=cover" width="100" alt="developmentwithparth1311"/><br/>
+        <sub><b>developmentwithparth1311</b></sub>
+      </a><br/>
+      <img src="https://img.shields.io/badge/LVL_2-BARD-ED64A6?style=for-the-badge&labelColor=1a1a1a" alt="Bard"/>
+    </td>
+    <td align="center">
+      <a href="https://github.com/isratarna">
+        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/180515630&w=100&h=100&fit=cover" width="100" alt="isratarna"/><br/>
+        <sub><b>isratarna</b></sub>
+      </a><br/>
+      <img src="https://img.shields.io/badge/LVL_2-PALADIN-F6AD55?style=for-the-badge&labelColor=1a1a1a" alt="Paladin"/>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/MFA-G">
+        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/136257088&w=100&h=100&fit=cover" width="100" alt="MFA-G"/><br/>
+        <sub><b>MFA-G</b></sub>
+      </a><br/>
+      <img src="https://img.shields.io/badge/LVL_1-WARRIOR-E53E3E?style=for-the-badge&labelColor=1a1a1a" alt="Warrior"/>
+    </td>
+    <td align="center">
+      <a href="https://github.com/Ishrat-alt">
+        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/173817616&w=100&h=100&fit=cover" width="100" alt="Ishrat-alt"/><br/>
+        <sub><b>Ishrat-alt</b></sub>
+      </a><br/>
+      <img src="https://img.shields.io/badge/LVL_1-DRUID-48BB78?style=for-the-badge&labelColor=1a1a1a" alt="Druid"/>
+    </td>
+    <td align="center">
+      <a href="https://github.com/IsratHossainSnigdha">
+        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/170188352&w=100&h=100&fit=cover" width="100" alt="IsratHossainSnigdha"/><br/>
+        <sub><b>IsratHossainSnigdha</b></sub>
+      </a><br/>
+      <img src="https://img.shields.io/badge/LVL_1-SORCERER-9F7AEA?style=for-the-badge&labelColor=1a1a1a" alt="Sorcerer"/>
+    </td>
+    <td align="center">
+      <a href="https://github.com/urmee111">
+        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/262960131&w=100&h=100&fit=cover" width="100" alt="urmee111"/><br/>
+        <sub><b>urmee111</b></sub>
+      </a><br/>
+      <img src="https://img.shields.io/badge/LVL_1-MONK-DD6B20?style=for-the-badge&labelColor=1a1a1a" alt="Monk"/>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/NujhatMaliha99">
+        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/256851119&w=100&h=100&fit=cover" width="100" alt="NujhatMaliha99"/><br/>
+        <sub><b>NujhatMaliha99</b></sub>
+      </a><br/>
+      <img src="https://img.shields.io/badge/LVL_2-ALCHEMIST-319795?style=for-the-badge&labelColor=1a1a1a" alt="Alchemist"/>
+    </td>
+    <td align="center">
+      <a href="https://github.com/SheikhMahmudArman">
+        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/215951139&w=100&h=100&fit=cover" width="100" alt="SheikhMahmudArman"/><br/>
+        <sub><b>SheikhMahmudArman</b></sub>
+      </a><br/>
+      <img src="https://img.shields.io/badge/LVL_1-ARCHER-3182CE?style=for-the-badge&labelColor=1a1a1a" alt="Archer"/>
+    </td>
+    <td align="center">
+      <a href="https://github.com/abidhasan176">
+        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/203552162&w=100&h=100&fit=cover" width="100" alt="abidhasan176"/><br/>
+        <sub><b>abidhasan176</b></sub>
+      </a><br/>
+      <img src="https://img.shields.io/badge/LVL_1-BERSERKER-C53030?style=for-the-badge&labelColor=1a1a1a" alt="Berserker"/>
+    </td>
+    <td align="center">
+      <a href="https://github.com/ayesha523">
+        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/199019280&w=100&h=100&fit=cover" width="100" alt="ayesha523"/><br/>
+        <sub><b>ayesha523</b></sub>
+      </a><br/>
+      <img src="https://img.shields.io/badge/LVL_4-ENCHANTER-6B46C1?style=for-the-badge&labelColor=1a1a1a" alt="Enchanter"/>
+    </td>
+  </tr>
+</table>
+<!-- CONTRIBUTORS:END -->
+
+<br/>
+
+<em>🗡️ Want to join the party? Grab a quest from the <a href="../../issues">issue board</a> and roll for initiative.</em>
+
+</div>
 
 ---
 
