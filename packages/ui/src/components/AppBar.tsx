@@ -32,8 +32,9 @@ export const AppBar: React.FC = () => {
   const displayAvatarUrl = user?.avatar || '/avatars/avatar1.jpeg';
 
   return (
+    <><Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onLogout={handleLogout} />
     <header className="md:hidden bg-surface dark:bg-surface-dim text-primary dark:text-primary-fixed w-full border-b-4 border-black flex justify-between items-center px-margin-mobile px-4 h-16 sticky top-0 z-40">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onLogout={handleLogout} />
+      
       <Button
         variant="ghost"
         className="p-2 w-10 h-10 border-transparent bg-surface-container"
@@ -64,5 +65,6 @@ export const AppBar: React.FC = () => {
         )}
       </div>
     </header>
+    </>
   );
 };
