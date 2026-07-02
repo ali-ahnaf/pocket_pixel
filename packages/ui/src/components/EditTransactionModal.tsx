@@ -19,6 +19,7 @@ export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, trans
   const [isExpense, setIsExpense] = useState(true);
   const [amount, setAmount] = useState('');
   const [title, setTitle] = useState('');
+  const [date, setDate] = useState('');
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isVisible, setIsVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,6 +54,7 @@ export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, trans
       setIsExpense(transaction.type === 'expense');
       setAmount(String(transaction.amount));
       setTitle(transaction.title ?? '');
+      setDate(transaction.date ? transaction.date.split('T')[0] : '');
       setSelectedTags(transaction.tags ?? []);
       setSelectedVaultId(transaction.vaultId);
       setTagInput('');
@@ -98,6 +100,7 @@ export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, trans
         tagIds: selectedTags.map((t) => t.id),
         title: title || null,
         vaultId: selectedVaultId,
+        date: date || undefined,
       });
       onSuccess?.();
       onClose();
@@ -183,6 +186,15 @@ export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, trans
                 onChange={(e) => setAmount(e.target.value)}
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <input
+              className="w-full h-16 px-4 bg-surface-container-lowest border-4 border-black shadow-[inset_4px_4px_0px_rgba(0,0,0,0.6),_inset_-2px_-2px_0px_rgba(255,255,255,0.05)] font-body-lg text-on-surface focus:outline-none"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
           </div>
 
           <div className="space-y-2">
