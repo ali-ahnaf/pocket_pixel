@@ -198,12 +198,26 @@ export default function StatsPage() {
   const vaultSavings = useMemo(() => {
     return vaults.map((vault) => {
       const vaultTxs = transactions.filter((t) => t.vaultId === vault.id);
-      const income = vaultTxs.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-      const expense = vaultTxs.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-      return { vault, income, expense, savings: income - expense };
+
+      const income = vaultTxs.filter((t) => t.type === 'income').reduce((sum, transaction) => sum + transaction.amount, 0);
+
+      const spent = vaultTxs.filter((t) => t.type === 'expense').reduce((sum, transaction) => sum + transaction.amount, 0);
+
+      const budget = vault.monthlyBudget ?? 0;
+      const progress = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0;
+      const isOver = budget > 0 && spent > budget;
+
+      return {
+        vault,
+        income,
+        spent,
+        savings: income - spent,
+        budget,
+        progress,
+        isOver,
+      };
     });
   }, [transactions, vaults]);
-
   const [selectedLineVaultId, setSelectedLineVaultId] = useState<string>('all');
   const [wizardOpen, setWizardOpen] = useState(false);
 
@@ -515,21 +529,30 @@ export default function StatsPage() {
                 <p className="font-body-sm text-on-surface-variant py-4 text-center">No vaults found.</p>
               ) : (
                 <div className="flex flex-col gap-3">
-                  {vaultSavings.map(({ vault, income, expense, savings }) => (
-                    <div
-                      key={vault.id}
-                      className="flex items-center justify-between bg-surface-dim p-3 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]"
-                    >
-                      <div className="flex flex-col gap-0.5">
-                        <span className="font-label-caps text-on-surface uppercase">{vault.name}</span>
-                        <span className="font-body-sm text-on-surface-variant text-[11px]">
-                          {formatCurrency(income)} in · {formatCurrency(expense)} out
-                        </span>
+                  {vaultSavings.map(({ vault, income, spent, savings, budget, progress, isOver }) => (
+                    <div key={vault.id} className="flex flex-col gap-3 bg-surface-dim p-3 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-label-caps text-on-surface uppercase">{vault.name}</span>
+
+                          <span className="font-body-sm text-on-surface-variant text-[11px]">
+                            {formatCurrency(income)} in · {formatCurrency(spent)} out
+                          </span>
+                        </div>
+
+                        <div className={`font-headline-sm ${savings >= 0 ? 'text-secondary' : 'text-error'}`}>
+                          {savings >= 0 ? '+' : '-'}
+                          {formatCurrency(Math.abs(savings))}
+                        </div>
                       </div>
-                      <div className={`font-headline-sm ${savings >= 0 ? 'text-secondary' : 'text-error'}`}>
-                        {savings >= 0 ? '+' : '-'}
-                        {formatCurrency(Math.abs(savings))}
-                      </div>
+
+                      {vault.monthlyBudget != null && (
+                        <div className="flex flex-col gap-1">
+                          <ProgressBar value={progress} variant={isOver ? 'error' : 'primary'} label={`${formatCurrency(spent)} / ${formatCurrency(budget)}`} />
+
+                          {isOver && <span className="font-label-caps text-error text-[11px] uppercase">Over budget by {formatCurrency(spent - budget)}</span>}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
