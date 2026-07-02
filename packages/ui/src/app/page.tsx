@@ -16,8 +16,22 @@ function formatCurrency(amount: number): string {
 }
 
 function formatDate(dateStr: string): string {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  if (!dateStr) return '';
+
+  // Handle simple YYYY-MM-DD format
+  const simpleDateMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (simpleDateMatch) {
+    const [, year, month, day] = simpleDateMatch;
+    return new Date(Number(year), Number(month) - 1, Number(day)).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  // Handle ISO datetime format
+  const parsed = new Date(dateStr);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  return 'Invalid date';
 }
 
 function formatTime(dateStr: string): string {
