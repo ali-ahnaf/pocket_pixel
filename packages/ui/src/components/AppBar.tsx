@@ -5,28 +5,14 @@ import { Menu, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button } from './Button';
 import { Sidebar } from './Sidebar';
-import { AUTH_TOKEN_STORAGE_KEY } from '@/lib/api/ApiClient';
+import { useAuth } from '@/hooks/useAuth';
 
 export const AppBar: React.FC = () => {
-  const [localAvatarUrl, setLocalAvatarUrl] = useState<string | null>(null);
+  const { user, signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-
-  useEffect(() => {
-    const stored = localStorage.getItem('pocket_pixel_profile');
-    if (stored) {
-      try {
-        const profile = JSON.parse(stored);
-        if (profile.avatar) {
-          setLocalAvatarUrl(profile.avatar);
-        }
-      } catch (e) {
-        console.error('Failed to parse profile from localStorage', e);
-      }
-    }
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -39,12 +25,11 @@ export const AppBar: React.FC = () => {
   }, [menuOpen]);
 
   const handleLogout = () => {
-    localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
-    localStorage.removeItem('pocket_pixel_profile');
+    signOut();
     router.replace('/signin');
   };
 
-  const displayAvatarUrl = localAvatarUrl || '/avatars/avatar1.jpeg';
+  const displayAvatarUrl = user?.avatar || '/avatars/avatar1.jpeg';
 
   return (
     <header className="md:hidden bg-surface dark:bg-surface-dim text-primary dark:text-primary-fixed w-full border-b-4 border-black flex justify-between items-center px-margin-mobile px-4 h-16 sticky top-0 z-40">
