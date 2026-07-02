@@ -243,7 +243,7 @@ Open an issue with:
 <div align="center">
 
 <!-- CONTRIBUTORS:START -->
-<img src="https://img.shields.io/badge/PARTY_SIZE-20_HEROES-2ea44f?style=for-the-badge&logo=github&logoColor=white" alt="party size"/>
+<img src="https://img.shields.io/badge/PARTY_SIZE-21_HEROES-2ea44f?style=for-the-badge&logo=github&logoColor=white" alt="party size"/>
 <img src="https://img.shields.io/badge/QUEST-EXPENSE_TRACKER-8B5CF6?style=for-the-badge" alt="quest"/>
 
 <table>
@@ -369,6 +369,13 @@ Open an issue with:
   </tr>
   <tr>
     <td align="center">
+      <a href="https://github.com/SarahZaman1310">
+        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/204079725&w=100&h=100&fit=cover" width="100" alt="SarahZaman1310"/><br/>
+        <sub><b>SarahZaman1310</b></sub>
+      </a><br/>
+      <img src="https://img.shields.io/badge/LVL_1-MONK-DD6B20?style=for-the-badge&labelColor=1a1a1a" alt="Monk"/>
+    </td>
+    <td align="center">
       <a href="https://github.com/SheikhMahmudArman">
         <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/215951139&w=100&h=100&fit=cover" width="100" alt="SheikhMahmudArman"/><br/>
         <sub><b>SheikhMahmudArman</b></sub>
@@ -389,6 +396,8 @@ Open an issue with:
       </a><br/>
       <img src="https://img.shields.io/badge/LVL_1-MONK-DD6B20?style=for-the-badge&labelColor=1a1a1a" alt="Monk"/>
     </td>
+  </tr>
+  <tr>
     <td align="center">
       <a href="https://github.com/faysaliqbal007">
         <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/198849341&w=100&h=100&fit=cover" width="100" alt="faysaliqbal007"/><br/>
