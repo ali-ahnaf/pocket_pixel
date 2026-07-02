@@ -109,10 +109,10 @@ export default function DebtsPage() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b-4 border-surface-container-highest pb-4">
             <div>
               <h2 className="font-headline-lg text-headline-lg text-primary">
-  <Link href="/" className="text-primary no-underline">
-    Debts
-  </Link>
-</h2>
+                <Link href="/" className="text-primary no-underline">
+                  Debts
+                </Link>
+              </h2>
               <p className="font-body-sm text-on-surface-variant">Templates you can apply as expenses or income whenever they come due.</p>
             </div>
             <div className="flex items-center gap-2">
@@ -232,8 +232,6 @@ export default function DebtsPage() {
           )}
         </div>
       </main>
-
-      
 
       <AddDebtModal isOpen={addOpen} onClose={() => setAddOpen(false)} onSave={handleCreate} />
 
