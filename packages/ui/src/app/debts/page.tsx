@@ -1,7 +1,9 @@
 'use client';
+import Link from 'next/link';
 
 import { useEffect, useState } from 'react';
 import { Plus, Check, Trash2, TrendingDown, TrendingUp, X, Coins, ChevronDown } from 'lucide-react';
+
 import { AppBar, BottomNavBar, Button, Card, AddDebtModal, DesktopSidebar } from '@/components';
 import { useAuth } from '@/hooks/useAuth';
 import { profileApi } from '@/lib/api';
@@ -102,11 +104,15 @@ export default function DebtsPage() {
 
       <DesktopSidebar />
 
-      <main className="flex-1 flex flex-col w-full md:h-screen relative px-3 pb-24 md:pb-0 overflow-y-auto overflow-x-hidden">
+      <main className="flex-1 flex flex-col w-full md:h-screen relative px-3 pb-6 md:pb-0 overflow-y-auto overflow-x-hidden">
         <div className="max-w-4xl w-full mx-auto p-margin-mobile md:p-8 flex flex-col gap-stack-md">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b-4 border-surface-container-highest pb-4">
             <div>
-              <h2 className="font-headline-lg text-headline-lg text-primary">Debts</h2>
+              <h2 className="font-headline-lg text-headline-lg text-primary">
+  <Link href="/" className="text-primary no-underline">
+    Debts
+  </Link>
+</h2>
               <p className="font-body-sm text-on-surface-variant">Templates you can apply as expenses or income whenever they come due.</p>
             </div>
             <div className="flex items-center gap-2">
@@ -227,7 +233,7 @@ export default function DebtsPage() {
         </div>
       </main>
 
-      <BottomNavBar />
+      
 
       <AddDebtModal isOpen={addOpen} onClose={() => setAddOpen(false)} onSave={handleCreate} />
 
