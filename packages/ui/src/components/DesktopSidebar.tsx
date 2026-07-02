@@ -2,7 +2,11 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Home, BarChart, User, Coins, type LucideIcon } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { Home, BarChart, User, Coins, Plus, type LucideIcon } from 'lucide-react';
+import { Button } from './Button';
+import { LogResourceModal } from './LogResourceModal';
+import { useAuth } from '@/hooks/useAuth';
 
 const PROFILE_STORAGE_KEY = 'pocket_pixel_profile';
 
@@ -27,7 +31,13 @@ interface DesktopSidebarProps {
 }
 
 export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ name, email, avatar }) => {
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [storedProfile, setStoredProfile] = useState<{ name?: string; email?: string; avatar?: string } | null>(null);
+
+  const rawPathname = usePathname();
+  const pathname = rawPathname?.replace(/\/$/, '') || '/';
 
   useEffect(() => {
     const stored = localStorage.getItem(PROFILE_STORAGE_KEY);
@@ -44,38 +54,62 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ name, email, ava
   const displayEmail = email ?? storedProfile?.email ?? '';
   const displayAvatar = avatar ?? storedProfile?.avatar ?? '/avatars/avatar1.jpeg';
 
+  const handleTransactionSuccess = () => {
+    window.dispatchEvent(new CustomEvent('transaction-success'));
+  };
+
   return (
-    <aside className="hidden md:flex flex-col h-screen w-80 border-r-4 border-black bg-surface-container dark:bg-surface-container-high sticky top-0 z-50">
-      <div className="p-4 border-b-4 border-black flex items-center gap-4 bg-surface-container-low">
-        <div className="h-16 w-16 border-4 border-black shadow-[inset_-2px_-2px_0px_0px_rgba(0,0,0,0.3),_inset_2px_2px_0px_0px_rgba(255,255,255,0.2)] rounded-none bg-secondary-container overflow-hidden shrink-0">
-          <img alt="Player Avatar" className="object-cover w-full h-full [image-rendering:pixelated]" src={displayAvatar} />
+    <>
+      <aside className="hidden md:flex flex-col h-screen w-80 border-r-4 border-black bg-surface-container dark:bg-surface-container-high sticky top-0 z-50">
+        <div className="p-4 border-b-4 border-black flex items-center gap-4 bg-surface-container-low">
+          <div className="h-16 w-16 border-4 border-black shadow-[inset_-2px_-2px_0px_0px_rgba(0,0,0,0.3),_inset_2px_2px_0px_0px_rgba(255,255,255,0.2)] rounded-none bg-secondary-container overflow-hidden shrink-0">
+            <img alt="Player Avatar" className="object-cover w-full h-full [image-rendering:pixelated]" src={displayAvatar} />
+          </div>
+          <div className="flex flex-col overflow-hidden">
+            <h2 className="font-headline-md text-primary truncate">{displayName}</h2>
+            <p className="font-body-sm text-on-surface-variant truncate">{displayEmail}</p>
+          </div>
         </div>
-        <div className="flex flex-col overflow-hidden">
-          <h2 className="font-headline-md text-primary truncate">{displayName}</h2>
-          <p className="font-body-sm text-on-surface-variant truncate">{displayEmail}</p>
-        </div>
+
+        <nav className="flex-1 flex flex-col p-4 gap-2 overflow-y-auto">
+          {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
+            const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={isActive ? 'page' : undefined}
+                className={
+                  isActive
+                    ? 'flex items-center gap-3 p-3 bg-primary text-on-primary border-r-4 border-primary-container btn'
+                    : 'flex items-center gap-3 p-3 text-on-surface hover:bg-surface-container-highest hover:translate-x-1 active:scale-95 transition-transform border-4 border-transparent hover:border-black'
+                }
+              >
+                <Icon />
+                <span className="font-label-caps tracking-wider uppercase">{label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      </aside>
+
+      {/* FAB - Desktop only */}
+      <div className="hidden md:block fixed bottom-8 right-8 z-50">
+        <Button
+          onClick={() => setIsModalOpen(true)}
+          variant="primary"
+          className="h-16 w-16 flex items-center justify-center rounded-none relative focus:outline-none !p-0 shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none transition-all"
+        >
+          <Plus className="w-8 h-8 font-bold" />
+        </Button>
       </div>
 
-      <nav className="flex-1 flex flex-col p-4 gap-2 overflow-y-auto">
-        {NAV_ITEMS.map(({ label, href, icon: Icon }, index) => {
-          const isActive = index === 0;
-          return (
-            <Link
-              key={href}
-              href={href}
-              aria-current={isActive ? 'page' : undefined}
-              className={
-                isActive
-                  ? 'flex items-center gap-3 p-3 bg-primary text-on-primary border-r-4 border-primary-container btn'
-                  : 'flex items-center gap-3 p-3 text-on-surface hover:bg-surface-container-highest hover:translate-x-1 active:scale-95 transition-transform border-4 border-transparent hover:border-black'
-              }
-            >
-              <Icon />
-              <span className="font-label-caps tracking-wider uppercase">{label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-    </aside>
+      <LogResourceModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={handleTransactionSuccess}
+        userId={userId}
+      />
+    </>
   );
 };

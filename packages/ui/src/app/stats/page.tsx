@@ -86,6 +86,7 @@ export default function StatsPage() {
   const [transactions, setTransactions] = useState<TransactionDto[]>([]);
   const [vaults, setVaults] = useState<VaultDto[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [refetchKey, setRefetchKey] = useState(0);
 
   const [tokenUsage, setTokenUsage] = useState<UsageReport | null>(null);
   const [tokenUsageLoading, setTokenUsageLoading] = useState(false);
@@ -112,7 +113,17 @@ export default function StatsPage() {
       })
       .catch(console.error)
       .finally(() => setIsLoading(false));
-  }, [userId, selectedMonthYear, isAllTime]);
+  }, [userId, selectedMonthYear, isAllTime, refetchKey]);
+
+  useEffect(() => {
+    const handleSuccessEvent = () => {
+      setRefetchKey((k) => k + 1);
+    };
+    window.addEventListener('transaction-success', handleSuccessEvent);
+    return () => {
+      window.removeEventListener('transaction-success', handleSuccessEvent);
+    };
+  }, []);
 
   useEffect(() => {
     if (!userId) return;
