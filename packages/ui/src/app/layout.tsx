@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Anybody, Inter, JetBrains_Mono } from 'next/font/google';
+import { Plus } from 'lucide-react';
 import './globals.css';
 import AuthGuard from '@/components/AuthGuard';
 import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration';
@@ -85,7 +86,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${anybody.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
       <body>
         <ServiceWorkerRegistration />
-        <AuthGuard>{children}</AuthGuard>
+        <AuthGuard>
+          {children}
+        </AuthGuard>
       </body>
     </html>
   );

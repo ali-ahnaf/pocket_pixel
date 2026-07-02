@@ -99,7 +99,12 @@ export default function DashboardPage() {
         setOccurrences(occs);
         setTags(tagList);
       })
-      .catch(console.error)
+      .catch(() => {
+        setTransactions([]);
+        setVaults([]);
+        setOccurrences([]);
+        setTags([]);
+      })
       .finally(() => setIsLoading(false));
   }, [userId, selectedMonth, selectedYear, refetchKey]);
 
@@ -487,15 +492,14 @@ export default function DashboardPage() {
       <BottomNavBar />
 
       {/* FAB */}
-      <div className="fixed bottom-24 md:bottom-8 right-4 md:right-8 z-50">
-        <Button
-          onClick={() => setIsModalOpen(true)}
-          variant="primary"
-          className="h-16 w-16 flex items-center justify-center rounded-none relative focus:outline-none !p-0 shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none transition-all"
-        >
-          <Plus className="w-8 h-8 font-bold" />
-        </Button>
-      </div>
+      <button
+        type="button"
+        aria-label="Add transaction"
+        onClick={() => setIsModalOpen(true)}
+        className="fixed md:bottom-32 bottom-24 md:right-8 right-4 z-50 h-16 w-16 flex items-center justify-center rounded-none border-4 border-black bg-primary text-on-primary shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none transition-all"
+      >
+        <Plus className="w-8 h-8 font-bold" />
+      </button>
 
       <LogResourceModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={handleTransactionSuccess} userId={userId} selectedMonth={selectedMonth} selectedYear={selectedYear} />
       <EditTransactionModal isOpen={!!editingTransaction} onClose={() => setEditingTransaction(null)} onSuccess={handleTransactionSuccess} userId={userId} transaction={editingTransaction} />
