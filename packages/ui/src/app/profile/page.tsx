@@ -405,16 +405,16 @@ export default function ProfilePage() {
             {loading ? (
               <p className="font-body-sm text-on-surface-variant">Loading...</p>
             ) : (
-              <div className="grid grid-cols-1 gap-gutter mt-4">
+              <div className="grid grid-cols-2 gap-3 mt-4 md:grid-cols-1 md:gap-gutter">
                 {tags.map((tag) => {
                   const IconComp = iconMapper(tag.icon);
                   return (
-                    <Card key={tag.id} className="p-3 flex items-center justify-between border-outline-variant hover:border-black transition-colors relative group">
-                      <div className="flex items-center gap-2 overflow-hidden">
+                    <Card key={tag.id} className="p-3 flex items-center justify-between gap-2 border-outline-variant hover:border-black transition-colors relative group overflow-hidden">
+                      <div className="flex items-center gap-2 overflow-hidden min-w-0">
                         <div className="w-8 h-8 flex items-center justify-center border-2 border-black shrink-0" style={{ backgroundColor: tag.color }}>
                           <IconComp size={16} className="text-black drop-shadow-sm" />
                         </div>
-                        <span className="font-headline-sm truncate" title={tag.name}>
+                        <span className="font-headline-sm truncate min-w-0" title={tag.name}>
                           {tag.name}
                         </span>
                       </div>
