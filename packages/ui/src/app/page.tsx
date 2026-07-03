@@ -99,16 +99,16 @@ export default function DashboardPage() {
         setOccurrences(occs);
         setTags(tagList);
       })
-      .catch(() => {
-        setTransactions([]);
-        setVaults([]);
-        setOccurrences([]);
-        setTags([]);
-      })
+      .catch(console.error)
       .finally(() => setIsLoading(false));
   }, [userId, selectedMonth, selectedYear, refetchKey]);
 
   const handleTransactionSuccess = useCallback(() => setRefetchKey((k) => k + 1), []);
+
+  useEffect(() => {
+    window.addEventListener('transaction-added', handleTransactionSuccess);
+    return () => window.removeEventListener('transaction-added', handleTransactionSuccess);
+  }, [handleTransactionSuccess]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -496,7 +496,7 @@ export default function DashboardPage() {
         type="button"
         aria-label="Add transaction"
         onClick={() => setIsModalOpen(true)}
-        className="fixed md:bottom-32 bottom-24 md:right-8 right-4 z-50 h-16 w-16 flex items-center justify-center rounded-none border-4 border-black bg-primary text-on-primary shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none transition-all"
+        className="md:hidden fixed bottom-24 right-4 z-50 h-16 w-16 flex items-center justify-center rounded-none border-4 border-black bg-primary text-on-primary shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none transition-all"
       >
         <Plus className="w-8 h-8 font-bold" />
       </button>

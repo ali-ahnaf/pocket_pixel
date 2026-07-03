@@ -703,13 +703,7 @@ export default function StatsPage() {
       </main>
 
       <WizardFab onClick={() => setWizardOpen(true)} />
-      <button
-        type="button"
-        aria-label="Add transaction"
-        className="fixed md:bottom-32 bottom-24 md:right-8 right-4 z-50 h-16 w-16 flex items-center justify-center rounded-none border-4 border-black bg-primary text-on-primary shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
-      >
-        <Plus className="w-8 h-8 font-bold" />
-      </button>
+
       <WizardChatSheet isOpen={wizardOpen} onClose={() => setWizardOpen(false)} userId={userId} />
 
       <BottomNavBar />

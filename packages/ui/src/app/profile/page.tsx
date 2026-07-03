@@ -458,19 +458,12 @@ export default function ProfilePage() {
         availableVaults={vaults}
         onCreateTag={handleCreateTagForQuest}
       />
+
       <DeleteQuestModal isOpen={!!questToDelete} onClose={() => setQuestToDelete(null)} questName={questToDelete?.title || ''} onDelete={handleDeleteQuest} />
       <AddTagModal isOpen={isTagModalOpen} onClose={() => setIsTagModalOpen(false)} title={tagToEdit ? 'Edit Tag' : 'Create New Tag'} initialData={tagToEdit} onSave={handleSaveTag} />
       <DeleteTagModal isOpen={!!tagToDelete} onClose={() => setTagToDelete(null)} tagName={tagToDelete?.name || ''} onDelete={handleDeleteTag} />
       <AvatarPickerModal isOpen={isAvatarModalOpen} onClose={() => setIsAvatarModalOpen(false)} currentAvatar={avatarUrl} onSelect={(avatar: string) => setAvatarUrl(avatar)} />
       
-      {/* FAB Button - Desktop only */}
-      <button
-        type="button"
-        aria-label="Add transaction"
-        className="hidden md:flex fixed bottom-28 right-8 z-50 h-16 w-16 items-center justify-center rounded-none border-4 border-black bg-primary text-on-primary shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
-      >
-        <Plus className="w-8 h-8 font-bold" />
-      </button>
     </div>
   );
 }
