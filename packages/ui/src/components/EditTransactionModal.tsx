@@ -1,17 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Coins, TrendingDown, TrendingUp, ChevronDown, Plus, Pencil, Trash2 } from 'lucide-react';
+import { X, Coins, ChevronDown, Plus, Pencil, Trash2 } from 'lucide-react';
 import { iconMapper } from '../lib/iconMapper';
 import { profileApi } from '../lib/api';
-import type { ApiTag, ApiVault, ApiTransaction } from '../lib/api/ProfileApi';
+import { TransactionTypeToggle } from './TransactionTypeToggle';
+import type { TagDto, VaultDto, TransactionDto } from '@expense-tracker/shared';
 
 interface EditTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
   userId: string | null;
-  transaction: ApiTransaction | null;
+  transaction: TransactionDto | null;
 }
 
 export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, transaction }: EditTransactionModalProps) {
@@ -24,19 +25,17 @@ export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, trans
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const [availableTags, setAvailableTags] = useState<ApiTag[]>([]);
+  const [availableTags, setAvailableTags] = useState<TagDto[]>([]);
   const [tagInput, setTagInput] = useState('');
-  const [selectedTags, setSelectedTags] = useState<ApiTag[]>([]);
+  const [selectedTags, setSelectedTags] = useState<TagDto[]>([]);
 
-  const [vaults, setVaults] = useState<ApiVault[]>([]);
+  const [vaults, setVaults] = useState<VaultDto[]>([]);
   const [selectedVaultId, setSelectedVaultId] = useState<string | null>(null);
   const [isVaultDropdownOpen, setIsVaultDropdownOpen] = useState(false);
 
   const selectedVault = vaults.find((v) => v.id === selectedVaultId) ?? null;
 
-  const suggestions = availableTags
-    .filter((tag) => !selectedTags.some((t) => t.id === tag.id) && tag.name.toLowerCase().includes(tagInput.toLowerCase()))
-    .slice(0, 3);
+  const suggestions = availableTags.filter((tag) => !selectedTags.some((t) => t.id === tag.id) && tag.name.toLowerCase().includes(tagInput.toLowerCase())).slice(0, 3);
 
   useEffect(() => {
     if (isOpen && userId) {
@@ -61,7 +60,7 @@ export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, trans
     }
   }, [isOpen, transaction]);
 
-  const toggleTag = (tag: ApiTag) => {
+  const toggleTag = (tag: TagDto) => {
     if (selectedTags.some((t) => t.id === tag.id)) {
       setSelectedTags(selectedTags.filter((t) => t.id !== tag.id));
     } else {
@@ -187,30 +186,7 @@ export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, trans
           </div>
 
           <div className="space-y-2">
-            <div className="grid grid-cols-2 gap-1 bg-black p-1 border-4 border-black">
-              <button
-                onClick={() => setIsExpense(true)}
-                className={`py-3 px-4 font-label-caps flex items-center justify-center gap-2 ${
-                  isExpense
-                    ? 'bg-error-container text-on-error-container border-4 border-black shadow-[inset_2px_2px_0px_rgba(255,255,255,0.1),_inset_-2px_-2px_0px_rgba(0,0,0,0.4)]'
-                    : 'bg-surface-container-low text-outline hover:bg-surface-container-highest transition-colors'
-                }`}
-              >
-                <TrendingDown size={18} />
-                EXPENSE
-              </button>
-              <button
-                onClick={() => setIsExpense(false)}
-                className={`py-3 px-4 font-label-caps flex items-center justify-center gap-2 ${
-                  !isExpense
-                    ? 'bg-primary-container text-on-primary-container border-4 border-black shadow-[inset_2px_2px_0px_rgba(255,255,255,0.1),_inset_-2px_-2px_0px_rgba(0,0,0,0.4)]'
-                    : 'bg-surface-container-low text-outline hover:bg-surface-container-highest transition-colors'
-                }`}
-              >
-                <TrendingUp size={18} />
-                INCOME
-              </button>
-            </div>
+            <TransactionTypeToggle isExpense={isExpense} onChange={setIsExpense} />
           </div>
 
           {vaults.length > 0 && (
@@ -223,10 +199,11 @@ export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, trans
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    {selectedVault && (() => {
-                      const VaultIcon = iconMapper(selectedVault.icon || 'Briefcase');
-                      return <VaultIcon className="text-primary" size={20} />;
-                    })()}
+                    {selectedVault &&
+                      (() => {
+                        const VaultIcon = iconMapper(selectedVault.icon || 'Briefcase');
+                        return <VaultIcon className="text-primary" size={20} />;
+                      })()}
                     <span className="text-primary font-bold">{selectedVault?.name ?? 'Select vault'}</span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -241,7 +218,10 @@ export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, trans
                     <div className="absolute top-[calc(100%+4px)] left-0 right-0 z-[70] bg-surface-container-high border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)]">
                       <div className="max-h-60 overflow-y-auto custom-scrollbar">
                         <button
-                          onClick={() => { setSelectedVaultId(null); setIsVaultDropdownOpen(false); }}
+                          onClick={() => {
+                            setSelectedVaultId(null);
+                            setIsVaultDropdownOpen(false);
+                          }}
                           className={`w-full h-14 px-4 flex items-center font-body-lg transition-colors hover:bg-surface-container-highest ${
                             selectedVaultId === null ? 'bg-surface-container-highest text-primary font-bold' : 'bg-surface-container-low text-on-surface'
                           }`}
@@ -253,7 +233,10 @@ export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, trans
                           return (
                             <button
                               key={vault.id}
-                              onClick={() => { setSelectedVaultId(vault.id); setIsVaultDropdownOpen(false); }}
+                              onClick={() => {
+                                setSelectedVaultId(vault.id);
+                                setIsVaultDropdownOpen(false);
+                              }}
                               className={`w-full h-14 px-4 flex items-center justify-between font-body-lg transition-colors hover:bg-surface-container-highest group ${
                                 selectedVaultId === vault.id ? 'bg-surface-container-highest' : 'bg-surface-container-low'
                               }`}

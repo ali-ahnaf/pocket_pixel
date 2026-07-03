@@ -1,30 +1,17 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import type { SignInPayload, SignUpPayload } from '@expense-tracker/shared';
+import type { ChangePasswordPayload, SignInPayload, SignUpPayload, TokenPayload, AuthResult } from '@expense-tracker/shared';
 import { AppError } from '../errors/app-error';
 import { UsersRepository } from '../repositories/users.repository';
 import { VaultsRepository } from '../repositories/vaults.repository';
 import { usersRepository, vaultsRepository } from '../repositories';
 import { logger } from '.';
 
+export type { TokenPayload, AuthResult };
+
 export const AUTH_TOKEN_KEY = 'auth_token';
 const SALT_ROUNDS = 12;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-jwt-secret-change-in-prod';
-
-export interface TokenPayload {
-  userId: string;
-  name: string;
-  email: string;
-  avatar: string;
-}
-
-export interface AuthResult {
-  id: string;
-  name: string;
-  email: string;
-  avatar: string;
-  token: string;
-}
 
 /**
  * Authentication: password hashing, JWT issuing/verification and the sign-up /
@@ -89,6 +76,23 @@ export class AuthService {
 
     logger.info('User signed in', { userId: user.id });
     return this.toAuthResult(user.id, user.name, user.email, user.avatar);
+  }
+
+  async changePassword(userId: string, payload: ChangePasswordPayload): Promise<void> {
+    const user = await this.users.findById(userId);
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    const passwordMatches = await bcrypt.compare(payload.currentPassword, user.password);
+    if (!passwordMatches) {
+      throw new AppError('Current password is incorrect', 401);
+    }
+
+    user.password = await this.hashPassword(payload.newPassword);
+    await this.users.save(user);
+
+    logger.info('User changed password', { userId: user.id });
   }
 
   private toAuthResult(id: string, name: string, email: string, avatar: string): AuthResult {

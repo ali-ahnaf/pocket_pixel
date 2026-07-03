@@ -21,21 +21,21 @@ import {
 import { User, Briefcase, Plus, Pencil, Star, Trash2, Repeat, Calendar, CalendarDays, TrendingDown, TrendingUp, Tag, Coins } from 'lucide-react';
 import { iconMapper } from '@/lib/iconMapper';
 import { profileApi } from '@/lib/api';
-import type { ApiVault, ApiTag, ApiRecurringQuest } from '@/lib/api/ProfileApi';
+import type { VaultDto, TagDto, RecurringDto } from '@expense-tracker/shared';
 
 function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-function toUiVault(v: ApiVault) {
+function toUiVault(v: VaultDto) {
   return { ...v, color: v.backgroundColor || '#3b82f6', icon: v.icon || 'Briefcase' };
 }
 
-function toUiTag(t: ApiTag) {
+function toUiTag(t: TagDto) {
   return { ...t, color: t.backgroundColor || '#3b82f6', icon: t.icon || 'Tag' };
 }
 
-function toUiQuest(q: ApiRecurringQuest) {
+function toUiQuest(q: RecurringDto) {
   const tagNames = (q.tags || []).map((tag) => tag.name);
 
   return {
@@ -76,7 +76,7 @@ export default function ProfilePage() {
   const [playerName, setPlayerName] = useState('');
 
   const [vaults, setVaults] = useState<UiVault[]>([]);
-  const [vaultToEdit, setVaultToEdit] = useState<{ id?: string; name: string; description: string; icon?: string; color?: string } | undefined>(undefined);
+  const [vaultToEdit, setVaultToEdit] = useState<{ id?: string; name: string; description: string; icon?: string; color?: string; budget?: number | null } | undefined>(undefined);
   const [vaultToDelete, setVaultToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const [recurringQuests, setRecurringQuests] = useState<UiQuest[]>([]);
@@ -109,9 +109,9 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSaveVault = async (data: { id?: string; name: string; description: string; icon?: string; color?: string }) => {
+  const handleSaveVault = async (data: { id?: string; name: string; description: string; icon?: string; color?: string; budget: number | null }) => {
     if (!userId) return;
-    const payload = { name: data.name, description: data.description, icon: data.icon, backgroundColor: data.color };
+    const payload = { name: data.name, description: data.description, icon: data.icon, backgroundColor: data.color, monthlyBudget: data.budget };
     if (data.id) {
       const res = await profileApi.updateVault(userId, data.id, payload);
       if (res) setVaults((prev) => prev.map((v) => (v.id === data.id ? toUiVault(res) : v)));
@@ -157,7 +157,7 @@ export default function ProfilePage() {
     }
   };
 
-  const handleCreateTagForQuest = async (name: string): Promise<ApiTag | null> => {
+  const handleCreateTagForQuest = async (name: string): Promise<TagDto | null> => {
     if (!userId) return null;
     const res = await profileApi.createTag(userId, { name });
     if (res) {
@@ -278,7 +278,7 @@ export default function ProfilePage() {
                             variant="ghost"
                             className="p-1 w-8 h-8 border-b-black bg-surface-container-highest text-on-surface flex items-center justify-center"
                             onClick={() => {
-                              setVaultToEdit({ id: vault.id, name: vault.name, description: vault.description, icon: vault.icon, color: vault.color });
+                              setVaultToEdit({ id: vault.id, name: vault.name, description: vault.description, icon: vault.icon, color: vault.color, budget: vault.monthlyBudget });
                               setIsVaultModalOpen(true);
                             }}
                           >
@@ -295,7 +295,7 @@ export default function ProfilePage() {
                               variant="ghost"
                               className="p-1 w-8 h-8 border-b-black bg-surface-container-highest text-on-surface flex items-center justify-center"
                               onClick={() => {
-                                setVaultToEdit({ id: vault.id, name: vault.name, description: vault.description, icon: vault.icon, color: vault.color });
+                                setVaultToEdit({ id: vault.id, name: vault.name, description: vault.description, icon: vault.icon, color: vault.color, budget: vault.monthlyBudget });
                                 setIsVaultModalOpen(true);
                               }}
                             >
@@ -405,16 +405,16 @@ export default function ProfilePage() {
             {loading ? (
               <p className="font-body-sm text-on-surface-variant">Loading...</p>
             ) : (
-              <div className="grid grid-cols-1 gap-gutter mt-4">
+              <div className="grid grid-cols-2 gap-3 mt-4 md:grid-cols-1 md:gap-gutter">
                 {tags.map((tag) => {
                   const IconComp = iconMapper(tag.icon);
                   return (
-                    <Card key={tag.id} className="p-3 flex items-center justify-between border-outline-variant hover:border-black transition-colors relative group">
-                      <div className="flex items-center gap-2 overflow-hidden">
+                    <Card key={tag.id} className="p-3 flex items-center justify-between gap-2 border-outline-variant hover:border-black transition-colors relative group overflow-hidden">
+                      <div className="flex items-center gap-2 overflow-hidden min-w-0">
                         <div className="w-8 h-8 flex items-center justify-center border-2 border-black shrink-0" style={{ backgroundColor: tag.color }}>
                           <IconComp size={16} className="text-black drop-shadow-sm" />
                         </div>
-                        <span className="font-headline-sm truncate" title={tag.name}>
+                        <span className="font-headline-sm truncate min-w-0" title={tag.name}>
                           {tag.name}
                         </span>
                       </div>

@@ -1,0 +1,119 @@
+name: Contributors Roster
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-roster:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Rebuild the party roster
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Rank ladder, lowest tier first. `max` = highest commit count that still
+            // earns this rank. Anyone above the last tier becomes Guild Master.
+            // Colors mirror the existing hand-authored badges to keep the RPG theme.
+            const RANKS = [
+              { name: 'MONK', max: 1, color: 'DD6B20' },
+              { name: 'KNIGHT', max: 3, color: 'C0C0C0' },
+              { name: 'MAGE', max: 5, color: '8B5CF6' },
+              { name: 'ROGUE', max: 8, color: '2F855A' },
+              { name: 'RANGER', max: 11, color: '38A169' },
+              { name: 'CLERIC', max: 15, color: 'F6E05E' },
+              { name: 'BARD', max: 19, color: 'ED64A6' },
+              { name: 'PALADIN', max: 24, color: 'F6AD55' },
+              { name: 'WARRIOR', max: 29, color: 'E53E3E' },
+              { name: 'DRUID', max: 34, color: '48BB78' },
+              { name: 'SORCERER', max: 39, color: '9F7AEA' },
+              { name: 'ALCHEMIST', max: 44, color: '319795' },
+              { name: 'ARCHER', max: 49, color: '3182CE' },
+              { name: 'BERSERKER', max: 54, color: 'C53030' },
+              { name: 'ENCHANTER', max: 60, color: '6B46C1' },
+            ];
+            const GUILD_MASTER = { name: 'GUILD_MASTER', color: 'FFD700' };
+
+            const rankFor = (commits) => {
+              if (commits > 60) return GUILD_MASTER;
+              return RANKS.find((r) => commits <= r.max) || GUILD_MASTER;
+            };
+            const titleCase = (label) =>
+              label
+                .split('_')
+                .map((w) => w[0] + w.slice(1).toLowerCase())
+                .join(' ');
+
+            // Fetch every contributor with their commit count (already sorted desc by the API).
+            const contributors = await github.paginate(github.rest.repos.listContributors, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100,
+            });
+
+            const heroes = contributors
+              .filter((c) => c.type === 'User' && !c.login.endsWith('[bot]'))
+              .sort((a, b) => b.contributions - a.contributions);
+
+            const card = (hero) => {
+              const rank = rankFor(hero.contributions);
+              const avatar = `https://images.weserv.nl/?url=avatars.githubusercontent.com/u/${hero.id}&w=100&h=100&fit=cover`;
+              const badge = `https://img.shields.io/badge/LVL_${hero.contributions}-${rank.name}-${rank.color}?style=for-the-badge&labelColor=1a1a1a`;
+              return [
+                `    <td align="center">`,
+                `      <a href="https://github.com/${hero.login}">`,
+                `        <img src="${avatar}" width="100" alt="${hero.login}"/><br/>`,
+                `        <sub><b>${hero.login}</b></sub>`,
+                `      </a><br/>`,
+                `      <img src="${badge}" alt="${titleCase(rank.name)}"/>`,
+                `    </td>`,
+              ].join('\n');
+            };
+
+            // Group four heroes per row, matching the existing table layout.
+            const rows = [];
+            for (let i = 0; i < heroes.length; i += 4) {
+              const cards = heroes.slice(i, i + 4).map(card).join('\n');
+              rows.push(`  <tr>\n${cards}\n  </tr>`);
+            }
+
+            const block = [
+              `<img src="https://img.shields.io/badge/PARTY_SIZE-${heroes.length}_HEROES-2ea44f?style=for-the-badge&logo=github&logoColor=white" alt="party size"/>`,
+              `<img src="https://img.shields.io/badge/QUEST-EXPENSE_TRACKER-8B5CF6?style=for-the-badge" alt="quest"/>`,
+              ``,
+              `<table>`,
+              rows.join('\n'),
+              `</table>`,
+            ].join('\n');
+
+            const readme = fs.readFileSync('README.md', 'utf8');
+            const START = '<!-- CONTRIBUTORS:START -->';
+            const END = '<!-- CONTRIBUTORS:END -->';
+            const pattern = new RegExp(`${START}[\\s\\S]*${END}`);
+            if (!pattern.test(readme)) {
+              core.setFailed('Contributor markers not found in README.md');
+              return;
+            }
+            const updated = readme.replace(pattern, `${START}\n${block}\n${END}`);
+            fs.writeFileSync('README.md', updated);
+
+      - name: Commit updated roster
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet README.md; then
+            echo "Roster unchanged — nothing to commit."
+          else
+            git add README.md
+            git commit -m "chore: update contributors roster"
+            git push
+          fi

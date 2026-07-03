@@ -1,26 +1,12 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import { AppBar, Card, ProgressBar, Button, BottomNavBar, DesktopSidebar } from '@/components';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { AppBar, Card, ProgressBar, Button, BottomNavBar, DesktopSidebar, WizardFab, WizardChatSheet } from '@/components';
 import { useAuth } from '@/hooks/useAuth';
-import {
-  Package,
-  ChevronDown,
-  TrendingUp,
-  TrendingDown,
-  CircleDollarSign,
-  Flame,
-  Gem,
-  Calendar,
-  ChevronLeft,
-  ChevronRight,
-  Vault,
-  LineChart,
-  Cpu,
-} from 'lucide-react';
+import { Package, ChevronDown, TrendingUp, TrendingDown, CircleDollarSign, Flame, Gem, Calendar, ChevronLeft, ChevronRight, Vault, LineChart, Cpu, Download } from 'lucide-react';
 import { iconMapper } from '@/lib/iconMapper';
 import { profileApi } from '@/lib/api';
-import type { ApiUser, ApiTransaction, ApiVault, ApiTokenUsage } from '@/lib/api/ProfileApi';
+import type { User, VaultDto, UsageReport, TransactionDto } from '@expense-tracker/shared';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -51,7 +37,7 @@ function getMonthKey(date: string): string | null {
   return `${year}-${month}`;
 }
 
-function getMonthRange(transactions: ApiTransaction[]): string[] {
+function getMonthRange(transactions: TransactionDto[]): string[] {
   const months = transactions
     .map((t) => getMonthKey(t.date))
     .filter((month): month is string => Boolean(month))
@@ -91,17 +77,26 @@ function valuesToPolyline(values: number[]): string {
     .join(' ');
 }
 
+function escapeCsvCell(value: string | number | null | undefined): string {
+  if (value === null || value === undefined) return '';
+  const str = String(value);
+  if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function StatsPage() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
-  const [profile, setProfile] = useState<ApiUser | null>(null);
-  const [transactions, setTransactions] = useState<ApiTransaction[]>([]);
-  const [vaults, setVaults] = useState<ApiVault[]>([]);
+  const [profile, setProfile] = useState<User | null>(null);
+  const [transactions, setTransactions] = useState<TransactionDto[]>([]);
+  const [vaults, setVaults] = useState<VaultDto[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const [tokenUsage, setTokenUsage] = useState<ApiTokenUsage | null>(null);
+  const [tokenUsage, setTokenUsage] = useState<UsageReport | null>(null);
   const [tokenUsageLoading, setTokenUsageLoading] = useState(false);
   const [tokenUsageError, setTokenUsageError] = useState<string | null>(null);
 
@@ -110,6 +105,11 @@ export default function StatsPage() {
   const [selectedMonthYear, setSelectedMonthYear] = useState<string>(CURRENT_MONTH_YEAR);
   const [monthYearOpen, setMonthYearOpen] = useState(false);
   const [pickerYear, setPickerYear] = useState(new Date().getFullYear());
+
+  const closeDropdowns = () => {
+    setVaultOpen(false);
+    setMonthYearOpen(false);
+  };
 
   const isAllTime = selectedMonthYear === ALL_TIME_PERIOD;
   const isCurrentMonth = selectedMonthYear === CURRENT_MONTH_YEAR;
@@ -146,6 +146,40 @@ export default function StatsPage() {
     if (selectedVaultId === 'all') return transactions;
     return transactions.filter((t) => t.vaultId === selectedVaultId);
   }, [transactions, selectedVaultId]);
+
+  const exportCsv = () => {
+    if (filteredTransactions.length === 0) return;
+
+    const headers = ['ID', 'Date', 'Title', 'Type', 'Amount', 'Vault', 'Category', 'Tags', 'Created At', 'Updated At'];
+    const csvRows = [
+      headers.join(','),
+      ...filteredTransactions.map((tx) =>
+        [
+          escapeCsvCell(tx.id),
+          escapeCsvCell(tx.date),
+          escapeCsvCell(tx.title || (tx.type === 'income' ? 'Unnamed Income' : 'Unnamed Expense')),
+          escapeCsvCell(tx.type),
+          escapeCsvCell(tx.amount),
+          escapeCsvCell(tx.vault?.name || ''),
+          escapeCsvCell(tx.tags?.[0]?.name || (tx.type === 'income' ? 'Income' : 'Expense')),
+          escapeCsvCell(tx.tags?.map((t) => t.name).join('; ') || ''),
+          escapeCsvCell(tx.createdAt),
+          escapeCsvCell(tx.updatedAt),
+        ].join(','),
+      ),
+    ];
+
+    const csvContent = '\uFEFF' + csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `transactions_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   const totalIncome = useMemo(() => filteredTransactions.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0), [filteredTransactions]);
   const totalExpenses = useMemo(() => filteredTransactions.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0), [filteredTransactions]);
@@ -212,13 +246,28 @@ export default function StatsPage() {
   const vaultSavings = useMemo(() => {
     return vaults.map((vault) => {
       const vaultTxs = transactions.filter((t) => t.vaultId === vault.id);
-      const income = vaultTxs.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-      const expense = vaultTxs.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-      return { vault, income, expense, savings: income - expense };
+
+      const income = vaultTxs.filter((t) => t.type === 'income').reduce((sum, transaction) => sum + transaction.amount, 0);
+
+      const spent = vaultTxs.filter((t) => t.type === 'expense').reduce((sum, transaction) => sum + transaction.amount, 0);
+
+      const budget = vault.monthlyBudget ?? 0;
+      const progress = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0;
+      const isOver = budget > 0 && spent > budget;
+
+      return {
+        vault,
+        income,
+        spent,
+        savings: income - spent,
+        budget,
+        progress,
+        isOver,
+      };
     });
   }, [transactions, vaults]);
-
   const [selectedLineVaultId, setSelectedLineVaultId] = useState<string>('all');
+  const [wizardOpen, setWizardOpen] = useState(false);
 
   const lineChartPoints = useMemo(() => {
     const vaultIds = selectedLineVaultId === 'all' ? vaults.map((v) => v.id) : [selectedLineVaultId];
@@ -290,7 +339,7 @@ export default function StatsPage() {
       <DesktopSidebar name={profile?.name} email={profile?.email} avatar={profile?.avatar} />
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col w-full md:h-screen relative px-3 pb-24 md:pb-0 overflow-y-auto overflow-x-hidden">
+      <main className="flex-1 flex flex-col w-full md:h-screen relative px-3 pb-24 md:pb-0 overflow-y-auto overflow-x-hidden" onClick={closeDropdowns}>
         <div className="max-w-4xl w-full mx-auto p-margin-mobile md:p-8 flex flex-col gap-stack-md">
           {/* Header & Controls */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b-4 border-surface-container-highest pb-4">
@@ -300,7 +349,7 @@ export default function StatsPage() {
             </div>
 
             {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-4 z-50">
+            <div className="relative flex flex-col sm:flex-row gap-4 z-50" onClick={(e) => e.stopPropagation()}>
               {/* Vault Selector */}
               <div className="flex flex-col gap-1">
                 <span className="font-label-caps text-[10px] text-outline uppercase ml-1">Source Vault</span>
@@ -308,19 +357,23 @@ export default function StatsPage() {
                   <Button
                     variant="ghost"
                     className="bg-surface-container text-on-surface font-body-sm py-2 px-4 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)] hover:bg-surface-container-highest flex items-center gap-3 min-w-[160px]"
-                    onClick={() => setVaultOpen((v) => !v)}
+                    onClick={() => {
+                      setVaultOpen((v) => !v);
+                      setMonthYearOpen(false);
+                    }}
                   >
                     <Package className="text-primary w-4 h-4 shrink-0" />
                     <span className="flex-grow text-left">{selectedVaultName}</span>
                     <ChevronDown className="w-4 h-4 shrink-0" />
                   </Button>
                   {vaultOpen && (
-                    <div className="absolute top-full left-0 w-full bg-surface-container-high border-4 border-black border-t-0 z-50">
+                    <div className="absolute top-full left-0 w-full bg-surface-container-high border-4 border-black border-t-0 z-50" onClick={(e) => e.stopPropagation()}>
                       {[{ id: 'all', name: 'All Vaults' }, ...vaults].map((vault) => (
                         <div
                           key={vault.id}
                           className="p-2 hover:bg-primary hover:text-on-primary cursor-pointer font-body-sm"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setSelectedVaultId(vault.id);
                             setVaultOpen(false);
                           }}
@@ -352,7 +405,10 @@ export default function StatsPage() {
                     </Button>
 
                     {monthYearOpen && (
-                      <div className="absolute top-full mt-1 left-0 w-[240px] bg-surface-container-high border-4 border-black z-50 p-3 shadow-[4px_4px_0_rgba(0,0,0,0.5)] flex flex-col gap-3">
+                      <div
+                        className="absolute top-full mt-1 left-0 w-[240px] bg-surface-container-high border-4 border-black z-50 p-3 shadow-[4px_4px_0_rgba(0,0,0,0.5)] flex flex-col gap-3"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <button
                           onClick={() => {
                             setSelectedMonthYear(ALL_TIME_PERIOD);
@@ -386,7 +442,8 @@ export default function StatsPage() {
                             return (
                               <button
                                 key={mon}
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   setSelectedMonthYear(monthValue);
                                   setMonthYearOpen(false);
                                 }}
@@ -411,6 +468,20 @@ export default function StatsPage() {
                     </Button>
                   )}
                 </div>
+              </div>
+
+              {/* Export CSV */}
+              <div className="flex flex-col gap-1">
+                <span className="font-label-caps text-[10px] text-outline uppercase ml-1">Export</span>
+                <Button
+                  variant="ghost"
+                  disabled={filteredTransactions.length === 0 || isLoading}
+                  className="bg-surface-container text-on-surface font-body-sm py-2 px-4 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)] hover:bg-surface-container-highest flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={exportCsv}
+                >
+                  <Download className="text-primary w-4 h-4 shrink-0" />
+                  <span>Export CSV</span>
+                </Button>
               </div>
             </div>
           </div>
@@ -528,21 +599,30 @@ export default function StatsPage() {
                 <p className="font-body-sm text-on-surface-variant py-4 text-center">No vaults found.</p>
               ) : (
                 <div className="flex flex-col gap-3">
-                  {vaultSavings.map(({ vault, income, expense, savings }) => (
-                    <div
-                      key={vault.id}
-                      className="flex items-center justify-between bg-surface-dim p-3 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]"
-                    >
-                      <div className="flex flex-col gap-0.5">
-                        <span className="font-label-caps text-on-surface uppercase">{vault.name}</span>
-                        <span className="font-body-sm text-on-surface-variant text-[11px]">
-                          {formatCurrency(income)} in · {formatCurrency(expense)} out
-                        </span>
+                  {vaultSavings.map(({ vault, income, spent, savings, budget, progress, isOver }) => (
+                    <div key={vault.id} className="flex flex-col gap-3 bg-surface-dim p-3 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-label-caps text-on-surface uppercase">{vault.name}</span>
+
+                          <span className="font-body-sm text-on-surface-variant text-[11px]">
+                            {formatCurrency(income)} in · {formatCurrency(spent)} out
+                          </span>
+                        </div>
+
+                        <div className={`font-headline-sm ${savings >= 0 ? 'text-secondary' : 'text-error'}`}>
+                          {savings >= 0 ? '+' : '-'}
+                          {formatCurrency(Math.abs(savings))}
+                        </div>
                       </div>
-                      <div className={`font-headline-sm ${savings >= 0 ? 'text-secondary' : 'text-error'}`}>
-                        {savings >= 0 ? '+' : '-'}
-                        {formatCurrency(Math.abs(savings))}
-                      </div>
+
+                      {vault.monthlyBudget != null && (
+                        <div className="flex flex-col gap-1">
+                          <ProgressBar value={progress} variant={isOver ? 'error' : 'primary'} label={`${formatCurrency(spent)} / ${formatCurrency(budget)}`} />
+
+                          {isOver && <span className="font-label-caps text-error text-[11px] uppercase">Over budget by {formatCurrency(spent - budget)}</span>}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -714,6 +794,9 @@ export default function StatsPage() {
           </div>
         </div>
       </main>
+
+      <WizardFab onClick={() => setWizardOpen(true)} />
+      <WizardChatSheet isOpen={wizardOpen} onClose={() => setWizardOpen(false)} userId={userId} />
 
       <BottomNavBar />
     </div>

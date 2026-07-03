@@ -1,50 +1,13 @@
+import { CreateRecurringInput, UpdateRecurringInput, RecurringDto, OccurrenceDto } from '@expense-tracker/shared';
 import { Expense, RecurrenceInterval } from '../entities/Expense.entity';
 import { Tag } from '../entities/Tag.entity';
-import { TransactionTag } from '../entities/TransactionTag.entity';
-import { TransactionType } from '../entities/Expense.entity';
 import { AppError } from '../errors/app-error';
 import { RecurringRepository } from '../repositories/recurring.repository';
 import { recurringRepository } from '../repositories';
 import { cancelRecurring, scheduleRecurring } from '../scheduler/recurring-scheduler';
 import { logger, tagsService } from '.';
 
-export interface CreateRecurringInput {
-  title: string;
-  amount: number;
-  type: TransactionType;
-  interval: RecurrenceInterval;
-  startDate: string;
-  endDate?: string | null;
-  tagIds?: string[] | null;
-  vaultId?: string | null;
-}
-
-export interface UpdateRecurringInput {
-  title?: string;
-  amount?: number;
-  type?: TransactionType;
-  interval?: RecurrenceInterval;
-  startDate?: string | null;
-  endDate?: string | null;
-  tagIds?: string[] | null;
-  vaultId?: string | null;
-}
-
-export interface RecurringDto extends Expense {
-  tagIds: string[];
-  tags: Tag[];
-}
-
-export interface OccurrenceDto {
-  recurringId: string;
-  date: string;
-  title: string | null;
-  amount: number;
-  type: string;
-  vaultId: string | null;
-  vault: { id: string; name: string; icon: string | null } | null;
-  tags: Tag[];
-}
+export type { CreateRecurringInput, UpdateRecurringInput, RecurringDto, OccurrenceDto };
 
 /**
  * Business logic for recurring expenses ("quests"): templates, their generated
@@ -56,7 +19,19 @@ export class RecurringService {
 
   async list(userId: string): Promise<RecurringDto[]> {
     const quests = await this.recurring.findManyForUser(userId);
-    return quests.map((quest) => this.toDto(quest));
+    return quests.map((quest) => {
+      const transactionTags = quest.transactionTags ?? [];
+      const tags = transactionTags.map((tt) => tt.tag).filter((tag): tag is Tag => Boolean(tag));
+      const tagIds = transactionTags.map((tt) => tt.tagId);
+      return {
+        ...quest,
+        tagIds,
+        tags,
+        createdAt: quest.createdAt.toISOString(),
+        updatedAt: quest.updatedAt.toISOString(),
+        deletedAt: quest.deletedAt ? quest.deletedAt.toISOString() : null,
+      };
+    });
   }
 
   async create(userId: string, input: CreateRecurringInput): Promise<RecurringDto | null> {
@@ -86,7 +61,18 @@ export class RecurringService {
     logger.info('Created recurring quest', { userId, recurringId: saved.id });
 
     const withRelations = await this.recurring.findOneWithRelations(userId, saved.id);
-    return withRelations ? this.toDto(withRelations) : null;
+    if (!withRelations) return null;
+    const relatedTags = withRelations.transactionTags ?? [];
+    const tags = relatedTags.map((tt) => tt.tag).filter((tag): tag is Tag => Boolean(tag));
+    const returnTagIds = relatedTags.map((tt) => tt.tagId);
+    return {
+      ...withRelations,
+      tagIds: returnTagIds,
+      tags,
+      createdAt: withRelations.createdAt.toISOString(),
+      updatedAt: withRelations.updatedAt.toISOString(),
+      deletedAt: withRelations.deletedAt ? withRelations.deletedAt.toISOString() : null,
+    };
   }
 
   async update(userId: string, id: string, input: UpdateRecurringInput): Promise<RecurringDto | null> {
@@ -131,7 +117,18 @@ export class RecurringService {
     }
 
     logger.info('Updated recurring quest', { userId, recurringId: id });
-    return updated ? this.toDto(updated) : null;
+    if (!updated) return null;
+    const relatedTags = updated.transactionTags ?? [];
+    const tags = relatedTags.map((tt) => tt.tag).filter((tag): tag is Tag => Boolean(tag));
+    const returnTagIds = relatedTags.map((tt) => tt.tagId);
+    return {
+      ...updated,
+      tagIds: returnTagIds,
+      tags,
+      createdAt: updated.createdAt.toISOString(),
+      updatedAt: updated.updatedAt.toISOString(),
+      deletedAt: updated.deletedAt ? updated.deletedAt.toISOString() : null,
+    };
   }
 
   async remove(userId: string, id: string): Promise<void> {
@@ -244,13 +241,6 @@ export class RecurringService {
       return [...new Set(tagIds.filter(Boolean))];
     }
     return [];
-  }
-
-  private toDto(expense: Expense & { transactionTags?: TransactionTag[] }): RecurringDto {
-    const transactionTags = expense.transactionTags ?? [];
-    const tags = transactionTags.map((tt) => tt.tag).filter((tag): tag is Tag => Boolean(tag));
-    const tagIds = transactionTags.map((tt) => tt.tagId);
-    return { ...expense, tagIds, tags };
   }
 
   private computeOccurrencesInMonth(interval: RecurrenceInterval, startDate: string, endDate: string | null, year: number, month: number): string[] {

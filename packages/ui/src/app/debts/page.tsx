@@ -1,19 +1,22 @@
 'use client';
+import Link from 'next/link';
 
 import { useEffect, useState } from 'react';
 import { Plus, Check, Trash2, TrendingDown, TrendingUp, X, Coins, ChevronDown } from 'lucide-react';
+
 import { AppBar, BottomNavBar, Button, Card, AddDebtModal, DesktopSidebar } from '@/components';
 import { useAuth } from '@/hooks/useAuth';
 import { profileApi } from '@/lib/api';
-import type { ApiDebt, ApiVault } from '@/lib/api/ProfileApi';
+import type { DebtDto, VaultDto } from '@expense-tracker/shared';
 import { iconMapper } from '@/lib/iconMapper';
-export const DebtTypes = {
+
+const DebtTypes = {
   INCOMPLETE: 'incomplete',
   COMPLETED: 'completed',
   ALL: 'all',
 } as const;
 
-export type DebtType = typeof DebtTypes[keyof typeof DebtTypes];
+type DebtType = (typeof DebtTypes)[keyof typeof DebtTypes];
 
 function formatCurrency(amount: number): string {
   return `⛁ ${Math.abs(amount).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
@@ -23,23 +26,25 @@ export default function DebtsPage() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
 
-  const [debts, setDebts] = useState<ApiDebt[]>([]);
-  const [vaults, setVaults] = useState<ApiVault[]>([]);
+  const [debts, setDebts] = useState<DebtDto[]>([]);
+  const [vaults, setVaults] = useState<VaultDto[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [editDebt, setEditDebt] = useState<DebtDto | null>(null);
   const [status, setStatus] = useState<DebtType>(DebtTypes.INCOMPLETE);
 
-  const [applyDebt, setApplyDebt] = useState<ApiDebt | null>(null);
+  const [applyDebt, setApplyDebt] = useState<DebtDto | null>(null);
   const [applyVaultId, setApplyVaultId] = useState<string>('');
   const [vaultDropdownOpen, setVaultDropdownOpen] = useState(false);
-  const [applying, setApplying] = useState(false);
+  const [applyingAction, setApplyingAction] = useState<'confirm' | 'withoutTransaction' | null>(null);
+  const applying = applyingAction !== null;
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
     setIsLoading(true);
 
-    Promise.all([profileApi.getDebts(userId,status), profileApi.getVaults(userId)])
+    Promise.all([profileApi.getDebts(userId, status), profileApi.getVaults(userId)])
       .then(([d, v]) => {
         setDebts(d);
         setVaults(v);
@@ -48,33 +53,42 @@ export default function DebtsPage() {
       .finally(() => setIsLoading(false));
   }, [userId, status]);
 
-  const handleCreate = async (data: { title: string; amount: number; type: 'expense' | 'income' }) => {
+  const handleCreate = async (data: { title: string; amount: number; type: 'expense' | 'income'; notes: string | null }) => {
     if (!userId) return;
     const created = await profileApi.createDebt(userId, data);
     setDebts((prev) => [created, ...prev]);
   };
 
-  const openApplyDialog = (debt: ApiDebt) => {
+  const handleUpdate = async (data: { title: string; amount: number; type: 'expense' | 'income'; notes: string | null }) => {
+    if (!userId || !editDebt) return;
+    const updated = await profileApi.updateDebt(userId, editDebt.id, data);
+    setDebts((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
+  };
+
+  const openApplyDialog = (debt: DebtDto) => {
     const defaultVault = vaults.find((v) => v.isDefault) ?? vaults[0];
     setApplyVaultId(defaultVault?.id ?? '');
     setApplyDebt(debt);
   };
 
-  const handleConfirmApply = async () => {
+  const handleApply = async (skipTransaction?: boolean) => {
     if (!userId || !applyDebt) return;
-    setApplying(true);
+
+    setApplyingAction(skipTransaction ? 'withoutTransaction' : 'confirm');
+
     try {
-      await profileApi.applyDebt(userId, applyDebt.id, applyVaultId || null);
+      await profileApi.applyDebt(userId, applyDebt.id, applyVaultId || null, skipTransaction);
       setDebts((prev) => prev.filter((d) => d.id !== applyDebt.id));
       setApplyDebt(null);
+      setVaultDropdownOpen(false);
     } catch (e) {
       console.error(e);
     } finally {
-      setApplying(false);
+      setApplyingAction(null);
     }
   };
 
-  const handleDiscard = async (debt: ApiDebt) => {
+  const handleDiscard = async (debt: DebtDto) => {
     if (!userId) return;
     if (!confirm(`Discard "${debt.title}"?`)) return;
     await profileApi.deleteDebt(userId, debt.id);
@@ -90,11 +104,15 @@ export default function DebtsPage() {
 
       <DesktopSidebar />
 
-      <main className="flex-1 flex flex-col w-full md:h-screen relative px-3 pb-24 md:pb-0 overflow-y-auto overflow-x-hidden">
+      <main className="flex-1 flex flex-col w-full md:h-screen relative px-3 pb-6 md:pb-0 overflow-y-auto overflow-x-hidden">
         <div className="max-w-4xl w-full mx-auto p-margin-mobile md:p-8 flex flex-col gap-stack-md">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b-4 border-surface-container-highest pb-4">
             <div>
-              <h2 className="font-headline-lg text-headline-lg text-primary">Debts</h2>
+              <h2 className="font-headline-lg text-headline-lg text-primary">
+                <Link href="/" className="text-primary no-underline">
+                  Debts
+                </Link>
+              </h2>
               <p className="font-body-sm text-on-surface-variant">Templates you can apply as expenses or income whenever they come due.</p>
             </div>
             <div className="flex items-center gap-2">
@@ -102,80 +120,52 @@ export default function DebtsPage() {
                 <button
                   onClick={() => setStatusDropdownOpen(!statusDropdownOpen)}
                   className={`w-full h-14 px-4 border-4 border-black flex items-center justify-between font-body-lg transition-all active:translate-y-0.5 active:shadow-none group bg-surface-container-lowest hover:bg-surface-container-low
-                    ${statusDropdownOpen
-                        ? 'ring-4 ring-primary/20'
-                        : ''
-                    }
+                    ${statusDropdownOpen ? 'ring-4 ring-primary/20' : ''}
                   `}
                 >
-                  <span className="text-primary font-bold">
-                    {status.charAt(0).toUpperCase() + status.slice(1)}
-                  </span>
+                  <span className="text-primary font-bold">{status.charAt(0).toUpperCase() + status.slice(1)}</span>
 
                   <div className="flex items-center gap-2">
                     <div className="w-1 h-6 bg-black/10 rounded-full" />
-                    <ChevronDown
-                      className={`text-outline transition-transform duration-300 ${
-                        statusDropdownOpen ? 'rotate-180' : ''
-                    }`}
-                    size={20}
-                  />
-                </div>
-              </button>
+                    <ChevronDown className={`text-outline transition-transform duration-300 ${statusDropdownOpen ? 'rotate-180' : ''}`} size={20} />
+                  </div>
+                </button>
 
-              {statusDropdownOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-[115]"
-                  onClick={() => setStatusDropdownOpen(false)}
-                />
+                {statusDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-[115]" onClick={() => setStatusDropdownOpen(false)} />
 
-                <div className={`absolute top-[calc(100%+4px)] left-0 right-0 z-[120] bg-surface-container-high border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] transition-all duration-200
-                  ${statusDropdownOpen
-                      ? 'opacity-100 translate-y-0'
-                      : 'opacity-0 -translate-y-2 pointer-events-none'
-                    }
+                    <div
+                      className={`absolute top-[calc(100%+4px)] left-0 right-0 z-[120] bg-surface-container-high border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] transition-all duration-200
+                  ${statusDropdownOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}
                   `}
-                >
-                  <div className="max-h-60 overflow-y-auto">
-                    {Object.values(DebtTypes).map((type) => {
-                      const isSelected = status === type;
+                    >
+                      <div className="max-h-60 overflow-y-auto">
+                        {Object.values(DebtTypes).map((type) => {
+                          const isSelected = status === type;
 
-                        return (
-                          <button
-                            key={type}
+                          return (
+                            <button
+                              key={type}
                               onClick={() => {
                                 setStatus(type);
                                 setStatusDropdownOpen(false);
                               }}
                               className={`w-full h-14 px-4 flex items-center justify-between font-body-lg transition-colors hover:bg-surface-container-highest group ${
-                                isSelected
-                                  ? 'bg-surface-container-highest'
-                                  : 'bg-surface-container-low'
+                                isSelected ? 'bg-surface-container-highest' : 'bg-surface-container-low'
                               }`}
                             >
-                              <span
-                                className={`font-body-lg ${
-                                  isSelected
-                                    ? 'text-primary font-bold'
-                                    : 'text-on-surface'
-                                }`}
-                              >
-                                {type.charAt(0).toUpperCase() + type.slice(1)}
-                              </span>
+                              <span className={`font-body-lg ${isSelected ? 'text-primary font-bold' : 'text-on-surface'}`}>{type.charAt(0).toUpperCase() + type.slice(1)}</span>
 
-                              {isSelected && (
-                                <div className="w-4 h-4 bg-primary border-2 border-black" />
-                              )}
-                          </button>
-                        );
-                      })}
+                              {isSelected && <div className="w-4 h-4 bg-primary border-2 border-black" />}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                </>
-              )}
-            </div>
-
+                  </>
+                )}
+              </div>
 
               <Button variant="primary" className="flex items-center gap-2" onClick={() => setAddOpen(true)}>
                 <Plus className="w-5 h-5" />
@@ -202,7 +192,12 @@ export default function DebtsPage() {
                 const isIncome = debt.type === 'income';
                 return (
                   <Card key={debt.id} className="flex flex-col sm:flex-row sm:items-center gap-3 !p-3">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => setEditDebt(debt)}
+                      className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer group focus:outline-none"
+                      aria-label={`Edit ${debt.title}`}
+                    >
                       <div
                         className={`w-12 h-12 shrink-0 border-4 border-black flex items-center justify-center ${isIncome ? 'bg-primary-container text-on-primary-container' : 'bg-error-container text-on-error-container'}`}
                       >
@@ -210,15 +205,16 @@ export default function DebtsPage() {
                       </div>
                       <div className="flex flex-col min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="font-headline-sm text-on-surface truncate">{debt.title}</span>
+                          <span className="font-headline-sm text-on-surface truncate group-hover:text-primary transition-colors">{debt.title}</span>
 
                           {debt.completed && <span className="text-xs bg-green-200 px-2 py-1 rounded">✓ Completed</span>}
                         </div>
                         <span className={`font-label-caps text-[11px] uppercase ${isIncome ? 'text-primary' : 'text-error'}`}>
                           {formatCurrency(debt.amount)} · {debt.type}
                         </span>
+                        {debt.notes && <span className="font-body-sm text-on-surface-variant truncate mt-0.5">{debt.notes}</span>}
                       </div>
-                    </div>
+                    </button>
                     <div className="flex gap-2 shrink-0">
                       <Button variant="primary" size="sm" className="flex items-center gap-1" onClick={() => openApplyDialog(debt)}>
                         <Check className="w-4 h-4" />
@@ -237,9 +233,9 @@ export default function DebtsPage() {
         </div>
       </main>
 
-      <BottomNavBar />
-
       <AddDebtModal isOpen={addOpen} onClose={() => setAddOpen(false)} onSave={handleCreate} />
+
+      <AddDebtModal isOpen={editDebt !== null} onClose={() => setEditDebt(null)} onSave={handleUpdate} debt={editDebt} />
 
       {applyDebt && (
         <>
@@ -258,8 +254,9 @@ export default function DebtsPage() {
 
             <div className="p-6 space-y-4">
               <p className="font-body-sm text-on-surface-variant">
-                This will create a {applyDebt.type} of <span className="font-bold text-on-surface">{formatCurrency(applyDebt.amount)}</span> for{' '}
-                <span className="font-bold text-on-surface">{applyDebt.title}</span> in the current month and remove the due.
+                Confirm will create a {applyDebt.type} of <span className="font-bold text-on-surface">{formatCurrency(applyDebt.amount)}</span> for{' '}
+                <span className="font-bold text-on-surface">{applyDebt.title}</span> in the current month and remove the due. Apply without transaction will remove the due without creating a
+                transaction.
               </p>
 
               <div className="space-y-2">
@@ -317,9 +314,9 @@ export default function DebtsPage() {
                 <Button variant="ghost" className="flex-1" onClick={() => setApplyDebt(null)} disabled={applying}>
                   <span className="font-label-caps uppercase">Cancel</span>
                 </Button>
-                <Button variant="primary" className="flex-1 flex items-center justify-center gap-2" onClick={handleConfirmApply} disabled={applying}>
+                <Button variant="primary" className="w-full flex items-center justify-center gap-2" onClick={() => handleApply()} disabled={applying}>
                   <Check className="w-4 h-4" />
-                  <span className="font-label-caps uppercase">{applying ? 'Applying...' : 'Confirm'}</span>
+                  <span className="font-label-caps uppercase">{applyingAction === 'confirm' ? 'Applying...' : 'Confirm'}</span>
                 </Button>
               </div>
             </div>

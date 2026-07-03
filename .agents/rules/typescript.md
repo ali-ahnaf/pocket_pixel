@@ -50,6 +50,7 @@ The application we are working on uses the following tech stack:
 
 - Never save the payload as sent from the client. always selectively save the fields in the database.
 - When removing entities, use `softDelete({id, companyId})`.
+- Do not use private `toDto()` methods in service classes. Instead, inline the DTO transformation logic directly in the callers (e.g., inside `.map()`, before the `return` statement). This keeps the data transformation logic visible and colocated with where it's used.
 - After every code change to a file, run Prettier on that file so it is formatted according to the project's `.prettierrc` (`singleQuote: true`, `trailingComma: "all"`, `printWidth: 200`). Example: `npx prettier --write <file>`.
 
 ### Types and Interfaces

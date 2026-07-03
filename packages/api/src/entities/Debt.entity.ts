@@ -20,6 +20,9 @@ export class Debt extends BaseEntity {
   @Column({ type: 'varchar', default: 'expense' })
   type: TransactionType;
 
+  @Column({ type: 'text', nullable: true })
+  notes: string | null;
+
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;
