@@ -30,7 +30,6 @@ interface DesktopSidebarProps {
 
 export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ name, email, avatar }) => {
   const pathname = usePathname();
-
   const [storedProfile, setStoredProfile] = useState<{ name?: string; email?: string; avatar?: string } | null>(null);
 
   useEffect(() => {
@@ -62,7 +61,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ name, email, ava
 
       <nav className="flex-1 flex flex-col p-4 gap-2 overflow-y-auto">
         {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
-          const isActive = pathname === href;
+          const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
           return (
             <Link
               key={href}
