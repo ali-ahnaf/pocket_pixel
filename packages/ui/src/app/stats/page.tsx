@@ -106,8 +106,10 @@ export default function StatsPage() {
   const [monthYearOpen, setMonthYearOpen] = useState(false);
   const [pickerYear, setPickerYear] = useState(new Date().getFullYear());
 
-  const vaultRef = useRef<HTMLDivElement>(null);
-  const monthRef = useRef<HTMLDivElement>(null);
+  const closeDropdowns = () => {
+    setVaultOpen(false);
+    setMonthYearOpen(false);
+  };
 
   const isAllTime = selectedMonthYear === ALL_TIME_PERIOD;
   const isCurrentMonth = selectedMonthYear === CURRENT_MONTH_YEAR;
@@ -139,29 +141,6 @@ export default function StatsPage() {
       })
       .finally(() => setTokenUsageLoading(false));
   }, [userId]);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      console.log('Outside Click');
-      console.log('Vault:', vaultRef.current?.contains(event.target as Node));
-      console.log('Month:', monthRef.current?.contains(event.target as Node));
-      const target = event.target as Node;
-
-      if (vaultRef.current && !vaultRef.current.contains(target)) {
-        setVaultOpen(false);
-      }
-
-      if (monthRef.current && !monthRef.current.contains(target)) {
-        setMonthYearOpen(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
 
   const filteredTransactions = useMemo(() => {
     if (selectedVaultId === 'all') return transactions;
@@ -360,7 +339,7 @@ export default function StatsPage() {
       <DesktopSidebar name={profile?.name} email={profile?.email} avatar={profile?.avatar} />
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col w-full md:h-screen relative px-3 pb-24 md:pb-0 overflow-y-auto overflow-x-hidden">
+      <main className="flex-1 flex flex-col w-full md:h-screen relative px-3 pb-24 md:pb-0 overflow-y-auto overflow-x-hidden" onClick={closeDropdowns}>
         <div className="max-w-4xl w-full mx-auto p-margin-mobile md:p-8 flex flex-col gap-stack-md">
           {/* Header & Controls */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b-4 border-surface-container-highest pb-4">
@@ -370,11 +349,11 @@ export default function StatsPage() {
             </div>
 
             {/* Filters */}
-            <div className="relative flex flex-col sm:flex-row gap-4 z-50">
+            <div className="relative flex flex-col sm:flex-row gap-4 z-50" onClick={(e) => e.stopPropagation()}>
               {/* Vault Selector */}
               <div className="flex flex-col gap-1">
                 <span className="font-label-caps text-[10px] text-outline uppercase ml-1">Source Vault</span>
-                <div className="relative" ref={vaultRef}>
+                <div className="relative">
                   <Button
                     variant="ghost"
                     className="bg-surface-container text-on-surface font-body-sm py-2 px-4 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)] hover:bg-surface-container-highest flex items-center gap-3 min-w-[160px]"
@@ -411,7 +390,7 @@ export default function StatsPage() {
               <div className="flex flex-col gap-1">
                 <span className="font-label-caps text-[10px] text-outline uppercase ml-1">Period</span>
                 <div className="flex items-center gap-2">
-                  <div className="relative" ref={monthRef}>
+                  <div className="relative">
                     <Button
                       variant="ghost"
                       className="bg-surface-container text-on-surface font-body-sm py-2 px-4 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)] hover:bg-surface-container-highest flex items-center gap-3 min-w-[160px]"
