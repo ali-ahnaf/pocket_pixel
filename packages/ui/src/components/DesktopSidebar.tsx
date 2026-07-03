@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Home, BarChart, User, Coins, KeyRound, type LucideIcon } from 'lucide-react';
+import { useRouter } from 'next/router';
+import { usePathname } from 'next/navigation';
 
 const PROFILE_STORAGE_KEY = 'pocket_pixel_profile';
 
@@ -21,13 +23,14 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 interface DesktopSidebarProps {
-  /** Optional overrides; when omitted the profile is read from localStorage (same as AppBar). */
   name?: string;
   email?: string;
   avatar?: string;
 }
 
 export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ name, email, avatar }) => {
+  const pathname = usePathname();
+
   const [storedProfile, setStoredProfile] = useState<{ name?: string; email?: string; avatar?: string } | null>(null);
 
   useEffect(() => {
@@ -58,8 +61,8 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ name, email, ava
       </div>
 
       <nav className="flex-1 flex flex-col p-4 gap-2 overflow-y-auto">
-        {NAV_ITEMS.map(({ label, href, icon: Icon }, index) => {
-          const isActive = index === 0;
+        {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
+          const isActive = pathname === href;
           return (
             <Link
               key={href}
