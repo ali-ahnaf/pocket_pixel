@@ -131,7 +131,6 @@ export default function DebtsPage() {
                     <ChevronDown className={`text-outline transition-transform duration-300 ${statusDropdownOpen ? 'rotate-180' : ''}`} size={20} />
                   </div>
                 </Button>
-
                 {statusDropdownOpen && (
                   <>
                     <div className="fixed inset-0 z-[115]" onClick={() => setStatusDropdownOpen(false)} />
