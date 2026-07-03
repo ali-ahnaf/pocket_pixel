@@ -3,6 +3,7 @@ import { Expense } from './Expense.entity';
 
 import { Vault } from './Vault.entity';
 import { Tag } from './Tag.entity';
+import { RefreshToken } from './refresh-token.entity';
 import { BaseEntity } from './BaseEntity';
 
 @Entity('users')
@@ -33,4 +34,7 @@ export class User extends BaseEntity {
 
   @OneToMany(() => Tag, (t) => t.user)
   tags: Tag[];
+
+  @OneToMany(() => RefreshToken, (t) => t.user)
+  refreshTokens: RefreshToken[];
 }

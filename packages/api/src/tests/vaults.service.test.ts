@@ -10,17 +10,7 @@ jest.mock('../services', () => ({
 }));
 
 type UsersRepositoryMock = jest.Mocked<Pick<UsersRepository, 'findById'>>;
-type VaultsRepositoryMock = jest.Mocked<
-  Pick<
-    VaultsRepository,
-    | 'findManyForUser'
-    | 'findOneForUser'
-    | 'createEntity'
-    | 'save'
-    | 'remove'
-    | 'setDefault'
-  >
->;
+type VaultsRepositoryMock = jest.Mocked<Pick<VaultsRepository, 'findManyForUser' | 'findOneForUser' | 'createEntity' | 'save' | 'remove' | 'setDefault'>>;
 
 const buildUser = (overrides: Partial<User> = {}): User => ({
   id: 'user-1',
@@ -32,6 +22,7 @@ const buildUser = (overrides: Partial<User> = {}): User => ({
   expenses: [],
   vaults: [],
   tags: [],
+  refreshTokens: [],
   createdAt: new Date(),
   updatedAt: new Date(),
   deletedAt: new Date(),
@@ -49,7 +40,7 @@ const buildVault = (overrides: Partial<Vault> = {}): Vault =>
     monthlyBudget: 100,
     isDefault: false,
     ...overrides,
-  } as Vault);
+  }) as Vault;
 
 describe('VaultsService', () => {
   let users: UsersRepositoryMock;

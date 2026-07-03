@@ -12,3 +12,7 @@ export interface AuthResult {
   avatar: string;
   token: string;
 }
+
+export interface RefreshResponse {
+  token: string;
+}

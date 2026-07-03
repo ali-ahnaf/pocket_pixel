@@ -19,7 +19,16 @@ router.post(
     if (error) return utilService.replyError(res, error.message);
 
     const result = await authService.signUp(value as SignUpPayload);
-    return utilService.replyCreated(res, result);
+
+    res.cookie('refresh_token', result.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      expires: result.refreshTokenExpiresAt,
+    });
+
+    const { refreshToken, refreshTokenExpiresAt, ...clientResult } = result;
+    return utilService.replyCreated(res, clientResult);
   }),
 );
 

@@ -1,22 +1,18 @@
 import { Request, Response, Router } from 'express';
-import Joi from 'joi';
-import type { SignInPayload } from '@expense-tracker/shared';
 import { authService, utilService } from '../../services';
 import { asyncHandler } from '../../middleware/error-handler';
 
 const router = Router();
-const signInSchema = Joi.object<SignInPayload>({
-  email: Joi.string().email().max(255).required(),
-  password: Joi.string().required(),
-});
 
 router.post(
-  '/sign-in',
+  '/refresh',
   asyncHandler(async (req: Request, res: Response) => {
-    const { error, value } = signInSchema.validate(req.body);
-    if (error) return utilService.replyError(res, error.message);
+    const cookieRefreshToken = req.cookies.refresh_token;
+    if (!cookieRefreshToken) {
+      return utilService.replyError(res, 'Refresh token missing', 401);
+    }
 
-    const result = await authService.signIn(value as SignInPayload);
+    const result = await authService.refresh(cookieRefreshToken);
 
     res.cookie('refresh_token', result.refreshToken, {
       httpOnly: true,
@@ -26,7 +22,7 @@ router.post(
     });
 
     const { refreshToken, refreshTokenExpiresAt, ...clientResult } = result;
-    return utilService.replyOk(res, clientResult);
+    return utilService.replyOk(res, { token: clientResult.token });
   }),
 );
 

@@ -1,25 +1,23 @@
-import "reflect-metadata";
-import "./env";
-import { DataSource } from "typeorm";
-import { User } from "./entities/User.entity";
-import { Expense } from "./entities/Expense.entity";
+import 'reflect-metadata';
+import './env';
+import { DataSource } from 'typeorm';
+import { User } from './entities/User.entity';
+import { Expense } from './entities/Expense.entity';
 
-import { Vault } from "./entities/Vault.entity";
-import { Tag } from "./entities/Tag.entity";
-import { TransactionTag } from "./entities/TransactionTag.entity";
-import { RecurringOccurrenceSkip } from "./entities/RecurringOccurrenceSkip.entity";
-import { Debt } from "./entities/Debt.entity";
+import { Vault } from './entities/Vault.entity';
+import { Tag } from './entities/Tag.entity';
+import { TransactionTag } from './entities/TransactionTag.entity';
+import { RecurringOccurrenceSkip } from './entities/RecurringOccurrenceSkip.entity';
+import { Debt } from './entities/Debt.entity';
+import { RefreshToken } from './entities/refresh-token.entity';
 
-const isTsNode = !!(process as any)[Symbol.for("ts-node.register.instance")];
+const isTsNode = !!(process as any)[Symbol.for('ts-node.register.instance')];
 
 export const AppDataSource = new DataSource({
-  type: "better-sqlite3",
-  database:
-    process.env.NODE_ENV === "production"
-      ? "/var/www/pocket_pixel/pocket_pixel.sqlite"
-      : "pocket_pixel.sqlite",
-  entities: [User, Expense, Vault, Tag, TransactionTag, RecurringOccurrenceSkip, Debt],
-  migrations: [isTsNode ? "src/migrations/*.ts" : "dist/migrations/*.js"],
+  type: 'better-sqlite3',
+  database: process.env.NODE_ENV === 'production' ? '/var/www/pocket_pixel/pocket_pixel.sqlite' : 'pocket_pixel.sqlite',
+  entities: [User, Expense, Vault, Tag, TransactionTag, RecurringOccurrenceSkip, Debt, RefreshToken],
+  migrations: [isTsNode ? 'src/migrations/*.ts' : 'dist/migrations/*.js'],
   synchronize: false,
   logging: false,
 });

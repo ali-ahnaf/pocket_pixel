@@ -38,6 +38,17 @@ function handleUnauthorized(): void {
     }
   }
 }
+let isRefreshing = false;
+let refreshSubscribers: ((token: string | null) => void)[] = [];
+
+function subscribeTokenRefresh(cb: (token: string | null) => void) {
+  refreshSubscribers.push(cb);
+}
+
+function onRefreshed(token: string | null) {
+  refreshSubscribers.forEach((cb) => cb(token));
+  refreshSubscribers = [];
+}
 
 export default class ApiClient {
   private axiosInstance: AxiosInstance;
@@ -76,7 +87,67 @@ export default class ApiClient {
       // A 401 from an unauthenticated request (e.g. a failed sign-in) is an
       // expected error the caller should surface, not a reason to redirect.
       if (error.response?.status === 401 && authToken) {
-        handleUnauthorized();
+        if (isRefreshing) {
+          try {
+            const newToken = await new Promise<string>((resolve, reject) => {
+              subscribeTokenRefresh((token) => {
+                if (token) {
+                  resolve(token);
+                } else {
+                  reject(new Error('Refresh failed'));
+                }
+              });
+            });
+
+            return await this.axiosInstance
+              .request({
+                method,
+                url,
+                ...config,
+                headers: {
+                  ...(config.headers ?? {}),
+                  Authorization: `Bearer ${newToken}`,
+                },
+              })
+              .then((res) => res.data);
+          } catch (err) {
+            handleUnauthorized();
+            throw error.response?.data || error;
+          }
+        }
+
+        isRefreshing = true;
+        const apiRoot = this.baseUrl.split('/api')[0] + '/api';
+        const refreshUrl = `${apiRoot}/auth/refresh`;
+
+        try {
+          const response = await axios.post<{ token: string }>(refreshUrl, {}, { withCredentials: true });
+          const newToken = response.data.token;
+
+          if (typeof window !== 'undefined') {
+            window.localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, newToken);
+          }
+
+          isRefreshing = false;
+          onRefreshed(newToken);
+
+          return await this.axiosInstance
+            .request({
+              method,
+              url,
+              ...config,
+              headers: {
+                ...(config.headers ?? {}),
+                Authorization: `Bearer ${newToken}`,
+              },
+            })
+            .then((res) => res.data);
+        } catch (refreshError) {
+          isRefreshing = false;
+          onRefreshed(null);
+          handleUnauthorized();
+          throw error.response?.data || error;
+        }
       }
       if (error.response?.data instanceof Blob) {
         try {

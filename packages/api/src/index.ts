@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import { AppDataSource } from './data-source';
 import authRouter from './routes/auth.routes';
 import usersRouter from './routes/users.routes';
@@ -23,6 +24,7 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 const isDev = process.env.NODE_ENV !== 'production';
 
+app.use(cookieParser());
 app.use(
   cors({
     origin: isDev ? true : process.env.ALLOWED_ORIGIN,
