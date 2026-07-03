@@ -169,4 +169,4 @@ async signOut(refreshToken?: string): Promise<void> {
     return { id, name, email, avatar, token: accessToken, refreshToken, refreshTokenExpiresAt: expiresAt };
   }
   }
-}
+
