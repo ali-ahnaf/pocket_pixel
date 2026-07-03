@@ -1,7 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Coins, ChevronDown, Plus, Pencil, Trash2 } from 'lucide-react';
+import { X, Coins, ChevronDown, Plus, Pencil, Trash2, CalendarDays } from 'lucide-react';
+import DatePicker from 'react-datepicker';
+// @ts-ignore
+import 'react-datepicker/dist/react-datepicker.css';
 import { iconMapper } from '../lib/iconMapper';
 import { profileApi } from '../lib/api';
 import { TransactionTypeToggle } from './TransactionTypeToggle';
@@ -19,7 +22,7 @@ export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, trans
   const [isExpense, setIsExpense] = useState(true);
   const [amount, setAmount] = useState('');
   const [title, setTitle] = useState('');
-  const [date, setDate] = useState('');
+  const [date, setDate] = useState<Date | null>(null);
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isVisible, setIsVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,10 +36,24 @@ export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, trans
   const [vaults, setVaults] = useState<VaultDto[]>([]);
   const [selectedVaultId, setSelectedVaultId] = useState<string | null>(null);
   const [isVaultDropdownOpen, setIsVaultDropdownOpen] = useState(false);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   const selectedVault = vaults.find((v) => v.id === selectedVaultId) ?? null;
 
   const suggestions = availableTags.filter((tag) => !selectedTags.some((t) => t.id === tag.id) && tag.name.toLowerCase().includes(tagInput.toLowerCase())).slice(0, 3);
+
+  const toLocalDate = (iso: string) => {
+    const [year, month, day] = iso.split('T')[0].split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
+  const toApiDate = (d: Date | null) => {
+    if (!d) return undefined;
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   useEffect(() => {
     if (isOpen && userId) {
@@ -54,7 +71,7 @@ export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, trans
       setIsExpense(transaction.type === 'expense');
       setAmount(String(transaction.amount));
       setTitle(transaction.title ?? '');
-      setDate(transaction.date ? transaction.date.split('T')[0] : '');
+      setDate(transaction.date ? toLocalDate(transaction.date) : null);
       setSelectedTags(transaction.tags ?? []);
       setSelectedVaultId(transaction.vaultId);
       setTagInput('');
@@ -100,7 +117,7 @@ export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, trans
         tagIds: selectedTags.map((t) => t.id),
         title: title || null,
         vaultId: selectedVaultId,
-        date: date || undefined,
+        date: toApiDate(date),
       });
       onSuccess?.();
       onClose();
@@ -188,13 +205,23 @@ export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, trans
             </div>
           </div>
 
-          <div className="space-y-2">
-            <input
-              className="w-full h-16 px-4 bg-surface-container-lowest border-4 border-black shadow-[inset_4px_4px_0px_rgba(0,0,0,0.6),_inset_-2px_-2px_0px_rgba(255,255,255,0.05)] font-body-lg text-on-surface focus:outline-none"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
+          <div className="space-y-2 relative">
+            <DatePicker
+              selected={date}
+              onChange={(newDate: Date | null) => {
+                setDate(newDate);
+                setIsDatePickerOpen(false);
+              }}
+              dateFormat="dd/MM/yyyy"
+              placeholderText="DD/MM/YYYY"
+              open={isDatePickerOpen}
+              onInputClick={() => setIsDatePickerOpen(true)}
+              onClickOutside={() => setIsDatePickerOpen(false)}
+              className="w-full h-16 pl-4 pr-14 bg-surface-container-lowest border-4 border-black shadow-[inset_4px_4px_0px_rgba(0,0,0,0.6),_inset_-2px_-2px_0px_rgba(255,255,255,0.05)] font-body-lg text-on-surface focus:outline-none"
             />
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface">
+              <CalendarDays size={24} strokeWidth={2.5} onClick={() => setIsDatePickerOpen(true)} />
+            </div>
           </div>
 
           <div className="space-y-2">
