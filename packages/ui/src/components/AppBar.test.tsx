@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppBar } from './AppBar';
-import { AUTH_TOKEN_STORAGE_KEY } from '@/lib/api/ApiClient';
 
 const { replaceMock } = vi.hoisted(() => ({
   replaceMock: vi.fn(),
@@ -35,7 +34,6 @@ describe('AppBar', () => {
   });
 
   it('shows the logout action and clears storage on logout', () => {
-    localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, 'token');
     localStorage.setItem('pocket_pixel_profile', JSON.stringify({ avatar: '/avatar.png' }));
 
     render(<AppBar />);
@@ -43,7 +41,6 @@ describe('AppBar', () => {
     fireEvent.click(screen.getByRole('button', { name: /open user menu/i }));
     fireEvent.click(screen.getByRole('button', { name: /logout/i }));
 
-    expect(localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)).toBeNull();
     expect(localStorage.getItem('pocket_pixel_profile')).toBeNull();
     expect(replaceMock).toHaveBeenCalledWith('/signin');
   });

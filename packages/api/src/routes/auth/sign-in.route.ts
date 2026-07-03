@@ -10,6 +10,13 @@ const signInSchema = Joi.object<SignInPayload>({
   password: Joi.string().required(),
 });
 
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  ...(process.env.NODE_ENV === 'production' ? { sameSite: 'lax' as const } : {}),
+  maxAge: 30 * 24 * 60 * 60 * 1000,
+};
+
 router.post(
   '/sign-in',
   asyncHandler(async (req: Request, res: Response) => {
@@ -17,6 +24,7 @@ router.post(
     if (error) return utilService.replyError(res, error.message);
 
     const result = await authService.signIn(value as SignInPayload);
+    res.cookie('auth_token', result.token, COOKIE_OPTIONS);
     return utilService.replyOk(res, result);
   }),
 );

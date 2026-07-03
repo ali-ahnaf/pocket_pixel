@@ -12,6 +12,13 @@ const signUpSchema = Joi.object<SignUpPayload>({
   avatar: Joi.string().max(255).optional(),
 });
 
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  ...(process.env.NODE_ENV === 'production' ? { sameSite: 'lax' as const } : {}),
+  maxAge: 30 * 24 * 60 * 60 * 1000,
+};
+
 router.post(
   '/sign-up',
   asyncHandler(async (req: Request, res: Response) => {
@@ -19,6 +26,7 @@ router.post(
     if (error) return utilService.replyError(res, error.message);
 
     const result = await authService.signUp(value as SignUpPayload);
+    res.cookie('auth_token', result.token, COOKIE_OPTIONS);
     return utilService.replyCreated(res, result);
   }),
 );
