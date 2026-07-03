@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { AppBar, Card, ProgressBar, Button, BottomNavBar, DesktopSidebar, WizardFab, WizardChatSheet } from '@/components';
 import { useAuth } from '@/hooks/useAuth';
-import { Package, ChevronDown, TrendingUp, TrendingDown, CircleDollarSign, Flame, Gem, Calendar, ChevronLeft, ChevronRight, Vault, LineChart, Cpu } from 'lucide-react';
+import { Package, ChevronDown, TrendingUp, TrendingDown, CircleDollarSign, Flame, Gem, Calendar, ChevronLeft, ChevronRight, Vault, LineChart, Cpu, Download } from 'lucide-react';
 import { iconMapper } from '@/lib/iconMapper';
 import { profileApi } from '@/lib/api';
 import type { User, VaultDto, UsageReport, TransactionDto } from '@expense-tracker/shared';
@@ -77,6 +77,15 @@ function valuesToPolyline(values: number[]): string {
     .join(' ');
 }
 
+function escapeCsvCell(value: string | number | null | undefined): string {
+  if (value === null || value === undefined) return '';
+  const str = String(value);
+  if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function StatsPage() {
@@ -132,6 +141,40 @@ export default function StatsPage() {
     if (selectedVaultId === 'all') return transactions;
     return transactions.filter((t) => t.vaultId === selectedVaultId);
   }, [transactions, selectedVaultId]);
+
+  const exportCsv = () => {
+    if (filteredTransactions.length === 0) return;
+
+    const headers = ['ID', 'Date', 'Title', 'Type', 'Amount', 'Vault', 'Category', 'Tags', 'Created At', 'Updated At'];
+    const csvRows = [
+      headers.join(','),
+      ...filteredTransactions.map((tx) =>
+        [
+          escapeCsvCell(tx.id),
+          escapeCsvCell(tx.date),
+          escapeCsvCell(tx.title || (tx.type === 'income' ? 'Unnamed Income' : 'Unnamed Expense')),
+          escapeCsvCell(tx.type),
+          escapeCsvCell(tx.amount),
+          escapeCsvCell(tx.vault?.name || ''),
+          escapeCsvCell(tx.tags?.[0]?.name || (tx.type === 'income' ? 'Income' : 'Expense')),
+          escapeCsvCell(tx.tags?.map((t) => t.name).join('; ') || ''),
+          escapeCsvCell(tx.createdAt),
+          escapeCsvCell(tx.updatedAt),
+        ].join(','),
+      ),
+    ];
+
+    const csvContent = '\uFEFF' + csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `transactions_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   const totalIncome = useMemo(() => filteredTransactions.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0), [filteredTransactions]);
   const totalExpenses = useMemo(() => filteredTransactions.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0), [filteredTransactions]);
@@ -412,6 +455,20 @@ export default function StatsPage() {
                     </Button>
                   )}
                 </div>
+              </div>
+
+              {/* Export CSV */}
+              <div className="flex flex-col gap-1">
+                <span className="font-label-caps text-[10px] text-outline uppercase ml-1">Export</span>
+                <Button
+                  variant="ghost"
+                  disabled={filteredTransactions.length === 0 || isLoading}
+                  className="bg-surface-container text-on-surface font-body-sm py-2 px-4 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)] hover:bg-surface-container-highest flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={exportCsv}
+                >
+                  <Download className="text-primary w-4 h-4 shrink-0" />
+                  <span>Export CSV</span>
+                </Button>
               </div>
             </div>
           </div>
