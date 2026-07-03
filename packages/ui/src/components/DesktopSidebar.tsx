@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Home, BarChart, User, Coins, type LucideIcon } from 'lucide-react';
+import { Home, BarChart, User, Coins, KeyRound, type LucideIcon } from 'lucide-react';
 
 const PROFILE_STORAGE_KEY = 'pocket_pixel_profile';
 
@@ -17,6 +17,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Stats', href: '/stats', icon: BarChart },
   { label: 'Profile', href: '/profile', icon: User },
   { label: 'Debts', href: '/debts', icon: Coins },
+  { label: 'Change Password', href: '/change-password', icon: KeyRound },
 ];
 
 interface DesktopSidebarProps {

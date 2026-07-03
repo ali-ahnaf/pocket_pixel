@@ -197,7 +197,7 @@ describe('AuthService', () => {
     });
   });
 
-  describe('refresh', () => {
+describe('refresh', () => {
     it('generates a rotated session for a valid refresh token', async () => {
       const plainToken = service.createToken({ userId: 'user-1', name: 'Ada', email: 'ada@example.com', avatar: 'avatar.png' });
       const hashed = service.hashToken(plainToken);
@@ -240,6 +240,45 @@ describe('AuthService', () => {
       await service.signOut(plainToken);
 
       expect(refreshTokens.revoke).toHaveBeenCalledWith(dbToken.id);
+    });
+  });
+
+  describe('changePassword', () => {
+    const payload = { currentPassword: 's3cret', newPassword: 'n3w-p4ssword' };
+
+    it('hashes and saves the new password when the current one matches', async () => {
+      const user = buildUser({ password: await bcrypt.hash(payload.currentPassword, 4) });
+      users.findById.mockResolvedValue(user);
+      users.save.mockResolvedValue(user);
+
+      await service.changePassword(user.id, payload);
+
+      const saved = users.save.mock.calls[0][0];
+      expect(saved.password).not.toBe(payload.newPassword);
+      await expect(bcrypt.compare(payload.newPassword, saved.password)).resolves.toBe(true);
+    });
+
+    it('throws a 401 AppError when the current password is incorrect', async () => {
+      const user = buildUser({ password: await bcrypt.hash('a-different-password', 4) });
+      users.findById.mockResolvedValue(user);
+
+      await expect(service.changePassword(user.id, payload)).rejects.toMatchObject({
+        constructor: AppError,
+        statusCode: 401,
+      });
+      expect(users.save).not.toHaveBeenCalled();
+    });
+
+    it('throws a 404 AppError when the user does not exist', async () => {
+      users.findById.mockResolvedValue(null);
+
+      await expect(service.changePassword('missing', payload)).rejects.toMatchObject({
+        constructor: AppError,
+        statusCode: 404,
+      });
+      expect(users.save).not.toHaveBeenCalled();
+    });
+  });
     });
   });
 });

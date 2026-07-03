@@ -65,4 +65,17 @@ describe("DeleteQuestModal", () => {
     fireEvent.click(backdrop as Element);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it("calls onClose when the close button (X) in the header is clicked", () => {
+    const onClose = vi.fn();
+    const { container } = render(
+      <DeleteQuestModal {...baseProps} onClose={onClose} />
+    );
+    // Find the close button by locating the button in the header with the X icon
+    const header = container.querySelector("header");
+    const closeButton = header?.querySelector("button");
+    expect(closeButton).not.toBeNull();
+    fireEvent.click(closeButton as Element);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 });

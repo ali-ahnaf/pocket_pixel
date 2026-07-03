@@ -1,4 +1,4 @@
-import type { User, VaultDto, TagDto, TransactionDto, OccurrenceDto, RecurringDto, ParsedTransaction, UsageReport, DebtDto } from '@expense-tracker/shared';
+import type { User, VaultDto, TagDto, TransactionDto, OccurrenceDto, RecurringDto, ParsedTransaction, UsageReport, DebtDto, ChangePasswordPayload } from '@expense-tracker/shared';
 import ApiClient from './ApiClient';
 
 export default class ProfileApi extends ApiClient {
@@ -12,6 +12,10 @@ export default class ProfileApi extends ApiClient {
 
   updateUser(userId: string, data: { name?: string; email?: string; avatar?: string }): Promise<User> {
     return this.put<User>(`/users/${userId}`, data);
+  }
+
+  changePassword(userId: string, data: ChangePasswordPayload): Promise<void> {
+    return this.put<void>(`/users/${userId}/password`, data);
   }
 
   // Vaults

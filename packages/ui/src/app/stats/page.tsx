@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { AppBar, Card, ProgressBar, Button, BottomNavBar, DesktopSidebar, WizardFab, WizardChatSheet } from '@/components';
 import { useAuth } from '@/hooks/useAuth';
 import { Package, ChevronDown, TrendingUp, TrendingDown, CircleDollarSign, Flame, Gem, Calendar, ChevronLeft, ChevronRight, Vault, LineChart, Cpu, Download } from 'lucide-react';
@@ -105,6 +105,11 @@ export default function StatsPage() {
   const [selectedMonthYear, setSelectedMonthYear] = useState<string>(CURRENT_MONTH_YEAR);
   const [monthYearOpen, setMonthYearOpen] = useState(false);
   const [pickerYear, setPickerYear] = useState(new Date().getFullYear());
+
+  const closeDropdowns = () => {
+    setVaultOpen(false);
+    setMonthYearOpen(false);
+  };
 
   const isAllTime = selectedMonthYear === ALL_TIME_PERIOD;
   const isCurrentMonth = selectedMonthYear === CURRENT_MONTH_YEAR;
@@ -334,7 +339,7 @@ export default function StatsPage() {
       <DesktopSidebar name={profile?.name} email={profile?.email} avatar={profile?.avatar} />
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col w-full md:h-screen relative px-3 pb-24 md:pb-0 overflow-y-auto overflow-x-hidden">
+      <main className="flex-1 flex flex-col w-full md:h-screen relative px-3 pb-24 md:pb-0 overflow-y-auto overflow-x-hidden" onClick={closeDropdowns}>
         <div className="max-w-4xl w-full mx-auto p-margin-mobile md:p-8 flex flex-col gap-stack-md">
           {/* Header & Controls */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b-4 border-surface-container-highest pb-4">
@@ -344,7 +349,7 @@ export default function StatsPage() {
             </div>
 
             {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-4 z-50">
+            <div className="relative flex flex-col sm:flex-row gap-4 z-50" onClick={(e) => e.stopPropagation()}>
               {/* Vault Selector */}
               <div className="flex flex-col gap-1">
                 <span className="font-label-caps text-[10px] text-outline uppercase ml-1">Source Vault</span>
@@ -352,19 +357,23 @@ export default function StatsPage() {
                   <Button
                     variant="ghost"
                     className="bg-surface-container text-on-surface font-body-sm py-2 px-4 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)] hover:bg-surface-container-highest flex items-center gap-3 min-w-[160px]"
-                    onClick={() => setVaultOpen((v) => !v)}
+                    onClick={() => {
+                      setVaultOpen((v) => !v);
+                      setMonthYearOpen(false);
+                    }}
                   >
                     <Package className="text-primary w-4 h-4 shrink-0" />
                     <span className="flex-grow text-left">{selectedVaultName}</span>
                     <ChevronDown className="w-4 h-4 shrink-0" />
                   </Button>
                   {vaultOpen && (
-                    <div className="absolute top-full left-0 w-full bg-surface-container-high border-4 border-black border-t-0 z-50">
+                    <div className="absolute top-full left-0 w-full bg-surface-container-high border-4 border-black border-t-0 z-50" onClick={(e) => e.stopPropagation()}>
                       {[{ id: 'all', name: 'All Vaults' }, ...vaults].map((vault) => (
                         <div
                           key={vault.id}
                           className="p-2 hover:bg-primary hover:text-on-primary cursor-pointer font-body-sm"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setSelectedVaultId(vault.id);
                             setVaultOpen(false);
                           }}
@@ -396,7 +405,10 @@ export default function StatsPage() {
                     </Button>
 
                     {monthYearOpen && (
-                      <div className="absolute top-full mt-1 left-0 w-[240px] bg-surface-container-high border-4 border-black z-50 p-3 shadow-[4px_4px_0_rgba(0,0,0,0.5)] flex flex-col gap-3">
+                      <div
+                        className="absolute top-full mt-1 left-0 w-[240px] bg-surface-container-high border-4 border-black z-50 p-3 shadow-[4px_4px_0_rgba(0,0,0,0.5)] flex flex-col gap-3"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <button
                           onClick={() => {
                             setSelectedMonthYear(ALL_TIME_PERIOD);
@@ -430,7 +442,8 @@ export default function StatsPage() {
                             return (
                               <button
                                 key={mon}
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   setSelectedMonthYear(monthValue);
                                   setMonthYearOpen(false);
                                 }}

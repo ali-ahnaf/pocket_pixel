@@ -16,3 +16,9 @@ export interface AuthResult {
 export interface RefreshResponse {
   token: string;
 }
+
+export interface ChangePasswordPayload {
+  currentPassword: string;
+  newPassword: string;
+}
+}
