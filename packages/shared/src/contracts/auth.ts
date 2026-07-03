@@ -12,3 +12,8 @@ export interface AuthResult {
   avatar: string;
   token: string;
 }
+
+export interface ChangePasswordPayload {
+  currentPassword: string;
+  newPassword: string;
+}
