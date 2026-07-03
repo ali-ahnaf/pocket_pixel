@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-import { Button, Card, ProgressBar, LogResourceModal, AppBar, BottomNavBar, DesktopSidebar, EditTransactionModal } from '@/components';
+import { Button, Card, ProgressBar, LogResourceModal, AppBar, BottomNavBar, DesktopSidebar, EditTransactionModal, GlobalFAB } from '@/components';
 import { iconMapper } from '@/lib/iconMapper';
 import { profileApi } from '@/lib/api';
 import type { User, VaultDto, TagDto, TransactionDto, OccurrenceDto } from '@expense-tracker/shared';
@@ -485,17 +485,7 @@ export default function DashboardPage() {
       </main>
 
       <BottomNavBar />
-
-      {/* FAB */}
-      <div className="fixed bottom-24 md:bottom-8 right-4 md:right-8 z-50">
-        <Button
-          onClick={() => setIsModalOpen(true)}
-          variant="primary"
-          className="h-16 w-16 flex items-center justify-center rounded-none relative focus:outline-none !p-0 shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none transition-all"
-        >
-          <Plus className="w-8 h-8 font-bold" />
-        </Button>
-      </div>
+      <GlobalFAB onSuccess={handleTransactionSuccess} selectedMonth={selectedMonth} selectedYear={selectedYear} />
 
       <LogResourceModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={handleTransactionSuccess} userId={userId} selectedMonth={selectedMonth} selectedYear={selectedYear} />
       <EditTransactionModal isOpen={!!editingTransaction} onClose={() => setEditingTransaction(null)} onSuccess={handleTransactionSuccess} userId={userId} transaction={editingTransaction} />

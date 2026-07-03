@@ -17,6 +17,7 @@ import {
   AddTagModal,
   DeleteTagModal,
   DesktopSidebar,
+  GlobalFAB,
 } from '@/components';
 import { User, Briefcase, Plus, Pencil, Star, Trash2, Repeat, Calendar, CalendarDays, TrendingDown, TrendingUp, Tag, Coins } from 'lucide-react';
 import { iconMapper } from '@/lib/iconMapper';
@@ -445,6 +446,7 @@ export default function ProfilePage() {
       </main>
 
       <BottomNavBar />
+      <GlobalFAB />
 
       <AddVaultModal isOpen={isVaultModalOpen} onClose={() => setIsVaultModalOpen(false)} title={vaultToEdit ? 'Edit Vault' : 'Create New Vault'} initialData={vaultToEdit} onSave={handleSaveVault} />
       <DeleteVaultModal isOpen={!!vaultToDelete} onClose={() => setVaultToDelete(null)} vaultName={vaultToDelete?.name || ''} onDelete={handleDeleteVault} />

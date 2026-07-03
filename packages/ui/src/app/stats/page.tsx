@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
-import { AppBar, Card, ProgressBar, Button, BottomNavBar, DesktopSidebar, WizardFab, WizardChatSheet } from '@/components';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { AppBar, Card, ProgressBar, Button, BottomNavBar, DesktopSidebar, GlobalFAB, WizardFab, WizardChatSheet } from '@/components';
 import { useAuth } from '@/hooks/useAuth';
 import { Package, ChevronDown, TrendingUp, TrendingDown, CircleDollarSign, Flame, Gem, Calendar, ChevronLeft, ChevronRight, Vault, LineChart, Cpu, Download } from 'lucide-react';
 import { iconMapper } from '@/lib/iconMapper';
@@ -114,6 +114,15 @@ export default function StatsPage() {
   const isAllTime = selectedMonthYear === ALL_TIME_PERIOD;
   const isCurrentMonth = selectedMonthYear === CURRENT_MONTH_YEAR;
 
+  const [refetchKey, setRefetchKey] = useState(0);
+  const [selectedMonth, selectedYear] = useMemo(() => {
+    if (selectedMonthYear === ALL_TIME_PERIOD) return [undefined, undefined] as const;
+    const [year, month] = selectedMonthYear.split('-').map(Number);
+    return [month - 1, year] as const;
+  }, [selectedMonthYear]);
+
+  const handleTransactionSuccess = useCallback(() => setRefetchKey((key) => key + 1), []);
+
   useEffect(() => {
     if (!userId) return;
     const [y, m] = isAllTime ? [null, null] : selectedMonthYear.split('-').map(Number);
@@ -126,7 +135,7 @@ export default function StatsPage() {
       })
       .catch(console.error)
       .finally(() => setIsLoading(false));
-  }, [userId, selectedMonthYear, isAllTime]);
+  }, [userId, selectedMonthYear, isAllTime, refetchKey]);
 
   useEffect(() => {
     if (!userId) return;
@@ -796,6 +805,7 @@ export default function StatsPage() {
       </main>
 
       <WizardFab onClick={() => setWizardOpen(true)} />
+      <GlobalFAB onSuccess={handleTransactionSuccess} selectedMonth={selectedMonth} selectedYear={selectedYear} />
       <WizardChatSheet isOpen={wizardOpen} onClose={() => setWizardOpen(false)} userId={userId} />
 
       <BottomNavBar />

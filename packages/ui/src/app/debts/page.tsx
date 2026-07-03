@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Plus, Check, Trash2, TrendingDown, TrendingUp, X, Coins, ChevronDown } from 'lucide-react';
 
-import { AppBar, BottomNavBar, Button, Card, AddDebtModal, DesktopSidebar } from '@/components';
+import { AppBar, BottomNavBar, Button, Card, AddDebtModal, DesktopSidebar, GlobalFAB } from '@/components';
 import { useAuth } from '@/hooks/useAuth';
 import { profileApi } from '@/lib/api';
 import type { DebtDto, VaultDto } from '@expense-tracker/shared';
@@ -233,6 +233,7 @@ export default function DebtsPage() {
         </div>
       </main>
 
+      <GlobalFAB />
       <AddDebtModal isOpen={addOpen} onClose={() => setAddOpen(false)} onSave={handleCreate} />
 
       <AddDebtModal isOpen={editDebt !== null} onClose={() => setEditDebt(null)} onSave={handleUpdate} debt={editDebt} />

@@ -29,3 +29,4 @@ export { DeleteTagModal } from './DeleteTagModal';
 export { EditTransactionModal } from './EditTransactionModal';
 export { WizardFab } from './wizard/WizardFab';
 export { WizardChatSheet } from './wizard/WizardChatSheet';
+export { default as GlobalFAB } from './GlobalFAB';
