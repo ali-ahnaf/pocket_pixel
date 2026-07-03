@@ -279,6 +279,6 @@ describe('refresh', () => {
       expect(users.save).not.toHaveBeenCalled();
     });
   });
-    });
-  });
+    
+  
 });
