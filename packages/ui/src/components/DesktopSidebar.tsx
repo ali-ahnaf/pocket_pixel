@@ -2,9 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Home, BarChart, User, Coins, KeyRound, type LucideIcon } from 'lucide-react';
-import { useRouter } from 'next/router';
-import { usePathname } from 'next/navigation';
+import { Home, BarChart, User, Coins, KeyRound, LogOut, type LucideIcon } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 
 const PROFILE_STORAGE_KEY = 'pocket_pixel_profile';
 
@@ -32,6 +32,8 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ name, email, ava
   const [storedProfile, setStoredProfile] = useState<{ name?: string; email?: string; avatar?: string } | null>(null);
   const rawPathname = usePathname();
   const pathname = rawPathname?.replace('/\/$/', '') || '/';
+  const router = useRouter();
+  const { signOut } = useAuth();
 
   useEffect(() => {
     const stored = localStorage.getItem(PROFILE_STORAGE_KEY);
@@ -47,6 +49,11 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ name, email, ava
   const displayName = name ?? storedProfile?.name ?? '...';
   const displayEmail = email ?? storedProfile?.email ?? '';
   const displayAvatar = avatar ?? storedProfile?.avatar ?? '/avatars/avatar1.jpeg';
+
+  const handleLogout = () => {
+    signOut();
+    router.replace('/signin');
+  };
 
   return (
     <aside className="hidden md:flex flex-col h-screen w-80 border-r-4 border-black bg-surface-container dark:bg-surface-container-high sticky top-0 z-50">
@@ -80,6 +87,16 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ name, email, ava
           );
         })}
       </nav>
+
+      <div className="p-4 border-t-4 border-black bg-surface-container">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 p-3 border-4 border-black bg-error-container text-on-error-container hover:translate-x-1 active:translate-y-0.5 transition-all"
+        >
+          <LogOut className="w-5 h-5" />
+          <span className="font-label-caps tracking-wider uppercase">Logout</span>
+        </button>
+      </div>
     </aside>
   );
 };
