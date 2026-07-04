@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, Method } from 'axios';
+import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse, Method } from 'axios';
 
 export const AUTH_TOKEN_STORAGE_KEY = 'auth_token';
 export const PROFILE_STORAGE_KEY = 'pocket_pixel_profile';
@@ -7,6 +7,30 @@ const SIGN_IN_PATH = '/signin';
 export function getStoredAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
   return window.localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+}
+
+/**
+ * Structured, redacted logger for request failures. Never logs the
+ * Authorization header or raw request config (both may carry the auth
+ * token or other sensitive payload data) — only method/url/status plus
+ * enough of the error itself to debug from the console.
+ */
+function logRequestError(method: Method, url: string, error: unknown, extra?: Record<string, unknown>): void {
+  const isAxios = axios.isAxiosError(error);
+  const status = isAxios ? error.response?.status : undefined;
+  const statusText = isAxios ? error.response?.statusText : undefined;
+  const code = isAxios ? error.code : undefined;
+  // Network/CORS/timeout errors: request was made, no response came back.
+  const isNetworkError = isAxios && Boolean(error.request) && !error.response;
+
+  console.error(`[ApiClient] ${method} ${url} failed`, {
+    status,
+    statusText,
+    code,
+    isNetworkError,
+    ...extra,
+    error: error instanceof Error ? { name: error.name, message: error.message } : error,
+  });
 }
 
 /**
@@ -71,7 +95,7 @@ export default class ApiClient {
 
       return response.data;
     } catch (error: any) {
-      console.log('error', error);
+      logRequestError(method, url, error);
       // Only treat a 401 as an expired session when we actually sent a token.
       // A 401 from an unauthenticated request (e.g. a failed sign-in) is an
       // expected error the caller should surface, not a reason to redirect.
@@ -82,8 +106,11 @@ export default class ApiClient {
         try {
           const text = await error.response.data.text();
           error.response.data = JSON.parse(text);
-        } catch (e) {
-          console.error('Error parsing blob error:', e);
+        } catch (parseErr) {
+          console.error(`[ApiClient] ${method} ${url}: failed to parse blob error response`, {
+            status: error.response?.status,
+            error: parseErr instanceof Error ? { name: parseErr.name, message: parseErr.message } : parseErr,
+          });
         }
       }
 
@@ -112,7 +139,7 @@ export default class ApiClient {
   }
 
   parseError(error: any): string {
-    const errorData = error.response?.data;
+    const errorData = error?.response?.data;
 
     if (errorData?.message && Array.isArray(errorData.message)) {
       return errorData.message.join(', ');
@@ -122,10 +149,20 @@ export default class ApiClient {
       return errorData.message || 'Failed to make request';
     }
 
-    if (error.response?.status) {
+    if (error?.response?.status) {
       return error.response?.statusText || 'Failed to make request';
     }
 
-    return error.message || 'Failed to make request';
+    // Axios network error: request was sent but no response came back
+    // (offline, timeout, CORS, DNS failure, etc.)
+    if (axios.isAxiosError(error) && error.request && !error.response) {
+      return 'Unable to reach the server. Please check your connection and try again.';
+    }
+
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+
+    return 'Failed to make request';
   }
 }

@@ -52,6 +52,67 @@ function getOccurrenceTitle(o: OccurrenceDto): string {
   return o.title || (o.type === 'income' ? 'Unnamed Income' : 'Unnamed Expense');
 }
 
+// ---------------------------------------------------------------------------
+// Error handling helpers
+// ---------------------------------------------------------------------------
+
+/** Shape we expect from an Axios-like HTTP client error. */
+interface HttpErrorLike {
+  response?: {
+    status?: number;
+    data?: { message?: string; error?: string };
+  };
+  request?: unknown;
+  message?: string;
+  code?: string;
+}
+
+function isHttpErrorLike(err: unknown): err is HttpErrorLike {
+  return typeof err === 'object' && err !== null;
+}
+
+/**
+ * Safely extract a user-facing error message from an unknown error.
+ * Handles: Axios-style errors with a response body, network errors
+ * (request made, no response received), plain Error instances, and
+ * anything else that doesn't match a known shape.
+ */
+function getErrorMessage(err: unknown, fallback: string = 'Something went wrong. Please try again.'): string {
+  if (isHttpErrorLike(err)) {
+    // Server responded with an error payload (4xx/5xx)
+    if (err.response?.data?.message) return err.response.data.message;
+    if (err.response?.data?.error) return err.response.data.error;
+
+    // Request was sent but no response came back (offline, timeout, CORS, etc.)
+    if (err.request && !err.response) {
+      return 'Unable to reach the server. Please check your connection and try again.';
+    }
+
+    if (err.message) return err.message;
+  }
+
+  if (err instanceof Error && err.message) return err.message;
+
+  return fallback;
+}
+
+/**
+ * Centralized, structured error logger. Logs enough context to debug the
+ * failure (operation name + any HTTP status) without dumping sensitive
+ * request/response bodies to the console.
+ */
+function logError(operation: string, err: unknown, context?: Record<string, unknown>): void {
+  const status = isHttpErrorLike(err) ? err.response?.status : undefined;
+  const code = isHttpErrorLike(err) ? err.code : undefined;
+
+  console.error(`[DashboardPage] ${operation} failed`, {
+    status,
+    code,
+    ...context,
+    error: err instanceof Error ? { name: err.name, message: err.message, stack: err.stack } : err,
+  });
+}
+
 export default function DashboardPage() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
@@ -72,6 +133,8 @@ export default function DashboardPage() {
   const tagDropdownRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [refetchKey, setRefetchKey] = useState(0);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
@@ -80,6 +143,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!userId) return;
     setIsLoading(true);
+    setFetchError(null);
     Promise.all([
       profileApi.getUser(userId),
       profileApi.getTransactions(userId, selectedMonth + 1, selectedYear),
@@ -99,9 +163,20 @@ export default function DashboardPage() {
         setOccurrences(occs);
         setTags(tagList);
       })
-      .catch(console.error)
+      .catch((err: unknown) => {
+        logError('Dashboard data load', err, { userId, selectedMonth, selectedYear });
+        setFetchError(getErrorMessage(err, 'Failed to load dashboard. Please try again.'));
+      })
       .finally(() => setIsLoading(false));
   }, [userId, selectedMonth, selectedYear, refetchKey]);
+
+  // Auto-dismiss mutation error after 5 seconds
+  useEffect(() => {
+    if (mutationError) {
+      const timer = setTimeout(() => setMutationError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [mutationError]);
 
   const handleTransactionSuccess = useCallback(() => setRefetchKey((k) => k + 1), []);
 
@@ -144,11 +219,13 @@ export default function DashboardPage() {
     if (!userId) return;
     const key = `${occ.recurringId}:${occ.date}`;
     setApplyingOccurrence(key);
+    setMutationError(null);
     try {
       await profileApi.applyRecurringOccurrence(userId, occ.recurringId, occ.date);
       setRefetchKey((k) => k + 1);
-    } catch (err) {
-      console.error(err);
+    } catch (err: unknown) {
+      logError('Apply recurring occurrence', err, { userId, recurringId: occ.recurringId, date: occ.date });
+      setMutationError(getErrorMessage(err, 'Failed to apply recurring occurrence.'));
     } finally {
       setApplyingOccurrence(null);
     }
@@ -158,11 +235,13 @@ export default function DashboardPage() {
     if (!userId) return;
     const key = `${occ.recurringId}:${occ.date}`;
     setOccurrences((prev) => prev.filter((o) => `${o.recurringId}:${o.date}` !== key));
+    setMutationError(null);
     try {
       await profileApi.skipRecurringOccurrence(userId, occ.recurringId, occ.date);
-    } catch (err) {
-      console.error(err);
+    } catch (err: unknown) {
+      logError('Skip recurring occurrence', err, { userId, recurringId: occ.recurringId, date: occ.date });
       setRefetchKey((k) => k + 1);
+      setMutationError(getErrorMessage(err, 'Failed to skip recurring occurrence.'));
     }
   };
   const totalIncome = filteredDrops.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
@@ -186,6 +265,34 @@ export default function DashboardPage() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col w-full md:h-screen relative px-3 md:px-0 pb-24 md:pb-0 overflow-y-auto overflow-x-hidden">
         <div className="max-w-4xl xl:max-w-6xl 2xl:max-w-7xl w-full mx-auto p-margin-mobile md:p-8 flex flex-col gap-stack-md">
+          {/* Fetch Error Banner */}
+          {fetchError && (
+            <div className="flex items-center justify-between gap-3 p-3 border-4 border-black bg-error-container shadow-[4px_4px_0_rgba(0,0,0,0.5)]">
+              <span className="font-body-sm text-on-surface">{fetchError}</span>
+              <button
+                onClick={() => setFetchError(null)}
+                className="p-1 hover:bg-surface/30 rounded"
+                aria-label="Dismiss error"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          )}
+
+          {/* Mutation Error Toast */}
+          {mutationError && (
+            <div className="fixed top-4 right-4 z-50 flex items-center justify-between gap-3 p-3 border-4 border-black bg-error-container shadow-[4px_4px_0_rgba(0,0,0,0.5)] max-w-md w-full">
+              <span className="font-body-sm text-on-surface">{mutationError}</span>
+              <button
+                onClick={() => setMutationError(null)}
+                className="p-1 hover:bg-surface/30 rounded"
+                aria-label="Dismiss error"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          )}
+
           {/* Month Selector */}
           <section className="flex justify-between items-center bg-surface-container border-4 border-black p-4 shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]">
             <Button onClick={handlePrevMonth} variant="ghost" className="p-2 w-10 h-10 text-primary bg-surface hover:bg-surface-container-highest">

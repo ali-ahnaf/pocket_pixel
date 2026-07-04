@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { AppBar, Card, ProgressBar, Button, BottomNavBar, DesktopSidebar, WizardFab, WizardChatSheet } from '@/components';
 import { useAuth } from '@/hooks/useAuth';
-import { Package, ChevronDown, TrendingUp, TrendingDown, CircleDollarSign, Flame, Gem, Calendar, ChevronLeft, ChevronRight, Vault, LineChart, Cpu, Download } from 'lucide-react';
+import { Package, ChevronDown, TrendingUp, TrendingDown, CircleDollarSign, Flame, Gem, Calendar, ChevronLeft, ChevronRight, Vault, LineChart, Cpu, Download, X } from 'lucide-react';
 import { iconMapper } from '@/lib/iconMapper';
 import { profileApi } from '@/lib/api';
 import type { User, VaultDto, UsageReport, TransactionDto } from '@expense-tracker/shared';
@@ -86,6 +86,65 @@ function escapeCsvCell(value: string | number | null | undefined): string {
   return str;
 }
 
+// ─── Error handling helpers ────────────────────────────────────────────────
+
+/** Shape we expect from an Axios-like HTTP client error. */
+interface HttpErrorLike {
+  response?: {
+    status?: number;
+    data?: { message?: string; error?: string };
+  };
+  request?: unknown;
+  message?: string;
+  code?: string;
+}
+
+function isHttpErrorLike(err: unknown): err is HttpErrorLike {
+  return typeof err === 'object' && err !== null;
+}
+
+/**
+ * Safely extract a user-facing error message from an unknown error.
+ * Handles: Axios-style errors with a response body, network errors
+ * (request made, no response received), plain Error instances, and
+ * anything else that doesn't match a known shape.
+ */
+function getErrorMessage(err: unknown, fallback: string = 'Something went wrong. Please try again.'): string {
+  if (isHttpErrorLike(err)) {
+    // Server responded with an error payload (4xx/5xx)
+    if (err.response?.data?.message) return err.response.data.message;
+    if (err.response?.data?.error) return err.response.data.error;
+
+    // Request was sent but no response came back (offline, timeout, CORS, etc.)
+    if (err.request && !err.response) {
+      return 'Unable to reach the server. Please check your connection and try again.';
+    }
+
+    if (err.message) return err.message;
+  }
+
+  if (err instanceof Error && err.message) return err.message;
+
+  return fallback;
+}
+
+/**
+ * Centralized, structured error logger. Logs enough context to debug the
+ * failure (operation name + any HTTP status) without dumping sensitive
+ * request/response bodies to the console.
+ */
+function logError(operation: string, err: unknown, context?: Record<string, unknown>): void {
+  const status = isHttpErrorLike(err) ? err.response?.status : undefined;
+  const code = isHttpErrorLike(err) ? err.code : undefined;
+
+  console.error(`[StatsPage] ${operation} failed`, {
+    status,
+    code,
+    ...context,
+    error: err instanceof Error ? { name: err.name, message: err.message, stack: err.stack } : err,
+  });
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function StatsPage() {
@@ -95,6 +154,7 @@ export default function StatsPage() {
   const [transactions, setTransactions] = useState<TransactionDto[]>([]);
   const [vaults, setVaults] = useState<VaultDto[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const [tokenUsage, setTokenUsage] = useState<UsageReport | null>(null);
   const [tokenUsageLoading, setTokenUsageLoading] = useState(false);
@@ -118,13 +178,21 @@ export default function StatsPage() {
     if (!userId) return;
     const [y, m] = isAllTime ? [null, null] : selectedMonthYear.split('-').map(Number);
     setIsLoading(true);
-    Promise.all([profileApi.getUser(userId), isAllTime ? profileApi.getAllTransactions(userId) : profileApi.getTransactions(userId, m as number, y as number), profileApi.getVaults(userId)])
+    setFetchError(null);
+    Promise.all([
+      profileApi.getUser(userId),
+      isAllTime ? profileApi.getAllTransactions(userId) : profileApi.getTransactions(userId, m as number, y as number),
+      profileApi.getVaults(userId),
+    ])
       .then(([user, txs, vaultList]) => {
         setProfile(user);
         setTransactions(txs);
         setVaults(vaultList);
       })
-      .catch(console.error)
+      .catch((err: unknown) => {
+        logError('Statistics data load', err, { userId, selectedMonthYear, isAllTime });
+        setFetchError(getErrorMessage(err, 'Failed to load statistics. Please try again.'));
+      })
       .finally(() => setIsLoading(false));
   }, [userId, selectedMonthYear, isAllTime]);
 
@@ -135,8 +203,8 @@ export default function StatsPage() {
     profileApi
       .getTokenUsage(userId)
       .then(setTokenUsage)
-      .catch((err) => {
-        console.error(err);
+      .catch((err: unknown) => {
+        logError('Token usage load', err, { userId });
         setTokenUsageError('Token usage is unavailable. Check that OPENAI_ADMIN_KEY is configured.');
       })
       .finally(() => setTokenUsageLoading(false));
@@ -341,6 +409,20 @@ export default function StatsPage() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col w-full md:h-screen relative px-3 pb-24 md:pb-0 overflow-y-auto overflow-x-hidden" onClick={closeDropdowns}>
         <div className="max-w-4xl w-full mx-auto p-margin-mobile md:p-8 flex flex-col gap-stack-md">
+          {/* Error Banner */}
+          {fetchError && (
+            <div className="flex items-center justify-between gap-3 p-3 border-4 border-black bg-error-container shadow-[4px_4px_0_rgba(0,0,0,0.5)]">
+              <span className="font-body-sm text-on-surface">{fetchError}</span>
+              <button
+                onClick={() => setFetchError(null)}
+                className="p-1 hover:bg-surface/30 rounded"
+                aria-label="Dismiss error"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          )}
+
           {/* Header & Controls */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b-4 border-surface-container-highest pb-4">
             <div>
