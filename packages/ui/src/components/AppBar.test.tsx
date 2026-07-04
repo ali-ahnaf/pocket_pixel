@@ -1,20 +1,26 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppBar } from './AppBar';
-import { AUTH_TOKEN_STORAGE_KEY } from '@/lib/api/ApiClient';
 
-const { replaceMock } = vi.hoisted(() => ({
+const { replaceMock, signOutMock } = vi.hoisted(() => ({
   replaceMock: vi.fn(),
+  signOutMock: vi.fn().mockResolvedValue({ message: 'Signed out' }),
 }));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: replaceMock }),
 }));
 
+vi.mock('@/lib/api', () => ({
+  authApi: { signOut: signOutMock },
+}));
+
 describe('AppBar', () => {
   beforeEach(() => {
     localStorage.clear();
     replaceMock.mockReset();
+    signOutMock.mockReset();
+    signOutMock.mockResolvedValue({ message: 'Signed out' });
   });
 
   it('renders the app title and user controls', () => {
@@ -34,8 +40,7 @@ describe('AppBar', () => {
     expect(screen.getByRole('heading', { name: /menu/i })).toBeInTheDocument();
   });
 
-  it('shows the logout action and clears storage on logout', () => {
-    localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, 'token');
+  it('shows the logout action and clears storage on logout', async () => {
     localStorage.setItem('pocket_pixel_profile', JSON.stringify({ avatar: '/avatar.png' }));
 
     render(<AppBar />);
@@ -43,8 +48,10 @@ describe('AppBar', () => {
     fireEvent.click(screen.getByRole('button', { name: /open user menu/i }));
     fireEvent.click(screen.getByRole('button', { name: /logout/i }));
 
-    expect(localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)).toBeNull();
-    expect(localStorage.getItem('pocket_pixel_profile')).toBeNull();
+    await waitFor(() => {
+      expect(localStorage.getItem('pocket_pixel_profile')).toBeNull();
+    });
+    expect(signOutMock).toHaveBeenCalledTimes(1);
     expect(replaceMock).toHaveBeenCalledWith('/signin');
   });
 });

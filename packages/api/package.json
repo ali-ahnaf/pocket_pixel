@@ -9,7 +9,7 @@
     "test:watch": "jest --watch",
     "migration:generate": "typeorm-ts-node-commonjs migration:generate src/migrations/Migration -d src/data-source.ts",
     "migration:run": "typeorm-ts-node-commonjs migration:run -d src/data-source.ts",
-    "migration:run-prod": "NODE_ENV=production typeorm -d dist/data-source.js migration:run",
+    "migration:run-prod": "cross-env NODE_ENV=production typeorm -d dist/data-source.js migration:run",
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/data-source.ts"
   },
   "dependencies": {
@@ -38,6 +38,7 @@
     "@types/jest": "^29.5.14",
     "@types/node": "^20.0.0",
     "@types/node-cron": "^3.0.11",
+    "cross-env": "^10.1.0",
     "jest": "^29.7.0",
     "shx": "^0.4.0",
     "ts-jest": "^29.4.11",

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { AUTH_TOKEN_STORAGE_KEY } from '@/lib/api/ApiClient';
 import PixelLoader from '@/components/PixelLoader';
 
 const PUBLIC_PATHS = ['/signin', '/signup', '/forgot-password', '/reset-password'];
@@ -15,15 +14,15 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!pathname) return;
 
-    const token = typeof window === 'undefined' ? null : window.localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+    const profile = typeof window === 'undefined' ? null : window.localStorage.getItem('pocket_pixel_profile');
     const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
 
-    if (token && isPublic) {
+    if (profile && isPublic) {
       router.replace('/');
       return;
     }
 
-    if (!token && !isPublic) {
+    if (!profile && !isPublic) {
       window.localStorage.removeItem('pocket_pixel_profile');
       router.replace('/signin');
       return;

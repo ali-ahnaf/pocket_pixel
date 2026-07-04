@@ -1,7 +1,8 @@
 'use client';
 
 import { useReducer, useEffect, useCallback } from 'react';
-import { AUTH_TOKEN_STORAGE_KEY, PROFILE_STORAGE_KEY } from '@/lib/api/ApiClient';
+import { PROFILE_STORAGE_KEY } from '@/lib/api/ApiClient';
+import { authApi } from '@/lib/api';
 
 export interface AuthUser {
   id: string;
@@ -50,8 +51,7 @@ export function useAuth() {
     }
   }, []);
 
-  const setSession = useCallback((token: string, profile: AuthUser) => {
-    localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
+  const setSession = useCallback((_token: string, profile: AuthUser) => {
     localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
     dispatch({ type: 'SET_USER', payload: profile });
   }, []);
@@ -61,8 +61,13 @@ export function useAuth() {
     dispatch({ type: 'SET_USER', payload: profile });
   }, []);
 
-  const signOut = useCallback(() => {
-    localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+  const signOut = useCallback(async () => {
+    try {
+      await authApi.signOut();
+    } catch {
+      // Ignore server-side sign-out failures and still clear the client state.
+    }
+
     localStorage.removeItem(PROFILE_STORAGE_KEY);
     dispatch({ type: 'CLEAR_USER' });
   }, []);

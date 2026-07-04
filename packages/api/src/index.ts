@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import { AppDataSource } from './data-source';
 import authRouter from './routes/auth.routes';
 import usersRouter from './routes/users.routes';
@@ -30,6 +31,7 @@ app.use(
   }),
 );
 app.use(express.json());
+app.use(cookieParser());
 app.use(authenticate);
 
 app.get('/health', (_req, res) => {

@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { authService, logger, utilService } from '../services';
-import type { TokenPayload } from '../services/auth.service';
+import { AUTH_TOKEN_KEY, type TokenPayload } from '../services/auth.service';
 
 declare global {
   namespace Express {
@@ -17,12 +17,10 @@ declare global {
  */
 export function authenticate(req: Request, _res: Response, next: NextFunction): void {
   const authorization = req.header('Authorization');
-  if (!authorization) {
-    return next();
-  }
+  const cookieToken = req.cookies?.[AUTH_TOKEN_KEY];
+  const token = authorization?.startsWith('Bearer ') ? authorization.replace('Bearer ', '') : cookieToken;
 
-  const [scheme, token] = authorization.split(' ');
-  if (scheme !== 'Bearer' || !token) {
+  if (!token) {
     return next();
   }
 
