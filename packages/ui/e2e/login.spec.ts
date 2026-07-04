@@ -90,8 +90,14 @@ test.describe('Sign-in page', () => {
     await expect(page).toHaveURL(/\/$/);
 
     // The session is persisted so the user stays authenticated on reload.
-    const token = await page.evaluate(() => window.localStorage.getItem('auth_token'));
-    expect(token).toBe(AUTH_RESPONSE.token);
+    const storedProfile = await page.evaluate(() => window.localStorage.getItem('pocket_pixel_profile'));
+    expect(storedProfile).not.toBeNull();
+    expect(JSON.parse(storedProfile!)).toMatchObject({
+      id: AUTH_RESPONSE.id,
+      name: AUTH_RESPONSE.name,
+      email: AUTH_RESPONSE.email,
+      avatar: AUTH_RESPONSE.avatar,
+    });
   });
 
   test('navigates to the sign-up page', async ({ page }) => {
