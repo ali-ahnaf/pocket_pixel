@@ -25,7 +25,6 @@
     "test:ui:e2e-report": "npm run test:e2e:report --workspace=packages/ui"
   },
   "dependencies": {
-    "date-fns": "^4.4.0",
-    "react-datepicker": "^9.1.0"
+    "date-fns": "^4.4.0"
   }
 }
