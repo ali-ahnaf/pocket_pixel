@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import ServiceWorkerRegistration from './ServiceWorkerRegistration';
-
+//Adding tests for ServiceWorkerRegistration!
 describe('ServiceWorkerRegistration', () => {
   let registerMock: ReturnType<typeof vi.fn>;
   let addEventListenerSpy: ReturnType<typeof vi.spyOn>;
