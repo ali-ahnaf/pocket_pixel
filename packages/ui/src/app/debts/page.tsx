@@ -117,7 +117,8 @@ export default function DebtsPage() {
             </div>
             <div className="flex items-center gap-2">
               <div className="relative w-56">
-                <button
+                <Button
+                  variant="primary"
                   onClick={() => setStatusDropdownOpen(!statusDropdownOpen)}
                   className={`w-full h-14 px-4 border-4 border-black flex items-center justify-between font-body-lg transition-all active:translate-y-0.5 active:shadow-none group bg-surface-container-lowest hover:bg-surface-container-low
                     ${statusDropdownOpen ? 'ring-4 ring-primary/20' : ''}
@@ -129,8 +130,7 @@ export default function DebtsPage() {
                     <div className="w-1 h-6 bg-black/10 rounded-full" />
                     <ChevronDown className={`text-outline transition-transform duration-300 ${statusDropdownOpen ? 'rotate-180' : ''}`} size={20} />
                   </div>
-                </button>
-
+                </Button>
                 {statusDropdownOpen && (
                   <>
                     <div className="fixed inset-0 z-[115]" onClick={() => setStatusDropdownOpen(false)} />
@@ -167,9 +167,9 @@ export default function DebtsPage() {
                 )}
               </div>
 
-              <Button variant="primary" className="flex items-center gap-2" onClick={() => setAddOpen(true)}>
+              <Button variant="primary" className="flex h-14 items-center gap-2 whitespace-nowrap" onClick={() => setAddOpen(true)}>
                 <Plus className="w-5 h-5" />
-                <span className="font-label-caps uppercase tracking-wider">New Due</span>
+                <span className="font-label-caps uppercase tracking-wider whitespace-nowrap">New Due</span>
               </Button>
             </div>
           </div>
