@@ -29,8 +29,9 @@ interface DesktopSidebarProps {
 }
 
 export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ name, email, avatar }) => {
-  const pathname = usePathname();
   const [storedProfile, setStoredProfile] = useState<{ name?: string; email?: string; avatar?: string } | null>(null);
+  const rawPathname = usePathname();
+  const pathname = rawPathname?.replace('/\/$/', '') || '/';
 
   useEffect(() => {
     const stored = localStorage.getItem(PROFILE_STORAGE_KEY);
