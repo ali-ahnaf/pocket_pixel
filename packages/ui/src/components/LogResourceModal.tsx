@@ -5,7 +5,7 @@ import { X, Coins, ChevronDown, Plus, Package, Sparkles, Send, SlidersHorizontal
 import { iconMapper } from '../lib/iconMapper';
 import { profileApi } from '../lib/api';
 import { TransactionTypeToggle } from './TransactionTypeToggle';
-import type { TagDto, VaultDto } from '@expense-tracker/shared';
+import type { TagDto, VaultDto, TransactionType } from '@expense-tracker/shared';
 
 interface LogResourceModalProps {
   isOpen: boolean;
@@ -22,7 +22,7 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
   const [isPrompting, setIsPrompting] = useState(false);
   const [promptResult, setPromptResult] = useState<string | null>(null);
 
-  const [isExpense, setIsExpense] = useState(true);
+  const [transactionType, setTransactionType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState('');
   const [title, setTitle] = useState('');
   const [shouldRender, setShouldRender] = useState(isOpen);
@@ -37,17 +37,39 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
   // Vault state
   const [vaults, setVaults] = useState<VaultDto[]>([]);
   const [selectedVaultId, setSelectedVaultId] = useState<string | null>(null);
+  const [sourceVaultId, setSourceVaultId] = useState<string | null>(null);
+  const [targetVaultId, setTargetVaultId] = useState<string | null>(null);
   const [isVaultDropdownOpen, setIsVaultDropdownOpen] = useState(false);
+  const [isSourceVaultDropdownOpen, setIsSourceVaultDropdownOpen] = useState(false);
+  const [isTargetVaultDropdownOpen, setIsTargetVaultDropdownOpen] = useState(false);
 
   const selectedVault = vaults.find((v) => v.id === selectedVaultId) ?? null;
+  const selectedSourceVault = vaults.find((v) => v.id === sourceVaultId) ?? null;
+  const selectedTargetVault = vaults.find((v) => v.id === targetVaultId) ?? null;
+  const transferValidationError = transactionType === 'transfer' && !!sourceVaultId && !!targetVaultId && sourceVaultId === targetVaultId ? 'Source and target vaults must be different.' : null;
+  const submitDisabled = !amount || isSubmitting || (transactionType === 'transfer' && (!sourceVaultId || !targetVaultId || !!transferValidationError));
 
   const suggestions = availableTags.filter((tag) => !selectedTags.some((t) => t.id === tag.id) && tag.name.toLowerCase().includes(tagInput.toLowerCase())).slice(0, 3);
+
+  const handleTransactionTypeChange = (nextType: TransactionType) => {
+    setTransactionType(nextType);
+    setIsVaultDropdownOpen(false);
+    setIsSourceVaultDropdownOpen(false);
+    setIsTargetVaultDropdownOpen(false);
+  };
 
   useEffect(() => {
     if (isOpen) {
       setManualEntry(false);
       setPromptText('');
       setPromptResult(null);
+      setTransactionType('expense');
+      setSelectedVaultId(null);
+      setSourceVaultId(null);
+      setTargetVaultId(null);
+      setIsVaultDropdownOpen(false);
+      setIsSourceVaultDropdownOpen(false);
+      setIsTargetVaultDropdownOpen(false);
     }
     if (isOpen && userId) {
       profileApi.getTags(userId).then((res) => {
@@ -57,7 +79,11 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
         if (res) {
           setVaults(res);
           const def = res.find((v) => v.isDefault) ?? res[0] ?? null;
-          if (def) setSelectedVaultId(def.id);
+          if (def) {
+            setSelectedVaultId(def.id);
+            setSourceVaultId(def.id);
+            setTargetVaultId(res.find((v) => v.id !== def.id)?.id ?? null);
+          }
         }
       });
     }
@@ -71,7 +97,7 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
       const res = await profileApi.sendPrompt(userId, promptText.trim());
       setTitle(res.title);
       setAmount(String(res.amount));
-      setIsExpense(res.type === 'expense');
+      setTransactionType(res.type === 'expense' ? 'expense' : res.type === 'income' ? 'income' : 'transfer');
       setSelectedTags(availableTags.filter((tag) => res.tagIds.includes(tag.id)));
       setManualEntry(true);
     } catch {
@@ -111,7 +137,7 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
   };
 
   const handleSubmit = async () => {
-    if (!userId || !amount || isSubmitting) return;
+    if (!userId || !amount || isSubmitting || submitDisabled) return;
     setIsSubmitting(true);
     const now = new Date();
     const isCurrentMonth = selectedMonth === undefined || selectedYear === undefined || (selectedMonth === now.getMonth() && selectedYear === now.getFullYear());
@@ -119,16 +145,21 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
     try {
       await profileApi.createTransaction(userId, {
         amount: parseFloat(amount),
-        type: isExpense ? 'expense' : 'income',
+        type: transactionType,
         tagIds: selectedTags.map((t) => t.id),
         title: title || undefined,
-        vaultId: selectedVaultId ?? null,
+        vaultId: transactionType === 'transfer' ? null : selectedVaultId ?? null,
+        sourceVaultId: transactionType === 'transfer' ? sourceVaultId ?? null : null,
+        targetVaultId: transactionType === 'transfer' ? targetVaultId ?? null : null,
         date,
       });
       setAmount('');
       setTitle('');
       setSelectedTags([]);
       setTagInput('');
+      setSelectedVaultId(null);
+      setSourceVaultId(null);
+      setTargetVaultId(null);
       onSuccess?.();
       onClose();
     } finally {
@@ -247,64 +278,204 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
 
               {/* Transaction Type Toggle */}
               <div className="space-y-2">
-                <TransactionTypeToggle isExpense={isExpense} onChange={setIsExpense} />
+                <TransactionTypeToggle transactionType={transactionType} onChange={handleTransactionTypeChange} allowTransfer />
               </div>
 
-              {/* Source Vault Selection */}
               {vaults.length > 0 && (
                 <div className="space-y-2">
-                  <div className="relative">
-                    <button
-                      onClick={() => setIsVaultDropdownOpen(!isVaultDropdownOpen)}
-                      className={`w-full h-14 px-4 border-4 border-black flex items-center justify-between font-body-lg transition-all active:translate-y-0.5 active:shadow-none group bg-surface-container-lowest hover:bg-surface-container-low ${
-                        isVaultDropdownOpen ? 'ring-4 ring-primary/20' : ''
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        {selectedVault &&
-                          (() => {
-                            const VaultIcon = iconMapper(selectedVault.icon || 'Briefcase');
-                            return <VaultIcon className="text-primary" size={20} />;
-                          })()}
-                        <span className="text-primary font-bold">{selectedVault?.name ?? 'Select vault'}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-1 h-6 bg-black/10 rounded-full" />
-                        <ChevronDown className={`text-outline transition-transform duration-300 ${isVaultDropdownOpen ? 'rotate-180' : ''}`} size={20} />
-                      </div>
-                    </button>
+                  {transactionType === 'transfer' ? (
+                    <>
+                      <div className="space-y-2">
+                        <div className="font-label-caps uppercase text-outline">From</div>
+                        <div className="relative">
+                          <button
+                            type="button"
+                            aria-label="Select source vault"
+                            onClick={() => {
+                              setIsSourceVaultDropdownOpen(!isSourceVaultDropdownOpen);
+                              setIsTargetVaultDropdownOpen(false);
+                            }}
+                            className={`w-full h-14 px-4 border-4 border-black flex items-center justify-between font-body-lg transition-all active:translate-y-0.5 active:shadow-none group bg-surface-container-lowest hover:bg-surface-container-low ${
+                              isSourceVaultDropdownOpen ? 'ring-4 ring-primary/20' : ''
+                            }`}
+                          >
+                            <div className="flex flex-col items-start gap-1">
+                              <span className="font-label-caps text-[10px] uppercase text-outline">From</span>
+                              <div className="flex items-center gap-3">
+                                {selectedSourceVault &&
+                                  (() => {
+                                    const VaultIcon = iconMapper(selectedSourceVault.icon || 'Briefcase');
+                                    return <VaultIcon className="text-primary" size={20} />;
+                                  })()}
+                                <span className="text-primary font-bold">{selectedSourceVault?.name ?? 'Select source vault'}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="w-1 h-6 bg-black/10 rounded-full" />
+                              <ChevronDown className={`text-outline transition-transform duration-300 ${isSourceVaultDropdownOpen ? 'rotate-180' : ''}`} size={20} />
+                            </div>
+                          </button>
 
-                    {isVaultDropdownOpen && (
-                      <>
-                        <div className="fixed inset-0 z-[65]" onClick={() => setIsVaultDropdownOpen(false)} />
-                        <div className="absolute top-[calc(100%+4px)] left-0 right-0 z-[70] bg-surface-container-high border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)]">
-                          <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                            {vaults.map((vault) => {
-                              const VaultIcon = iconMapper(vault.icon || 'Briefcase');
-                              return (
-                                <button
-                                  key={vault.id}
-                                  onClick={() => {
-                                    setSelectedVaultId(vault.id);
-                                    setIsVaultDropdownOpen(false);
-                                  }}
-                                  className={`w-full h-14 px-4 flex items-center justify-between font-body-lg transition-colors hover:bg-surface-container-highest group ${
-                                    selectedVaultId === vault.id ? 'bg-surface-container-highest' : 'bg-surface-container-low'
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-3">
-                                    <VaultIcon className={selectedVaultId === vault.id ? 'text-primary' : 'text-outline'} size={20} />
-                                    <span className={`font-body-lg uppercase ${selectedVaultId === vault.id ? 'text-primary font-bold' : 'text-on-surface'}`}>{vault.name}</span>
-                                  </div>
-                                  {selectedVaultId === vault.id && <div className="w-4 h-4 bg-primary border-2 border-black" />}
-                                </button>
-                              );
-                            })}
-                          </div>
+                          {isSourceVaultDropdownOpen && (
+                            <>
+                              <div className="fixed inset-0 z-[65]" onClick={() => setIsSourceVaultDropdownOpen(false)} />
+                              <div className="absolute top-[calc(100%+4px)] left-0 right-0 z-[70] bg-surface-container-high border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)]">
+                                <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                                  {vaults.map((vault) => {
+                                    const VaultIcon = iconMapper(vault.icon || 'Briefcase');
+                                    const isDisabled = vault.id === targetVaultId;
+                                    return (
+                                      <button
+                                        key={vault.id}
+                                        type="button"
+                                        disabled={isDisabled}
+                                        onClick={() => {
+                                          setSourceVaultId(vault.id);
+                                          setIsSourceVaultDropdownOpen(false);
+                                        }}
+                                        className={`w-full h-14 px-4 flex items-center justify-between font-body-lg transition-colors hover:bg-surface-container-highest disabled:opacity-50 disabled:cursor-not-allowed group ${
+                                          sourceVaultId === vault.id ? 'bg-surface-container-highest' : 'bg-surface-container-low'
+                                        }`}
+                                      >
+                                        <div className="flex items-center gap-3">
+                                          <VaultIcon className={sourceVaultId === vault.id ? 'text-primary' : 'text-outline'} size={20} />
+                                          <span className={`font-body-lg uppercase ${sourceVaultId === vault.id ? 'text-primary font-bold' : 'text-on-surface'}`}>{vault.name}</span>
+                                        </div>
+                                        {sourceVaultId === vault.id && <div className="w-4 h-4 bg-primary border-2 border-black" />}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </>
+                          )}
                         </div>
-                      </>
-                    )}
-                  </div>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="font-label-caps uppercase text-outline">To</div>
+                        <div className="relative">
+                          <button
+                            type="button"
+                            aria-label="Select target vault"
+                            onClick={() => {
+                              setIsTargetVaultDropdownOpen(!isTargetVaultDropdownOpen);
+                              setIsSourceVaultDropdownOpen(false);
+                            }}
+                            className={`w-full h-14 px-4 border-4 border-black flex items-center justify-between font-body-lg transition-all active:translate-y-0.5 active:shadow-none group bg-surface-container-lowest hover:bg-surface-container-low ${
+                              isTargetVaultDropdownOpen ? 'ring-4 ring-primary/20' : ''
+                            }`}
+                          >
+                            <div className="flex flex-col items-start gap-1">
+                              <span className="font-label-caps text-[10px] uppercase text-outline">To</span>
+                              <div className="flex items-center gap-3">
+                                {selectedTargetVault &&
+                                  (() => {
+                                    const VaultIcon = iconMapper(selectedTargetVault.icon || 'Briefcase');
+                                    return <VaultIcon className="text-primary" size={20} />;
+                                  })()}
+                                <span className="text-primary font-bold">{selectedTargetVault?.name ?? 'Select target vault'}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="w-1 h-6 bg-black/10 rounded-full" />
+                              <ChevronDown className={`text-outline transition-transform duration-300 ${isTargetVaultDropdownOpen ? 'rotate-180' : ''}`} size={20} />
+                            </div>
+                          </button>
+
+                          {isTargetVaultDropdownOpen && (
+                            <>
+                              <div className="fixed inset-0 z-[65]" onClick={() => setIsTargetVaultDropdownOpen(false)} />
+                              <div className="absolute top-[calc(100%+4px)] left-0 right-0 z-[70] bg-surface-container-high border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)]">
+                                <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                                  {vaults.map((vault) => {
+                                    const VaultIcon = iconMapper(vault.icon || 'Briefcase');
+                                    const isDisabled = vault.id === sourceVaultId;
+                                    return (
+                                      <button
+                                        key={vault.id}
+                                        type="button"
+                                        disabled={isDisabled}
+                                        onClick={() => {
+                                          setTargetVaultId(vault.id);
+                                          setIsTargetVaultDropdownOpen(false);
+                                        }}
+                                        className={`w-full h-14 px-4 flex items-center justify-between font-body-lg transition-colors hover:bg-surface-container-highest disabled:opacity-50 disabled:cursor-not-allowed group ${
+                                          targetVaultId === vault.id ? 'bg-surface-container-highest' : 'bg-surface-container-low'
+                                        }`}
+                                      >
+                                        <div className="flex items-center gap-3">
+                                          <VaultIcon className={targetVaultId === vault.id ? 'text-primary' : 'text-outline'} size={20} />
+                                          <span className={`font-body-lg uppercase ${targetVaultId === vault.id ? 'text-primary font-bold' : 'text-on-surface'}`}>{vault.name}</span>
+                                        </div>
+                                        {targetVaultId === vault.id && <div className="w-4 h-4 bg-primary border-2 border-black" />}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      {transferValidationError && <p className="font-body-sm text-error">{transferValidationError}</p>}
+                    </>
+                  ) : (
+                    <div className="relative">
+                      <button
+                        type="button"
+                        aria-label="Select vault"
+                        onClick={() => setIsVaultDropdownOpen(!isVaultDropdownOpen)}
+                        className={`w-full h-14 px-4 border-4 border-black flex items-center justify-between font-body-lg transition-all active:translate-y-0.5 active:shadow-none group bg-surface-container-lowest hover:bg-surface-container-low ${
+                          isVaultDropdownOpen ? 'ring-4 ring-primary/20' : ''
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          {selectedVault &&
+                            (() => {
+                              const VaultIcon = iconMapper(selectedVault.icon || 'Briefcase');
+                              return <VaultIcon className="text-primary" size={20} />;
+                            })()}
+                          <span className="text-primary font-bold">{selectedVault?.name ?? 'Select vault'}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-1 h-6 bg-black/10 rounded-full" />
+                          <ChevronDown className={`text-outline transition-transform duration-300 ${isVaultDropdownOpen ? 'rotate-180' : ''}`} size={20} />
+                        </div>
+                      </button>
+
+                      {isVaultDropdownOpen && (
+                        <>
+                          <div className="fixed inset-0 z-[65]" onClick={() => setIsVaultDropdownOpen(false)} />
+                          <div className="absolute top-[calc(100%+4px)] left-0 right-0 z-[70] bg-surface-container-high border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)]">
+                            <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                              {vaults.map((vault) => {
+                                const VaultIcon = iconMapper(vault.icon || 'Briefcase');
+                                return (
+                                  <button
+                                    key={vault.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedVaultId(vault.id);
+                                      setIsVaultDropdownOpen(false);
+                                    }}
+                                    className={`w-full h-14 px-4 flex items-center justify-between font-body-lg transition-colors hover:bg-surface-container-highest group ${
+                                      selectedVaultId === vault.id ? 'bg-surface-container-highest' : 'bg-surface-container-low'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <VaultIcon className={selectedVaultId === vault.id ? 'text-primary' : 'text-outline'} size={20} />
+                                      <span className={`font-body-lg uppercase ${selectedVaultId === vault.id ? 'text-primary font-bold' : 'text-on-surface'}`}>{vault.name}</span>
+                                    </div>
+                                    {selectedVaultId === vault.id && <div className="w-4 h-4 bg-primary border-2 border-black" />}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -377,7 +548,7 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
               <div className="pt-5">
                 <button
                   onClick={handleSubmit}
-                  disabled={!amount || isSubmitting}
+                  disabled={submitDisabled}
                   className="w-full h-20 bg-primary-container text-on-primary-container border-4 border-black shadow-[inset_2px_2px_0px_rgba(255,255,255,0.1),_inset_-2px_-2px_0px_rgba(0,0,0,0.4)] active:translate-y-0.5 active:shadow-none flex items-center justify-center gap-4 transition-transform group disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span className="font-headline-md font-black uppercase tracking-wider">{isSubmitting ? 'RECORDING...' : 'RECORD'}</span>

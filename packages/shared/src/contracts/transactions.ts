@@ -1,6 +1,6 @@
 import { TagDto } from './tags';
 
-export type TransactionType = 'expense' | 'income';
+export type TransactionType = 'expense' | 'income' | 'transfer';
 
 export interface ListTransactionsQuery {
   month?: number;
@@ -14,6 +14,8 @@ export interface CreateTransactionInput {
   tagIds?: string[];
   title?: string | null;
   vaultId?: string | null;
+  sourceVaultId?: string | null;
+  targetVaultId?: string | null;
   date?: string;
 }
 
@@ -23,6 +25,8 @@ export interface UpdateTransactionInput {
   tagIds?: string[];
   title?: string | null;
   vaultId?: string | null;
+  sourceVaultId?: string | null;
+  targetVaultId?: string | null;
   date?: string;
 }
 

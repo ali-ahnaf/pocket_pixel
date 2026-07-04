@@ -1,4 +1,4 @@
-import type { User, VaultDto, TagDto, TransactionDto, OccurrenceDto, RecurringDto, ParsedTransaction, UsageReport, DebtDto, ChangePasswordPayload } from '@expense-tracker/shared';
+import type { User, VaultDto, TagDto, TransactionDto, OccurrenceDto, RecurringDto, ParsedTransaction, UsageReport, DebtDto, ChangePasswordPayload, CreateTransactionInput, UpdateTransactionInput } from '@expense-tracker/shared';
 import ApiClient from './ApiClient';
 
 export default class ProfileApi extends ApiClient {
@@ -74,14 +74,14 @@ export default class ProfileApi extends ApiClient {
     return this.get<TransactionDto[]>(`/users/${userId}/transactions?period=all`);
   }
 
-  createTransaction(userId: string, data: { amount: number; type?: string; tagIds?: string[]; title?: string; vaultId?: string | null; date?: string }): Promise<{ id: string }> {
+  createTransaction(userId: string, data: CreateTransactionInput): Promise<{ id: string }> {
     return this.post<{ id: string }>(`/users/${userId}/transactions`, data);
   }
 
   updateTransaction(
     userId: string,
     transactionId: string,
-    data: { amount?: number; type?: string; tagIds?: string[]; title?: string | null; vaultId?: string | null; date?: string },
+    data: UpdateTransactionInput,
   ): Promise<TransactionDto> {
     return this.put<TransactionDto>(`/users/${userId}/transactions/${transactionId}`, data);
   }

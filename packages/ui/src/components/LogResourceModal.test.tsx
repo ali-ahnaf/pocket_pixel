@@ -1,5 +1,5 @@
-import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // The modal imports a real API client (axios-based). Mock it so the component
 // can be rendered in isolation. Tests use userId={null}, so no calls are made.
@@ -19,8 +19,12 @@ describe("LogResourceModal", () => {
   const baseProps = {
     isOpen: true,
     onClose: () => {},
-    userId: null,
+    userId: "user-1",
   };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it("does not render anything when isOpen is false", () => {
     const { container } = render(
@@ -52,6 +56,59 @@ describe("LogResourceModal", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /expense/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /income/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /transfer/i })).toBeInTheDocument();
+  });
+
+  it("shows separate source and target vault pickers for transfers", async () => {
+    const { profileApi } = await import("../lib/api");
+    vi.mocked(profileApi.getVaults).mockResolvedValue([
+      { id: "vault-1", name: "Cash", icon: "Wallet", backgroundColor: "#f59e0b", description: "", isDefault: true, monthlyBudget: null },
+      { id: "vault-2", name: "Savings", icon: "PiggyBank", backgroundColor: "#10b981", description: "", isDefault: false, monthlyBudget: null },
+    ] as never);
+
+    render(<LogResourceModal {...baseProps} />);
+    fireEvent.click(screen.getByRole("button", { name: /manual entry/i }));
+    fireEvent.click(screen.getByRole("button", { name: /transfer/i }));
+
+    await screen.findByRole("button", { name: /select source vault/i });
+    await screen.findByRole("button", { name: /select target vault/i });
+    expect(screen.queryByText(/select vault/i)).not.toBeInTheDocument();
+  });
+
+  it("submits transfer payload with source and target vaults", async () => {
+    const { profileApi } = await import("../lib/api");
+    vi.mocked(profileApi.getVaults).mockResolvedValue([
+      { id: "vault-1", name: "Cash", icon: "Wallet", backgroundColor: "#f59e0b", description: "", isDefault: true, monthlyBudget: null },
+      { id: "vault-2", name: "Savings", icon: "PiggyBank", backgroundColor: "#10b981", description: "", isDefault: false, monthlyBudget: null },
+    ] as never);
+    vi.mocked(profileApi.createTransaction).mockResolvedValue({ id: "txn-1" });
+
+    render(<LogResourceModal {...baseProps} />);
+    fireEvent.click(screen.getByRole("button", { name: /manual entry/i }));
+    fireEvent.click(screen.getByRole("button", { name: /transfer/i }));
+
+    const amountInput = screen.getByPlaceholderText("0.00");
+    fireEvent.change(amountInput, { target: { value: "35.5" } });
+
+    const sourceButton = await screen.findByRole("button", { name: /select source vault/i });
+    fireEvent.click(sourceButton);
+    fireEvent.click(await screen.findByRole("button", { name: /cash/i }));
+
+    const targetButton = await screen.findByRole("button", { name: /select target vault/i });
+    fireEvent.click(targetButton);
+    fireEvent.click(await screen.findByRole("button", { name: /savings/i }));
+
+    fireEvent.click(screen.getByRole("button", { name: /record/i }));
+
+    await waitFor(() => expect(profileApi.createTransaction).toHaveBeenCalledWith(
+      "user-1",
+      expect.objectContaining({
+        amount: 35.5,
+        type: "transfer",
+        sourceVaultId: "vault-1",
+        targetVaultId: "vault-2",
+      }),
+    ));
   });
 
   it("calls onClose when the close button is clicked", () => {

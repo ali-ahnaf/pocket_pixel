@@ -3,6 +3,7 @@ import { AppError } from '../errors/app-error';
 import type { Expense } from '../entities/Expense.entity';
 import type { TransactionsRepository } from '../repositories/transactions.repository';
 import { TransactionsService } from '../services/transactions.service';
+import { createTransactionSchema } from '../routes/transactions/post-transaction.route';
 
 // Prevent the real logger from being initialized during unit tests.
 jest.mock('../services', () => ({
@@ -95,6 +96,17 @@ describe('TransactionsService', () => {
   });
 
   describe('create', () => {
+    it('accepts transfer payloads with source and target vaults', () => {
+      const { error } = createTransactionSchema.validate({
+        amount: 35.5,
+        type: 'transfer',
+        sourceVaultId: '00000000-0000-4000-8000-000000000001',
+        targetVaultId: '00000000-0000-4000-8000-000000000002',
+      });
+
+      expect(error).toBeUndefined();
+    });
+
     it('creates a transaction without tags', async () => {
       const input: CreateTransactionInput = {
         title: 'Salary',

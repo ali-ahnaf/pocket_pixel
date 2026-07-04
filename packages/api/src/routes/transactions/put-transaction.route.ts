@@ -6,12 +6,14 @@ import { asyncHandler } from '../../middleware/error-handler';
 
 const router = Router({ mergeParams: true });
 
-const updateTransactionSchema = Joi.object<UpdateTransactionInput>({
+export const updateTransactionSchema = Joi.object<UpdateTransactionInput>({
   amount: Joi.number().positive().precision(2),
-  type: Joi.string().valid('expense', 'income'),
+  type: Joi.string().valid('expense', 'income', 'transfer'),
   title: Joi.string().max(200).allow(null, ''),
   date: Joi.string().isoDate(),
   vaultId: Joi.string().uuid().allow(null),
+  sourceVaultId: Joi.string().uuid().allow(null),
+  targetVaultId: Joi.string().uuid().allow(null),
   tagIds: Joi.array().items(Joi.string().uuid()),
 }).min(1);
 
