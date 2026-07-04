@@ -231,9 +231,10 @@ export class RecurringService {
   }
 
   private defaultEndDate(startDate: string): string {
-    const d = new Date(startDate + 'T00:00:00');
-    d.setFullYear(d.getFullYear() + 1);
-    return d.toISOString().slice(0, 10);
+    const d = this.parseDateOnly(startDate);
+    d.setUTCFullYear(d.getUTCFullYear() + 1);
+    d.setUTCDate(d.getUTCDate() - 1);
+    return this.formatDate(d);
   }
 
   private normalizeTagIds(tagIds?: string[] | null): string[] {
