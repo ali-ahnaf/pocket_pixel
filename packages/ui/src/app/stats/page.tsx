@@ -348,142 +348,165 @@ export default function StatsPage() {
               <p className="font-body-sm text-on-surface-variant">Track your loot and resource consumption.</p>
             </div>
 
-            {/* Filters */}
-            <div className="relative flex flex-col sm:flex-row gap-4 z-50" onClick={(e) => e.stopPropagation()}>
-              {/* Vault Selector */}
-              <div className="flex flex-col gap-1">
-                <span className="font-label-caps text-[10px] text-outline uppercase ml-1">Source Vault</span>
-                <div className="relative">
-                  <Button
-                    variant="ghost"
-                    className="bg-surface-container text-on-surface font-body-sm py-2 px-4 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)] hover:bg-surface-container-highest flex items-center gap-3 min-w-[160px]"
-                    onClick={() => {
-                      setVaultOpen((v) => !v);
-                      setMonthYearOpen(false);
-                    }}
-                  >
-                    <Package className="text-primary w-4 h-4 shrink-0" />
-                    <span className="flex-grow text-left">{selectedVaultName}</span>
-                    <ChevronDown className="w-4 h-4 shrink-0" />
-                  </Button>
-                  {vaultOpen && (
-                    <div className="absolute top-full left-0 w-full bg-surface-container-high border-4 border-black border-t-0 z-50" onClick={(e) => e.stopPropagation()}>
-                      {[{ id: 'all', name: 'All Vaults' }, ...vaults].map((vault) => (
-                        <div
-                          key={vault.id}
-                          className="p-2 hover:bg-primary hover:text-on-primary cursor-pointer font-body-sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedVaultId(vault.id);
-                            setVaultOpen(false);
-                          }}
-                        >
-                          {vault.name}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+
+
+
+
+
+
+
+
+
+{/* Filters */}
+<div className="relative flex flex-col sm:flex-row gap-4 z-50" onClick={(e) => e.stopPropagation()}>
+  {/* WRAP DROPDOWNS IN FLEX ROW */}
+  <div className="flex flex-row gap-2 flex-1 min-w-0">
+    {/* Source Vault Dropdown */}
+    <div className="flex flex-col gap-1 flex-1 min-w-0">
+      <span className="font-label-caps text-[10px] text-outline uppercase ml-1">Source Vault</span>
+      <div className="relative">
+        <Button
+          variant="ghost"
+          className="bg-surface-container text-on-surface font-body-sm py-2 px-4 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)] hover:bg-surface-container-highest flex items-center gap-3 w-full"
+          onClick={() => {
+            setVaultOpen((v) => !v);
+            setMonthYearOpen(false);
+          }}
+        >
+          <Package className="text-primary w-4 h-4 shrink-0" />
+          <span className="flex-grow text-left">{selectedVaultName}</span>
+          <ChevronDown className="w-4 h-4 shrink-0" />
+        </Button>
+        {vaultOpen && (
+          <div className="absolute top-full left-0 w-full bg-surface-container-high border-4 border-black border-t-0 z-50" onClick={(e) => e.stopPropagation()}>
+            {[{ id: 'all', name: 'All Vaults' }, ...vaults].map((vault) => (
+              <div
+                key={vault.id}
+                className="p-2 hover:bg-primary hover:text-on-primary cursor-pointer font-body-sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedVaultId(vault.id);
+                  setVaultOpen(false);
+                }}
+              >
+                {vault.name}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+    
+    {/* Period Dropdown */}
+    <div className="flex flex-col gap-1 flex-1 min-w-0">
+      <span className="font-label-caps text-[10px] text-outline uppercase ml-1">Period</span>
+      <div className="flex items-center gap-2">
+        <div className="relative w-full">
+          <Button
+            variant="ghost"
+            className="bg-surface-container text-on-surface font-body-sm py-2 px-4 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)] hover:bg-surface-container-highest flex items-center gap-3 w-full"
+            onClick={() => {
+              setMonthYearOpen((v) => !v);
+              setVaultOpen(false);
+            }}
+          >
+            <Calendar className="text-primary w-4 h-4 shrink-0" />
+            <span className="flex-grow text-left">{displayMonthYear(selectedMonthYear)}</span>
+            <ChevronDown className="w-4 h-4 shrink-0" />
+          </Button>
+
+          {monthYearOpen && (
+            <div
+              className="absolute top-full mt-1 left-0 w-[240px] bg-surface-container-high border-4 border-black z-50 p-3 shadow-[4px_4px_0_rgba(0,0,0,0.5)] flex flex-col gap-3"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => {
+                  setSelectedMonthYear(ALL_TIME_PERIOD);
+                  setMonthYearOpen(false);
+                }}
+                className={`p-2 text-center font-label-caps uppercase border-2 transition-colors ${
+                  isAllTime
+                    ? 'bg-primary text-on-primary border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]'
+                    : 'bg-surface hover:bg-surface-container-highest border-black text-on-surface'
+                }`}
+              >
+                ALL TIME
+              </button>
+
+              {/* Year Selector */}
+              <div className="flex justify-between items-center bg-surface-dim border-2 border-black p-1">
+                <button className="p-1 hover:bg-primary hover:text-on-primary transition-colors" onClick={() => setPickerYear((y) => y - 1)}>
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="font-headline-sm text-on-surface">{pickerYear}</span>
+                <button className="p-1 hover:bg-primary hover:text-on-primary transition-colors" onClick={() => setPickerYear((y) => y + 1)}>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
 
-              {/* Month/Year Selector */}
-              <div className="flex flex-col gap-1">
-                <span className="font-label-caps text-[10px] text-outline uppercase ml-1">Period</span>
-                <div className="flex items-center gap-2">
-                  <div className="relative">
-                    <Button
-                      variant="ghost"
-                      className="bg-surface-container text-on-surface font-body-sm py-2 px-4 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)] hover:bg-surface-container-highest flex items-center gap-3 min-w-[160px]"
-                      onClick={() => {
-                        setMonthYearOpen((v) => !v);
-                        setVaultOpen(false);
+              {/* Month Grid */}
+              <div className="grid grid-cols-3 gap-2">
+                {MONTH_NAMES.map((mon, i) => {
+                  const monthValue = `${pickerYear}-${String(i + 1).padStart(2, '0')}`;
+                  const isActive = selectedMonthYear === monthValue;
+                  return (
+                    <button
+                      key={mon}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedMonthYear(monthValue);
+                        setMonthYearOpen(false);
                       }}
+                      className={`p-2 text-center font-body-sm border-2 transition-colors ${
+                        isActive
+                          ? 'bg-primary text-on-primary border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]'
+                          : 'bg-surface hover:bg-surface-container-highest border-transparent hover:border-black text-on-surface'
+                      }`}
                     >
-                      <Calendar className="text-primary w-4 h-4 shrink-0" />
-                      <span className="flex-grow text-left">{displayMonthYear(selectedMonthYear)}</span>
-                      <ChevronDown className="w-4 h-4 shrink-0" />
-                    </Button>
-
-                    {monthYearOpen && (
-                      <div
-                        className="absolute top-full mt-1 left-0 w-[240px] bg-surface-container-high border-4 border-black z-50 p-3 shadow-[4px_4px_0_rgba(0,0,0,0.5)] flex flex-col gap-3"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <button
-                          onClick={() => {
-                            setSelectedMonthYear(ALL_TIME_PERIOD);
-                            setMonthYearOpen(false);
-                          }}
-                          className={`p-2 text-center font-label-caps uppercase border-2 transition-colors ${
-                            isAllTime
-                              ? 'bg-primary text-on-primary border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]'
-                              : 'bg-surface hover:bg-surface-container-highest border-black text-on-surface'
-                          }`}
-                        >
-                          ALL TIME
-                        </button>
-
-                        {/* Year Selector */}
-                        <div className="flex justify-between items-center bg-surface-dim border-2 border-black p-1">
-                          <button className="p-1 hover:bg-primary hover:text-on-primary transition-colors" onClick={() => setPickerYear((y) => y - 1)}>
-                            <ChevronLeft className="w-4 h-4" />
-                          </button>
-                          <span className="font-headline-sm text-on-surface">{pickerYear}</span>
-                          <button className="p-1 hover:bg-primary hover:text-on-primary transition-colors" onClick={() => setPickerYear((y) => y + 1)}>
-                            <ChevronRight className="w-4 h-4" />
-                          </button>
-                        </div>
-
-                        {/* Month Grid */}
-                        <div className="grid grid-cols-3 gap-2">
-                          {MONTH_NAMES.map((mon, i) => {
-                            const monthValue = `${pickerYear}-${String(i + 1).padStart(2, '0')}`;
-                            const isActive = selectedMonthYear === monthValue;
-                            return (
-                              <button
-                                key={mon}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedMonthYear(monthValue);
-                                  setMonthYearOpen(false);
-                                }}
-                                className={`p-2 text-center font-body-sm border-2 transition-colors ${
-                                  isActive
-                                    ? 'bg-primary text-on-primary border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]'
-                                    : 'bg-surface hover:bg-surface-container-highest border-transparent hover:border-black text-on-surface'
-                                }`}
-                              >
-                                {mon}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {!isCurrentMonth && (
-                    <Button variant="ghost" size="sm" className="border-primary text-primary hover:bg-primary/10 whitespace-nowrap" onClick={() => setSelectedMonthYear(CURRENT_MONTH_YEAR)}>
-                      Current
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              {/* Export CSV */}
-              <div className="flex flex-col gap-1">
-                <span className="font-label-caps text-[10px] text-outline uppercase ml-1">Export</span>
-                <Button
-                  variant="ghost"
-                  disabled={filteredTransactions.length === 0 || isLoading}
-                  className="bg-surface-container text-on-surface font-body-sm py-2 px-4 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)] hover:bg-surface-container-highest flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={exportCsv}
-                >
-                  <Download className="text-primary w-4 h-4 shrink-0" />
-                  <span>Export CSV</span>
-                </Button>
+                      {mon}
+                    </button>
+                  );
+                })}
               </div>
             </div>
+          )}
+        </div>
+
+        {!isCurrentMonth && (
+          <Button variant="ghost" size="sm" className="border-primary text-primary hover:bg-primary/10 whitespace-nowrap" onClick={() => setSelectedMonthYear(CURRENT_MONTH_YEAR)}>
+            Current
+          </Button>
+        )}
+      </div>
+    </div>
+  </div>
+
+  {/* Export CSV */}
+  <div className="flex flex-col gap-1">
+    <span className="font-label-caps text-[10px] text-outline uppercase ml-1">Export</span>
+    <Button
+      variant="ghost"
+      disabled={filteredTransactions.length === 0 || isLoading}
+      className="bg-surface-container text-on-surface font-body-sm py-2 px-4 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)] hover:bg-surface-container-highest flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+      onClick={exportCsv}
+      aria-label="Export CSV"
+    >
+      <Download className="text-primary w-4 h-4 shrink-0" />
+      <span className="hidden sm:inline">Export CSV</span>
+    </Button>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
+
           </div>
 
           {/* Bento Grid */}
