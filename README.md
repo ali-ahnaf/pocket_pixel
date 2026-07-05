@@ -194,7 +194,6 @@ Three views to understand your spending:
 - **Monthly report** — income vs. expenses by month
 - **Yearly report** — long-term trend across all months
 
-
 ---
 
 ## Contributing
@@ -473,6 +472,13 @@ Open an issue with:
       <img src="https://img.shields.io/badge/LVL_1-MONK-DD6B20?style=for-the-badge&labelColor=1a1a1a" alt="Monk"/>
     </td>
     <td align="center">
+      <a href="https://github.com/tarannum007">
+        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/198879222&w=100&h=100&fit=cover" width="100" alt="tarannum007"/><br/>
+        <sub><b>tarannum007</b></sub>
+      </a><br/>
+      <img src="https://img.shields.io/badge/LVL_1-MONK-DD6B20?style=for-the-badge&labelColor=1a1a1a" alt="Monk"/>
+    </td>
+    <td align="center">
       <a href="https://github.com/abidhasan176">
         <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/203552162&w=100&h=100&fit=cover" width="100" alt="abidhasan176"/><br/>
         <sub><b>abidhasan176</b></sub>
@@ -495,6 +501,8 @@ Open an issue with:
       </a><br/>
       <img src="https://img.shields.io/badge/LVL_1-MONK-DD6B20?style=for-the-badge&labelColor=1a1a1a" alt="Monk"/>
     </td>
+  </tr>
+  <tr>
     <td align="center">
       <a href="https://github.com/faysaliqbal007">
         <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/198849341&w=100&h=100&fit=cover" width="100" alt="faysaliqbal007"/><br/>
@@ -522,6 +530,22 @@ Open an issue with:
       <a href="https://github.com/minhalriaz">
         <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/203744899&w=100&h=100&fit=cover" width="100" alt="minhalriaz"/><br/>
         <sub><b>minhalriaz</b></sub>
+      </a><br/>
+      <img src="https://img.shields.io/badge/LVL_1-MONK-DD6B20?style=for-the-badge&labelColor=1a1a1a" alt="Monk"/>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/nafi0001">
+        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/199020965&w=100&h=100&fit=cover" width="100" alt="nafi0001"/><br/>
+        <sub><b>nafi0001</b></sub>
+      </a><br/>
+      <img src="https://img.shields.io/badge/LVL_1-MONK-DD6B20?style=for-the-badge&labelColor=1a1a1a" alt="Monk"/>
+    </td>
+    <td align="center">
+      <a href="https://github.com/proyas2005">
+        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/199010630&w=100&h=100&fit=cover" width="100" alt="proyas2005"/><br/>
+        <sub><b>proyas2005</b></sub>
       </a><br/>
       <img src="https://img.shields.io/badge/LVL_1-MONK-DD6B20?style=for-the-badge&labelColor=1a1a1a" alt="Monk"/>
     </td>
