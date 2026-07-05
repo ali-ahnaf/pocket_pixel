@@ -250,13 +250,13 @@ export default function ProfilePage() {
             {loading ? (
               <p className="font-body-sm text-on-surface-variant">Loading...</p>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+              <div className="grid grid-cols-2 gap-gutter">
                 {vaults.map((vault) => {
                   const IconComp = iconMapper(vault.icon || 'Briefcase');
                   return (
                     <Card key={vault.id} className={`p-4 relative flex flex-col mt-2 justify-between ${vault.isDefault ? 'border-primary mt-2' : 'border-outline-variant'}`}>
                       <div>
-                        <div className="flex justify-between items-start">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
                           <div className="flex items-center gap-2 mb-1">
                             <div className="w-8 h-8 flex items-center justify-center border-2 border-black shrink-0" style={{ backgroundColor: vault.color || '#3b82f6' }}>
                               <IconComp size={16} className="text-black drop-shadow-sm" />
@@ -264,7 +264,7 @@ export default function ProfilePage() {
                             <h3 className="font-headline-md text-on-surface">{vault.name}</h3>
                           </div>
                           {vault.isDefault && (
-                            <Badge variant="primary" className="text-[10px]">
+                            <Badge variant="primary" className="text-[10px] w-fit self-start sm:self-auto">
                               DEFAULT
                             </Badge>
                           )}
