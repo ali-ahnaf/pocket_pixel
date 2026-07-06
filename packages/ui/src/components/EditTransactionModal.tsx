@@ -5,6 +5,7 @@ import { X, Coins, ChevronDown, Plus, Pencil, Trash2 } from 'lucide-react';
 import { iconMapper } from '../lib/iconMapper';
 import { profileApi } from '../lib/api';
 import { TransactionTypeToggle } from './TransactionTypeToggle';
+import { PixelDatePicker } from './PixelDatePicker';
 import type { TagDto, VaultDto, TransactionDto } from '@expense-tracker/shared';
 
 interface EditTransactionModalProps {
@@ -19,6 +20,7 @@ export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, trans
   const [isExpense, setIsExpense] = useState(true);
   const [amount, setAmount] = useState('');
   const [title, setTitle] = useState('');
+  const [date, setDate] = useState('');
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isVisible, setIsVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,6 +55,7 @@ export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, trans
       setIsExpense(transaction.type === 'expense');
       setAmount(String(transaction.amount));
       setTitle(transaction.title ?? '');
+      setDate(transaction.date ? transaction.date.split('T')[0] : '');
       setSelectedTags(transaction.tags ?? []);
       setSelectedVaultId(transaction.vaultId);
       setTagInput('');
@@ -98,6 +101,7 @@ export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, trans
         tagIds: selectedTags.map((t) => t.id),
         title: title || null,
         vaultId: selectedVaultId,
+        date: date || undefined,
       });
       onSuccess?.();
       onClose();
@@ -171,18 +175,22 @@ export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, trans
           </div>
 
           <div className="space-y-2">
-            <div className="relative flex items-center">
-              <div className="absolute left-4 flex items-center pointer-events-none">
-                <Coins className="text-secondary" />
+            <div className="flex items-center gap-2">
+              <div className="relative flex items-center flex-1">
+                <div className="absolute left-4 flex items-center pointer-events-none">
+                  <Coins className="text-secondary" />
+                </div>
+                <input
+                  className="w-full h-16 pl-14 pr-4 bg-surface-container-lowest border-4 border-black shadow-[inset_4px_4px_0px_rgba(0,0,0,0.6),_inset_-2px_-2px_0px_rgba(255,255,255,0.05)] font-headline-md text-secondary placeholder:text-surface-variant focus:outline-none focus:ring-0"
+                  placeholder="0.00"
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                />
               </div>
-              <input
-                className="w-full h-16 pl-14 pr-4 bg-surface-container-lowest border-4 border-black shadow-[inset_4px_4px_0px_rgba(0,0,0,0.6),_inset_-2px_-2px_0px_rgba(255,255,255,0.05)] font-headline-md text-secondary placeholder:text-surface-variant focus:outline-none focus:ring-0"
-                placeholder="0.00"
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-              />
+              <PixelDatePicker value={date} onChange={setDate} />
             </div>
+            {date && <p className="font-label-caps text-xs text-outline pl-1">{new Date(`${date}T00:00:00`).toLocaleDateString('en-GB')}</p>}
           </div>
 
           <div className="space-y-2">
