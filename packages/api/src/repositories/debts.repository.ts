@@ -1,4 +1,4 @@
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, FindManyOptions, IsNull, Not, Repository } from 'typeorm';
 import { AppDataSource } from '../data-source';
 import { Debt } from '../entities/Debt.entity';
 
@@ -9,12 +9,17 @@ export class DebtsRepository {
     return this.dataSource.getRepository(Debt);
   }
 
-  findManyForUser(userId: string, includeDeleted = false): Promise<Debt[]> {
-    return this.repo.find({
-      where: { userId },
-      order: { createdAt: 'DESC' },
-      withDeleted: includeDeleted,
-    });
+  findManyForUser(userId: string, statusOrFlag: 'incomplete' | 'completed' | 'all' | boolean = 'incomplete'): Promise<Debt[]> {
+    const options: FindManyOptions<Debt> = { where: { userId }, order: { createdAt: 'DESC' } };
+
+    if (statusOrFlag === 'completed' || statusOrFlag === true) {
+      options.where = statusOrFlag === 'completed' ? { userId, deletedAt: Not(IsNull()) } : { userId };
+      options.withDeleted = true;
+    } else if (statusOrFlag === 'all') {
+      options.withDeleted = true;
+    }
+
+    return this.repo.find(options);
   }
 
   findOneForUser(userId: string, id: string, includeDeleted = false): Promise<Debt | null> {
