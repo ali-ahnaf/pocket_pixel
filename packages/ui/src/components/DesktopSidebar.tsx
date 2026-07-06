@@ -77,12 +77,12 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ name, email, ava
               aria-current={isActive ? 'page' : undefined}
               className={
                 isActive
-                  ? 'flex items-center gap-3 p-3 bg-primary text-on-primary border-r-4 border-primary-container btn'
+                  ? 'flex items-center gap-3 p-3 bg-primary text-on-primary border-4 border-primary-container'
                   : 'flex items-center gap-3 p-3 text-on-surface hover:bg-surface-container-highest hover:translate-x-1 active:scale-95 transition-transform border-4 border-transparent hover:border-black'
               }
             >
               <Icon />
-              <span className="font-label-caps tracking-wider uppercase">{label}</span>
+              <span className={`font-label-caps tracking-wider uppercase ${isActive ? 'font-black' : 'font-bold'}`}>{label}</span>
             </Link>
           );
         })}

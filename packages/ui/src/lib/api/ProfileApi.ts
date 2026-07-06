@@ -1,4 +1,4 @@
-import type { User, VaultDto, TagDto, TransactionDto, OccurrenceDto, RecurringDto, ParsedTransaction, UsageReport, DebtDto, ChangePasswordPayload } from '@expense-tracker/shared';
+import type { User, VaultDto, TagDto, TransactionDto, OccurrenceDto, RecurringDto, ParsedTransaction, UsageReport, DebtDto, DebtStatus, ChangePasswordPayload } from '@expense-tracker/shared';
 import ApiClient from './ApiClient';
 
 export default class ProfileApi extends ApiClient {
@@ -127,7 +127,7 @@ export default class ProfileApi extends ApiClient {
   }
 
   // Debts (dues)
-  getDebts(userId: string, status: 'incomplete' | 'completed' | 'all' = 'incomplete'): Promise<DebtDto[]> {
+  getDebts(userId: string, status: DebtStatus = 'incomplete'): Promise<DebtDto[]> {
     return this.get<DebtDto[]>(`/users/${userId}/debts?status=${status}`);
   }
 

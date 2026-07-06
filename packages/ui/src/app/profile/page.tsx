@@ -200,7 +200,7 @@ export default function ProfilePage() {
       <DesktopSidebar name={playerName} avatar={avatarUrl} />
 
       <main className="flex-1 flex flex-col w-full md:h-screen relative px-3 pb-24 md:pb-0 overflow-y-auto overflow-x-hidden">
-        <div className="max-w-5xl w-full mx-auto p-margin-mobile md:p-8 flex flex-col gap-3 md:gap-14">
+        <div className="w-full p-margin-mobile md:p-8 flex flex-col gap-3 md:gap-14">
           {/* Profile Section */}
           <section>
             <h2 className="font-headline-lg text-primary mb-stack-sm flex items-center gap-2">
