@@ -2,10 +2,6 @@ import { DataSource, Repository } from 'typeorm';
 import { AppDataSource } from '../data-source';
 import { Debt } from '../entities/Debt.entity';
 
-/**
- * Data-access layer for debts (dues). The TypeORM repository is resolved lazily
- * per call so a different DataSource can be injected in tests.
- */
 export class DebtsRepository {
   constructor(private readonly dataSource: DataSource = AppDataSource) {}
 
@@ -13,12 +9,19 @@ export class DebtsRepository {
     return this.dataSource.getRepository(Debt);
   }
 
-  findManyForUser(userId: string): Promise<Debt[]> {
-    return this.repo.find({ where: { userId }, order: { createdAt: 'DESC' } });
+  findManyForUser(userId: string, includeDeleted = false): Promise<Debt[]> {
+    return this.repo.find({
+      where: { userId },
+      order: { createdAt: 'DESC' },
+      withDeleted: includeDeleted,
+    });
   }
 
-  findOneForUser(userId: string, id: string): Promise<Debt | null> {
-    return this.repo.findOneBy({ userId, id });
+  findOneForUser(userId: string, id: string, includeDeleted = false): Promise<Debt | null> {
+    return this.repo.findOne({
+      where: { userId, id },
+      withDeleted: includeDeleted,
+    });
   }
 
   createEntity(data: Partial<Debt>): Debt {
@@ -30,6 +33,6 @@ export class DebtsRepository {
   }
 
   remove(debt: Debt): Promise<Debt> {
-    return this.repo.remove(debt);
+    return this.repo.softRemove(debt);
   }
 }

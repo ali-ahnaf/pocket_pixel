@@ -6,7 +6,6 @@ import { debtsRepository, transactionsRepository } from '../repositories';
 import { logger } from '.';
 
 export type { CreateDebtInput, UpdateDebtInput, ApplyDebtInput, DebtDto };
-
 /**
  * Business logic for debts (dues). Repositories are injected (default to the
  * shared singletons) so the service can be unit-tested against mocks.
@@ -17,20 +16,21 @@ export class DebtsService {
     private readonly transactions: TransactionsRepository = transactionsRepository,
   ) {}
 
-  async list(userId: string): Promise<DebtDto[]> {
-    const debts = await this.debts.findManyForUser(userId);
-    return debts.map((debt) => ({
-      id: debt.id,
-      userId: debt.userId,
-      title: debt.title,
-      amount: Number(debt.amount),
-      type: debt.type,
-      notes: debt.notes ?? null,
-      createdAt: debt.createdAt,
-    }));
+  async list(userId: string, status: 'incomplete' | 'completed' | 'all' = 'incomplete'): Promise<any[]> {
+    const includeDeleted = status === 'completed' || status === 'all';
+
+    const debts = includeDeleted ? await this.debts.findManyForUser(userId, true) : await this.debts.findManyForUser(userId);
+
+    const filteredDebts = debts.filter((debt) => {
+      if (status === 'incomplete') return !debt.deletedAt;
+      if (status === 'completed') return !!debt.deletedAt;
+      return true;
+    });
+
+    return filteredDebts.map((debt) => this.mapToDto(debt));
   }
 
-  async create(userId: string, input: CreateDebtInput): Promise<DebtDto> {
+  async create(userId: string, input: CreateDebtInput): Promise<any> {
     const debt = this.debts.createEntity({
       userId,
       title: input.title,
@@ -40,20 +40,16 @@ export class DebtsService {
     });
     const saved = await this.debts.save(debt);
     logger.info('Created debt', { userId, debtId: saved.id });
-    return {
-      id: saved.id,
-      userId: saved.userId,
-      title: saved.title,
-      amount: Number(saved.amount),
-      type: saved.type,
-      notes: saved.notes ?? null,
-      createdAt: saved.createdAt,
-    };
+    return this.mapToDto(saved);
   }
 
-  async update(userId: string, id: string, input: UpdateDebtInput): Promise<DebtDto> {
+  async update(userId: string, id: string, input: UpdateDebtInput): Promise<any> {
     const debt = await this.debts.findOneForUser(userId, id);
     if (!debt) {
+      const deletedDebt = await this.debts.findOneForUser(userId, id, true);
+      if (deletedDebt) {
+        throw new AppError('Cannot update a completed due', 400);
+      }
       throw new AppError('Due not found', 404);
     }
 
@@ -64,15 +60,7 @@ export class DebtsService {
 
     const saved = await this.debts.save(debt);
     logger.info('Updated debt', { userId, debtId: id });
-    return {
-      id: saved.id,
-      userId: saved.userId,
-      title: saved.title,
-      amount: Number(saved.amount),
-      type: saved.type,
-      notes: saved.notes ?? null,
-      createdAt: saved.createdAt,
-    };
+    return this.mapToDto(saved);
   }
 
   async remove(userId: string, id: string): Promise<void> {
@@ -84,7 +72,6 @@ export class DebtsService {
     await this.debts.remove(debt);
     logger.info('Deleted debt', { userId, debtId: id });
   }
-
   /**
    * Settle a debt: record it as a one-off transaction for today and delete the
    * debt. Returns the id of the created transaction.
@@ -96,12 +83,7 @@ export class DebtsService {
     }
     if (input.skipTransaction) {
       await this.debts.remove(debt);
-
-      logger.info('Applied debt without transaction', {
-        userId,
-        debtId: id,
-      });
-
+      logger.info('Applied debt without transaction', { userId, debtId: id });
       return { id: debt.id };
     }
     const date = new Date().toISOString().split('T')[0];
@@ -118,5 +100,18 @@ export class DebtsService {
     await this.debts.remove(debt);
     logger.info('Applied debt', { userId, debtId: id, transactionId: saved.id });
     return { id: saved.id };
+  }
+
+  private mapToDto(debt: any) {
+    return {
+      id: debt.id,
+      userId: debt.userId,
+      title: debt.title,
+      amount: Number(debt.amount),
+      type: debt.type,
+      notes: debt.notes ?? null,
+      createdAt: debt.createdAt,
+      completed: !!debt.deletedAt,
+    };
   }
 }
