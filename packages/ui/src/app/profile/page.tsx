@@ -254,7 +254,7 @@ export default function ProfilePage() {
                 {vaults.map((vault) => {
                   const IconComp = iconMapper(vault.icon || 'Briefcase');
                   return (
-                    <Card key={vault.id} className={`p-4 relative flex flex-col mt-2 justify-between ${vault.isDefault ? 'border-primary mt-2' : 'border-outline-variant'}`}>
+                    <Card key={vault.id} className={`p-2 relative flex flex-col mt-2 justify-between ${vault.isDefault ? 'border-primary mt-2' : 'border-outline-variant'}`}>
                       <div>
                         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
                           <div className="flex items-center gap-2 mb-1">
@@ -288,7 +288,7 @@ export default function ProfilePage() {
                       ) : (
                         <div className="flex justify-between items-center mt-4">
                           <button className="font-label-caps text-secondary flex items-center gap-1 hover:underline text-sm" onClick={() => handleSetDefault(vault.id)}>
-                            <Star className="w-[16px] h-[16px]" /> Set as Default
+                            <Star className="w-[16px] h-[16px]" />
                           </button>
                           <div className="flex gap-2">
                             <Button
