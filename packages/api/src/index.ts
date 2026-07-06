@@ -18,6 +18,7 @@ import wizardRouter from './routes/wizard.routes';
 import { authenticate, requireAuth } from './middleware/auth';
 import { errorHandler } from './middleware/error-handler';
 import { restoreAllRecurringJobs } from './scheduler/recurring-scheduler';
+import { startBackupScheduler } from './scheduler/backup-scheduler';
 import { logger } from './services/logger.service';
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -68,6 +69,7 @@ AppDataSource.initialize()
     } catch (err) {
       logger.error('Failed to restore recurring jobs:', err);
     }
+    startBackupScheduler();
     app.listen(PORT, () => {
       logger.info(`Node env: ${process.env.NODE_ENV}`);
       logger.info(`API running at http://localhost:${PORT}`);

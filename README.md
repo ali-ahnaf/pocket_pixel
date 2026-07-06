@@ -176,6 +176,59 @@ npm run migration:revert     # Roll back the last migration
 
 ---
 
+## Database Backups (Cloudflare R2)
+
+The API can snapshot the SQLite database and upload it to **Cloudflare R2** (an S3-compatible object store) every **12 hours**. It's **off by default** — flip `ENABLE_BACKUP=true` in the API `.env` to turn it on. Backups use SQLite's online backup API, so snapshots stay consistent even while the app is writing.
+
+Each run uploads an object named `pocket_pixel/pocket_pixel-<timestamp>.sqlite` to your bucket.
+
+> **Why R2?** The free tier includes **10 GB storage** and, unlike most clouds, **zero egress fees** — you can pull your backups down for free. That's plenty for a SQLite file.
+
+### 1. Create a Cloudflare account & enable R2
+
+1. Sign up (or log in) at [dash.cloudflare.com](https://dash.cloudflare.com) — the account is free.
+2. In the sidebar open **R2 Object Storage** and click **Enable R2**. Cloudflare asks for a payment method to verify identity, but you are **not charged** while you stay within the free tier limits.
+
+### 2. Create a bucket
+
+1. Go to **R2 → Create bucket**.
+2. Name it (e.g. `pocket-pixel-backups`) and create it. The location hint can stay on **Automatic**.
+3. Remember this name — it's your `R2_BUCKET`.
+
+### 3. Create an API token
+
+1. On the R2 overview page click **Manage R2 API Tokens → Create API Token**.
+2. Permission: **Object Read & Write**.
+3. Scope it to the bucket you just created (recommended), then **Create**.
+4. Copy the **Access Key ID** and **Secret Access Key** — the secret is shown **only once**.
+
+### 4. Find your Account ID
+
+Your **Account ID** is on the R2 overview page (and in the S3 endpoint Cloudflare shows: `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`). Copy it.
+
+### 5. Configure the API `.env`
+
+Add these to `packages/api/.env` (see `packages/api/.env.example`):
+
+```bash
+ENABLE_BACKUP=true
+R2_ACCOUNT_ID=your-account-id
+R2_ACCESS_KEY_ID=your-access-key-id
+R2_SECRET_ACCESS_KEY=your-secret-access-key
+R2_BUCKET=pocket-pixel-backups
+```
+
+Restart the API to pick them up (`pm2 restart ecosystem.config.js` in production, or restart `npm run dev:api` locally). On boot you should see `Database backup scheduled every 12 hours to R2` in the logs. If R2 credentials are missing while `ENABLE_BACKUP=true`, the scheduler logs a warning and stays idle instead of crashing.
+
+### Restoring a backup
+
+1. Download the desired `.sqlite` object from your R2 bucket (Cloudflare dashboard or any S3 client).
+2. Stop the API.
+3. Replace the live database file (`/var/www/pocket_pixel/pocket_pixel.sqlite` in production, or `packages/api/pocket_pixel.sqlite` locally) with the downloaded file.
+4. Start the API again.
+
+---
+
 ## Features In Depth
 
 ### Vaults
