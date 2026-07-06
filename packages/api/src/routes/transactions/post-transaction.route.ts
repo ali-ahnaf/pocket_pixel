@@ -7,10 +7,23 @@ import { asyncHandler } from '../../middleware/error-handler';
 const router = Router({ mergeParams: true });
 const createTransactionSchema = Joi.object<CreateTransactionInput>({
   amount: Joi.number().positive().precision(2).required(),
-  type: Joi.string().valid('expense', 'income').default('expense'),
+
+  type: Joi.string().valid('expense','income','transfer').default('expense'),
   tagIds: Joi.array().items(Joi.string().uuid()).default([]),
   title: Joi.string().max(200).allow(null, '').optional(),
-  vaultId: Joi.string().uuid().allow(null).optional(),
+  vaultId: Joi.string().uuid().allow(null).optional().when('type', {
+    is: 'transfer',
+    then: Joi.required().messages({
+      'any.required': 'Source vaultId is required for transfers'
+    })
+  }),
+  targetVaultId: Joi.string().uuid().allow(null).optional().when('type', {
+    is: 'transfer',
+    then: Joi.required().invalid(Joi.ref('vaultId')).messages({
+      'any.required': 'targetVaultId is required for transfers',
+      'any.invalid': 'targetVaultId must be different from the source vaultId'
+    })
+  }),
   date: Joi.string()
     .pattern(/^\d{4}-\d{2}-\d{2}$/)
     .optional(),
