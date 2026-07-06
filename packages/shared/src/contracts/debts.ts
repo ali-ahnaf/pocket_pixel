@@ -1,5 +1,7 @@
 import { TransactionType } from './transactions';
 
+export type DebtStatus = 'incomplete' | 'completed' | 'all';
+
 export interface CreateDebtInput {
   title: string;
   amount: number;
@@ -28,4 +30,5 @@ export interface DebtDto {
   notes: string | null;
   createdAt: Date;
   completed?: boolean;
+  discarded?: boolean;
 }

@@ -68,14 +68,47 @@ describe('DebtsService', () => {
   });
 
   describe('list', () => {
-    it("returns the user's debts", async () => {
+    it("returns the user's debts and defaults to the incomplete status", async () => {
       const debt = buildDebt();
       debts.findManyForUser.mockResolvedValue([debt]);
 
       const result = await service.list('user-1');
 
-      expect(result).toEqual([debt]);
-      expect(debts.findManyForUser).toHaveBeenCalledWith('user-1');
+      expect(result).toEqual([
+        {
+          id: debt.id,
+          userId: debt.userId,
+          title: debt.title,
+          amount: debt.amount,
+          type: debt.type,
+          notes: null,
+          createdAt: debt.createdAt,
+          completed: undefined,
+          discarded: false,
+        },
+      ]);
+      expect(debts.findManyForUser).toHaveBeenCalledWith('user-1', 'incomplete');
+    });
+
+    it('forwards the requested status to the repository', async () => {
+      debts.findManyForUser.mockResolvedValue([]);
+
+      await service.list('user-1', 'completed');
+
+      expect(debts.findManyForUser).toHaveBeenCalledWith('user-1', 'completed');
+    });
+
+    it('flags soft-deleted, non-completed debts as discarded', async () => {
+      const applied = buildDebt({ id: 'applied', completed: true, deletedAt: new Date() });
+      const discarded = buildDebt({ id: 'discarded', completed: false, deletedAt: new Date() });
+      debts.findManyForUser.mockResolvedValue([applied, discarded]);
+
+      const result = await service.list('user-1', 'completed');
+
+      expect(result).toMatchObject([
+        { id: 'applied', completed: true, discarded: false },
+        { id: 'discarded', completed: false, discarded: true },
+      ]);
     });
 
     it('returns an empty array if no debt is found', async () => {
@@ -85,7 +118,7 @@ describe('DebtsService', () => {
       const result = await service.list('user-1');
 
       expect(result).toEqual(emptyDebts);
-      expect(debts.findManyForUser).toHaveBeenCalledWith('user-1');
+      expect(debts.findManyForUser).toHaveBeenCalledWith('user-1', 'incomplete');
     });
   });
 
@@ -210,6 +243,10 @@ describe('DebtsService', () => {
       expect(transactions.createEntity).not.toHaveBeenCalled();
       expect(transactions.save).not.toHaveBeenCalled();
 
+      expect(debt.completed).toBe(true);
+      // The completed flag must be persisted before the soft-remove, otherwise
+      // softRemove drops it and the due is later flagged as discarded.
+      expect(debts.save).toHaveBeenCalledWith(expect.objectContaining({ completed: true }));
       expect(debts.remove).toHaveBeenCalledWith(debt);
 
       expect(result).toEqual({
@@ -242,6 +279,8 @@ describe('DebtsService', () => {
 
       expect(transactions.save).toHaveBeenCalledWith(expense);
 
+      expect(debt.completed).toBe(true);
+      expect(debts.save).toHaveBeenCalledWith(expect.objectContaining({ completed: true }));
       expect(debts.remove).toHaveBeenCalledWith(debt);
 
       expect(result).toEqual({

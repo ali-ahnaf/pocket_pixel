@@ -1,11 +1,11 @@
-import { CreateDebtInput, UpdateDebtInput, ApplyDebtInput, DebtDto } from '@expense-tracker/shared';
+import { CreateDebtInput, UpdateDebtInput, ApplyDebtInput, DebtDto, DebtStatus } from '@expense-tracker/shared';
 import { AppError } from '../errors/app-error';
 import { DebtsRepository } from '../repositories/debts.repository';
 import { TransactionsRepository } from '../repositories/transactions.repository';
 import { debtsRepository, transactionsRepository } from '../repositories';
 import { logger } from '.';
 
-export type { CreateDebtInput, UpdateDebtInput, ApplyDebtInput, DebtDto };
+export type { CreateDebtInput, UpdateDebtInput, ApplyDebtInput, DebtDto, DebtStatus };
 
 /**
  * Business logic for debts (dues). Repositories are injected (default to the
@@ -17,8 +17,8 @@ export class DebtsService {
     private readonly transactions: TransactionsRepository = transactionsRepository,
   ) {}
 
-  async list(userId: string): Promise<DebtDto[]> {
-    const debts = await this.debts.findManyForUser(userId);
+  async list(userId: string, status: DebtStatus = 'incomplete'): Promise<DebtDto[]> {
+    const debts = await this.debts.findManyForUser(userId, status);
     return debts.map((debt) => ({
       id: debt.id,
       userId: debt.userId,
@@ -27,6 +27,9 @@ export class DebtsService {
       type: debt.type,
       notes: debt.notes ?? null,
       createdAt: debt.createdAt,
+      completed: debt.completed,
+      // A soft-deleted due that was never applied was discarded by the user.
+      discarded: debt.deletedAt != null && !debt.completed,
     }));
   }
 
@@ -94,6 +97,12 @@ export class DebtsService {
     if (!debt) {
       throw new AppError('Due not found', 404);
     }
+
+    // Persist the completed flag first: softRemove only writes deletedAt, so it
+    // would drop this in-memory change and the settled due would look discarded.
+    debt.completed = true;
+    await this.debts.save(debt);
+
     if (input.skipTransaction) {
       await this.debts.remove(debt);
 

@@ -1,14 +1,13 @@
 'use client';
 import Link from 'next/link';
 
-import { useEffect, useState } from 'react';
-import { Plus, Check, Trash2, TrendingDown, TrendingUp, X, Coins, ChevronDown } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { Plus, Check, Trash2, TrendingDown, TrendingUp, Coins, ChevronDown } from 'lucide-react';
 
-import { AppBar, BottomNavBar, Button, Card, AddDebtModal, DesktopSidebar } from '@/components';
+import { AppBar, BottomNavBar, Button, Card, AddDebtModal, DesktopSidebar, DiscardDebtModal, ApplyDebtModal, QueryParamsProvider, useQueryParams } from '@/components';
 import { useAuth } from '@/hooks/useAuth';
 import { profileApi } from '@/lib/api';
 import type { DebtDto, VaultDto } from '@expense-tracker/shared';
-import { iconMapper } from '@/lib/iconMapper';
 
 const DebtTypes = {
   INCOMPLETE: 'incomplete',
@@ -18,40 +17,54 @@ const DebtTypes = {
 
 type DebtType = (typeof DebtTypes)[keyof typeof DebtTypes];
 
+const STATUS_QUERY_PARAM = 'status';
+
+function isDebtType(value: string | null): value is DebtType {
+  return value === DebtTypes.INCOMPLETE || value === DebtTypes.COMPLETED || value === DebtTypes.ALL;
+}
+
 function formatCurrency(amount: number): string {
   return `⛁ ${Math.abs(amount).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
-export default function DebtsPage() {
+function DebtsContent() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
+
+  const { getParam, setParam } = useQueryParams();
+  const statusParam = getParam(STATUS_QUERY_PARAM);
+  const status: DebtType = isDebtType(statusParam) ? statusParam : DebtTypes.INCOMPLETE;
 
   const [debts, setDebts] = useState<DebtDto[]>([]);
   const [vaults, setVaults] = useState<VaultDto[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [editDebt, setEditDebt] = useState<DebtDto | null>(null);
-  const [status, setStatus] = useState<DebtType>(DebtTypes.INCOMPLETE);
 
   const [applyDebt, setApplyDebt] = useState<DebtDto | null>(null);
   const [applyVaultId, setApplyVaultId] = useState<string>('');
-  const [vaultDropdownOpen, setVaultDropdownOpen] = useState(false);
-  const [applyingAction, setApplyingAction] = useState<'confirm' | 'withoutTransaction' | null>(null);
-  const applying = applyingAction !== null;
+  const [applying, setApplying] = useState(false);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+  const [discardDebt, setDiscardDebt] = useState<DebtDto | null>(null);
 
-  useEffect(() => {
+  const fetchData = useCallback(async (): Promise<void> => {
     if (!userId) return;
     setIsLoading(true);
 
-    Promise.all([profileApi.getDebts(userId, status), profileApi.getVaults(userId)])
-      .then(([d, v]) => {
-        setDebts(d);
-        setVaults(v);
-      })
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
+    try {
+      const [d, v] = await Promise.all([profileApi.getDebts(userId, status), profileApi.getVaults(userId)]);
+      setDebts(d);
+      setVaults(v);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoading(false);
+    }
   }, [userId, status]);
+
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData]);
 
   const handleCreate = async (data: { title: string; amount: number; type: 'expense' | 'income'; notes: string | null }) => {
     if (!userId) return;
@@ -71,32 +84,27 @@ export default function DebtsPage() {
     setApplyDebt(debt);
   };
 
-  const handleApply = async (skipTransaction?: boolean) => {
+  const handleApply = async (skipTransaction: boolean) => {
     if (!userId || !applyDebt) return;
 
-    setApplyingAction(skipTransaction ? 'withoutTransaction' : 'confirm');
+    setApplying(true);
 
     try {
       await profileApi.applyDebt(userId, applyDebt.id, applyVaultId || null, skipTransaction);
-      setDebts((prev) => prev.filter((d) => d.id !== applyDebt.id));
       setApplyDebt(null);
-      setVaultDropdownOpen(false);
+      await fetchData();
     } catch (e) {
       console.error(e);
     } finally {
-      setApplyingAction(null);
+      setApplying(false);
     }
   };
 
   const handleDiscard = async (debt: DebtDto) => {
     if (!userId) return;
-    if (!confirm(`Discard "${debt.title}"?`)) return;
     await profileApi.deleteDebt(userId, debt.id);
-    setDebts((prev) => prev.filter((d) => d.id !== debt.id));
+    await fetchData();
   };
-
-  const selectedVault = vaults.find((v) => v.id === applyVaultId);
-  const SelectedVaultIcon = iconMapper(selectedVault?.icon || 'Briefcase');
 
   return (
     <div className="bg-background text-on-background font-body-lg min-h-screen flex flex-col md:flex-row overflow-x-hidden selection:bg-primary selection:text-on-primary">
@@ -104,8 +112,8 @@ export default function DebtsPage() {
 
       <DesktopSidebar />
 
-      <main className="flex-1 flex flex-col w-full md:h-screen relative px-3 pb-6 md:pb-0 overflow-y-auto overflow-x-hidden">
-        <div className="max-w-4xl w-full mx-auto p-margin-mobile md:p-8 flex flex-col gap-stack-md">
+      <main className="flex-1 flex flex-col w-full md:h-screen relative px-3 pb-24 md:pb-0 overflow-y-auto overflow-x-hidden">
+        <div className="w-full p-margin-mobile md:p-8 flex flex-col gap-stack-md">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b-4 border-surface-container-highest pb-4">
             <div>
               <h2 className="font-headline-lg text-headline-lg text-primary">
@@ -148,7 +156,7 @@ export default function DebtsPage() {
                             <button
                               key={type}
                               onClick={() => {
-                                setStatus(type);
+                                setParam(STATUS_QUERY_PARAM, type);
                                 setStatusDropdownOpen(false);
                               }}
                               className={`w-full h-14 px-4 flex items-center justify-between font-body-lg transition-colors hover:bg-surface-container-highest group ${
@@ -207,7 +215,8 @@ export default function DebtsPage() {
                         <div className="flex items-center gap-2">
                           <span className="font-headline-sm text-on-surface truncate group-hover:text-primary transition-colors">{debt.title}</span>
 
-                          {debt.completed && <span className="text-xs bg-green-200 px-2 py-1 rounded">✓ Completed</span>}
+                          {debt.completed && <span className="text-xs border-2 border-green-600 text-green-700 px-2 py-0.5 rounded whitespace-nowrap">✓</span>}
+                          {debt.discarded && <span className="text-xs border-2 border-error text-error px-2 py-0.5 rounded whitespace-nowrap">✕</span>}
                         </div>
                         <span className={`font-label-caps text-[11px] uppercase ${isIncome ? 'text-primary' : 'text-error'}`}>
                           {formatCurrency(debt.amount)} · {debt.type}
@@ -215,16 +224,18 @@ export default function DebtsPage() {
                         {debt.notes && <span className="font-body-sm text-on-surface-variant truncate mt-0.5">{debt.notes}</span>}
                       </div>
                     </button>
-                    <div className="flex gap-2 shrink-0">
-                      <Button variant="primary" size="sm" className="flex items-center gap-1" onClick={() => openApplyDialog(debt)}>
-                        <Check className="w-4 h-4" />
-                        <span className="font-label-caps uppercase">Apply</span>
-                      </Button>
-                      <Button variant="danger" size="sm" className="flex items-center gap-1" onClick={() => handleDiscard(debt)}>
-                        <Trash2 className="w-4 h-4" />
-                        <span className="font-label-caps uppercase">Discard</span>
-                      </Button>
-                    </div>
+                    {!debt.completed && !debt.discarded && (
+                      <div className="flex gap-2 shrink-0">
+                        <Button variant="primary" size="sm" className="flex items-center gap-1" onClick={() => openApplyDialog(debt)}>
+                          <Check className="w-4 h-4" />
+                          <span className="font-label-caps uppercase">Apply</span>
+                        </Button>
+                        <Button variant="danger" size="sm" className="flex items-center gap-1" onClick={() => setDiscardDebt(debt)}>
+                          <Trash2 className="w-4 h-4" />
+                          <span className="font-label-caps uppercase">Discard</span>
+                        </Button>
+                      </div>
+                    )}
                   </Card>
                 );
               })}
@@ -233,96 +244,32 @@ export default function DebtsPage() {
         </div>
       </main>
 
+      <BottomNavBar />
+
       <AddDebtModal isOpen={addOpen} onClose={() => setAddOpen(false)} onSave={handleCreate} />
 
       <AddDebtModal isOpen={editDebt !== null} onClose={() => setEditDebt(null)} onSave={handleUpdate} debt={editDebt} />
 
-      {applyDebt && (
-        <>
-          <div className="fixed inset-0 bg-black/70 z-[100]" onClick={() => !applying && setApplyDebt(null)} />
-          <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[110] w-full max-w-md bg-surface-container-high border-4 border-black shadow-[8px_8px_0_0_rgba(0,0,0,1)]">
-            <header className="px-6 py-4 border-b-4 border-black flex justify-between items-center">
-              <h2 className="font-headline-md text-primary uppercase">Apply Due</h2>
-              <button
-                onClick={() => !applying && setApplyDebt(null)}
-                className="w-10 h-10 bg-surface-container-highest border-4 border-black flex items-center justify-center hover:bg-error-container hover:text-on-error-container transition-colors"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </header>
+      <DiscardDebtModal isOpen={discardDebt !== null} onClose={() => setDiscardDebt(null)} debtTitle={discardDebt?.title ?? ''} onDiscard={() => discardDebt && handleDiscard(discardDebt)} />
 
-            <div className="p-6 space-y-4">
-              <p className="font-body-sm text-on-surface-variant">
-                Confirm will create a {applyDebt.type} of <span className="font-bold text-on-surface">{formatCurrency(applyDebt.amount)}</span> for{' '}
-                <span className="font-bold text-on-surface">{applyDebt.title}</span> in the current month and remove the due. Apply without transaction will remove the due without creating a
-                transaction.
-              </p>
-
-              <div className="space-y-2">
-                <label className="pixel-input-label ml-1">VAULT</label>
-                {vaults.length === 0 ? (
-                  <p className="font-body-sm text-on-surface-variant">No vaults available — the expense will be unassigned.</p>
-                ) : (
-                  <div className="relative">
-                    <button
-                      onClick={() => setVaultDropdownOpen((o) => !o)}
-                      className="w-full h-14 px-4 border-4 border-black flex items-center justify-between font-body-lg active:translate-y-0.5 bg-surface-container-lowest hover:bg-surface-container-low"
-                    >
-                      <div className="flex items-center gap-3">
-                        <SelectedVaultIcon className="text-secondary" size={20} />
-                        <span className="text-primary font-bold">{selectedVault?.name ?? 'Select vault'}</span>
-                      </div>
-                      <ChevronDown className={`text-outline transition-transform ${vaultDropdownOpen ? 'rotate-180' : ''}`} size={20} />
-                    </button>
-                    {vaultDropdownOpen && (
-                      <>
-                        <div className="fixed inset-0 z-[115]" onClick={() => setVaultDropdownOpen(false)} />
-                        <div className="absolute top-[calc(100%+4px)] left-0 right-0 z-[120] bg-surface-container-high border-4 border-black shadow-[8px_8px_0_0_rgba(0,0,0,1)]">
-                          <div className="max-h-60 overflow-y-auto">
-                            {vaults.map((vault) => {
-                              const VaultIcon = iconMapper(vault.icon || 'Briefcase');
-                              const isSelected = applyVaultId === vault.id;
-                              return (
-                                <button
-                                  key={vault.id}
-                                  onClick={() => {
-                                    setApplyVaultId(vault.id);
-                                    setVaultDropdownOpen(false);
-                                  }}
-                                  className={`w-full h-14 px-4 flex items-center justify-between transition-colors hover:bg-surface-container-highest ${
-                                    isSelected ? 'bg-surface-container-highest' : 'bg-surface-container-low'
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-3">
-                                    <VaultIcon className={isSelected ? 'text-secondary' : 'text-outline'} size={20} />
-                                    <span className={`font-body-lg ${isSelected ? 'text-primary font-bold' : 'text-on-surface'}`}>{vault.name}</span>
-                                  </div>
-                                  {isSelected && <div className="w-4 h-4 bg-primary border-2 border-black" />}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <Button variant="ghost" className="flex-1" onClick={() => setApplyDebt(null)} disabled={applying}>
-                  <span className="font-label-caps uppercase">Cancel</span>
-                </Button>
-                <Button variant="primary" className="w-full flex items-center justify-center gap-2" onClick={() => handleApply()} disabled={applying}>
-                  <Check className="w-4 h-4" />
-                  <span className="font-label-caps uppercase">{applyingAction === 'confirm' ? 'Applying...' : 'Confirm'}</span>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
+      <ApplyDebtModal
+        isOpen={applyDebt !== null}
+        onClose={() => setApplyDebt(null)}
+        debt={applyDebt}
+        vaults={vaults}
+        vaultId={applyVaultId}
+        onVaultChange={setApplyVaultId}
+        onConfirm={handleApply}
+        applying={applying}
+      />
     </div>
+  );
+}
+
+export default function DebtsPage() {
+  return (
+    <QueryParamsProvider>
+      <DebtsContent />
+    </QueryParamsProvider>
   );
 }

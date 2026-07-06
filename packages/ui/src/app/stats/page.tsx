@@ -340,7 +340,7 @@ export default function StatsPage() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col w-full md:h-screen relative px-3 pb-24 md:pb-0 overflow-y-auto overflow-x-hidden" onClick={closeDropdowns}>
-        <div className="max-w-4xl w-full mx-auto p-margin-mobile md:p-8 flex flex-col gap-stack-md">
+        <div className="w-full p-margin-mobile md:p-8 flex flex-col gap-stack-md">
           {/* Header & Controls */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b-4 border-surface-container-highest pb-4">
             <div>
@@ -349,7 +349,7 @@ export default function StatsPage() {
             </div>
 
             {/* Filters */}
-            <div className="relative flex flex-col sm:flex-row gap-4 z-50" onClick={(e) => e.stopPropagation()}>
+            <div className="relative flex flex-row items-end gap-1 z-50" onClick={(e) => e.stopPropagation()}>
               {/* Vault Selector */}
               <div className="flex flex-col gap-1">
                 <span className="font-label-caps text-[10px] text-outline uppercase ml-1">Source Vault</span>
@@ -471,18 +471,16 @@ export default function StatsPage() {
               </div>
 
               {/* Export CSV */}
-              <div className="flex flex-col gap-1">
-                <span className="font-label-caps text-[10px] text-outline uppercase ml-1">Export</span>
-                <Button
-                  variant="ghost"
-                  disabled={filteredTransactions.length === 0 || isLoading}
-                  className="bg-surface-container text-on-surface font-body-sm py-2 px-4 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)] hover:bg-surface-container-highest flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={exportCsv}
-                >
-                  <Download className="text-primary w-4 h-4 shrink-0" />
-                  <span>Export CSV</span>
-                </Button>
-              </div>
+              <Button
+                variant="ghost"
+                title="Export CSV"
+                aria-label="Export CSV"
+                disabled={filteredTransactions.length === 0 || isLoading}
+                className="h-[45px] bg-surface-container text-on-surface px-4 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)] hover:bg-surface-container-highest flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={exportCsv}
+              >
+                <Download className="text-primary w-4 h-4 shrink-0" />
+              </Button>
             </div>
           </div>
 

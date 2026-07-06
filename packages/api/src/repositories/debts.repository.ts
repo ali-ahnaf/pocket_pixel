@@ -1,4 +1,5 @@
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, FindManyOptions, IsNull, Not, Repository } from 'typeorm';
+import { DebtStatus } from '@expense-tracker/shared';
 import { AppDataSource } from '../data-source';
 import { Debt } from '../entities/Debt.entity';
 
@@ -13,8 +14,20 @@ export class DebtsRepository {
     return this.dataSource.getRepository(Debt);
   }
 
-  findManyForUser(userId: string): Promise<Debt[]> {
-    return this.repo.find({ where: { userId }, order: { createdAt: 'DESC' } });
+  findManyForUser(userId: string, status: DebtStatus = 'incomplete'): Promise<Debt[]> {
+    const options: FindManyOptions<Debt> = { where: { userId }, order: { createdAt: 'DESC' } };
+
+    if (status === 'completed') {
+      // Applied and discarded dues are both soft-deleted; return only those,
+      // most recently settled/discarded first.
+      options.where = { userId, deletedAt: Not(IsNull()) };
+      options.order = { deletedAt: 'DESC' };
+      options.withDeleted = true;
+    } else if (status === 'all') {
+      options.withDeleted = true;
+    }
+
+    return this.repo.find(options);
   }
 
   findOneForUser(userId: string, id: string): Promise<Debt | null> {
@@ -30,6 +43,6 @@ export class DebtsRepository {
   }
 
   remove(debt: Debt): Promise<Debt> {
-    return this.repo.remove(debt);
+    return this.repo.softRemove(debt);
   }
 }
