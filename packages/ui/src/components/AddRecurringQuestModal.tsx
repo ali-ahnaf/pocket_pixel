@@ -6,6 +6,7 @@ import { iconMapper } from '../lib/iconMapper';
 import { Button } from './Button';
 import { Input } from './Input';
 import { TransactionTypeToggle } from './TransactionTypeToggle';
+import { Dropdown } from './Dropdown';
 import type { TagDto, VaultDto } from '@expense-tracker/shared';
 
 interface AddRecurringQuestModalProps {
@@ -325,57 +326,34 @@ export function AddRecurringQuestModal({ isOpen, onClose, title, initialData, on
           {availableVaults.length > 0 && (
             <div className="space-y-2">
               <label className="pixel-input-label ml-1">SOURCE VAULT</label>
-              <div className="relative">
-                <button
-                  onClick={() => setIsVaultDropdownOpen(!isVaultDropdownOpen)}
-                  className={`w-full h-14 px-4 border-4 border-black flex items-center justify-between font-body-lg transition-all active:translate-y-0.5 active:shadow-none group bg-surface-container-lowest hover:bg-surface-container-low ${
-                    isVaultDropdownOpen ? 'ring-4 ring-primary/20' : ''
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <SelectedVaultIcon className="text-secondary" size={20} />
-                    <span className="text-primary font-bold">{selectedVault?.name || 'Select vault'}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-1 h-6 bg-black/10 rounded-full" />
-                    <ChevronDown className={`text-outline transition-transform duration-300 ${isVaultDropdownOpen ? 'rotate-180' : ''}`} size={20} />
-                  </div>
-                </button>
-
-                {isVaultDropdownOpen && (
-                  <>
-                    <div className="fixed inset-0 z-[115]" onClick={() => setIsVaultDropdownOpen(false)} />
-                    <div
-                      className={`absolute top-[calc(100%+4px)] left-0 right-0 z-[120] bg-surface-container-high border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] transition-all duration-200 ${isVaultDropdownOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
-                    >
-                      <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                        {availableVaults.map((vault) => {
-                          const VaultIcon = iconMapper(vault.icon || 'Briefcase');
-                          const isSelected = selectedVaultId === vault.id;
-                          return (
-                            <button
-                              key={vault.id}
-                              onClick={() => {
-                                setSelectedVaultId(vault.id);
-                                setIsVaultDropdownOpen(false);
-                              }}
-                              className={`w-full h-14 px-4 flex items-center justify-between font-body-lg transition-colors hover:bg-surface-container-highest group ${
-                                isSelected ? 'bg-surface-container-highest' : 'bg-surface-container-low'
-                              }`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <VaultIcon className={isSelected ? 'text-secondary' : 'text-outline'} size={20} />
-                                <span className={`font-body-lg ${isSelected ? 'text-primary font-bold' : 'text-on-surface'}`}>{vault.name}</span>
-                              </div>
-                              {isSelected && <div className="w-4 h-4 bg-primary border-2 border-black" />}
-                            </button>
-                          );
-                        })}
+              <Dropdown<VaultDto>
+                options={availableVaults}
+                value={selectedVault}
+                onChange={(vault) => setSelectedVaultId(vault.id)}
+                keyExtractor={(vault) => vault.id}
+                direction="down"
+                renderValue={(vault) => {
+                  const VaultIcon = iconMapper(vault?.icon || 'Briefcase');
+                  return (
+                    <>
+                      <VaultIcon className="text-secondary" size={20} />
+                      <span className="text-primary font-bold">{vault?.name || 'Select vault'}</span>
+                    </>
+                  );
+                }}
+                renderOption={(vault, isSelected) => {
+                  const VaultIcon = iconMapper(vault.icon || 'Briefcase');
+                  return (
+                    <>
+                      <div className="flex items-center gap-3">
+                        <VaultIcon className={isSelected ? 'text-secondary' : 'text-outline'} size={20} />
+                        <span className={`font-body-lg ${isSelected ? 'text-primary font-bold' : 'text-on-surface'}`}>{vault.name}</span>
                       </div>
-                    </div>
-                  </>
-                )}
-              </div>
+                      {isSelected && <div className="w-4 h-4 bg-primary border-2 border-black" />}
+                    </>
+                  );
+                }}
+              />
             </div>
           )}
 
