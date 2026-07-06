@@ -259,7 +259,7 @@ Open an issue with:
         <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/6575515&w=100&h=100&fit=cover" width="100" alt="namahu"/><br/>
         <sub><b>namahu</b></sub>
       </a><br/>
-      <img src="https://img.shields.io/badge/LVL_5-MAGE-8B5CF6?style=for-the-badge&labelColor=1a1a1a" alt="Mage"/>
+      <img src="https://img.shields.io/badge/LVL_7-ROGUE-2F855A?style=for-the-badge&labelColor=1a1a1a" alt="Rogue"/>
     </td>
     <td align="center">
       <a href="https://github.com/uttam12331">
