@@ -137,7 +137,7 @@ export default function DashboardPage() {
   const filteredDrops = transactions
     .filter((t) => matchesVault(t.vaultId) && matchesTag(t.tags))
     .slice()
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    .sort((a, b) => b.date.localeCompare(a.date) || b.updatedAt.localeCompare(a.updatedAt));
   const filteredOccurrences = occurrences.filter((o) => matchesVault(o.vaultId) && matchesTag(o.tags));
 
   const handleApplyOccurrence = async (occ: OccurrenceDto) => {

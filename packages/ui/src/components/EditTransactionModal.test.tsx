@@ -51,10 +51,13 @@ describe('EditTransactionModal', () => {
     userId: 'user-1',
     transaction: {
       id: 'txn-1',
+      userId: 'user-1',
       title: 'Dinner',
       amount: 42.5,
       type: 'expense' as const,
+      date: '2024-01-15',
       vaultId: null,
+      vault: null,
       tags: [],
       createdAt: '2024-01-01T00:00:00.000Z',
       updatedAt: '2024-01-01T00:00:00.000Z',
@@ -83,6 +86,13 @@ describe('EditTransactionModal', () => {
 
     expect(await screen.findByDisplayValue('Dinner')).toBeInTheDocument();
     expect(screen.getByDisplayValue('42.5')).toBeInTheDocument();
+  });
+
+  it('exposes a date picker pre-filled with the transaction date', async () => {
+    render(<EditTransactionModal {...baseProps} />);
+
+    expect(await screen.findByRole('button', { name: /change date/i })).toBeInTheDocument();
+    expect(screen.getByDisplayValue('2024-01-15')).toBeInTheDocument();
   });
 
   it('calls onClose when the close button is clicked', async () => {
