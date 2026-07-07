@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { KeyRound, ArrowLeft } from 'lucide-react';
+import { AppBar, BottomNavBar, DesktopSidebar } from '@/components';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { useAuth } from '@/hooks/useAuth';
@@ -59,67 +60,72 @@ export default function ChangePasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-on-background flex items-center justify-center p-4">
-      {/* scanline */}
-      <div className="pointer-events-none fixed inset-0 bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(0,0,0,0.08)_2px,rgba(0,0,0,0.08)_4px)] z-0" />
+    <div className="bg-background text-on-background font-body-lg min-h-screen flex flex-col md:flex-row overflow-x-hidden selection:bg-primary selection:text-on-primary">
+      <AppBar />
 
-      <div className="relative z-10 w-full max-w-sm">
-        <button type="button" onClick={() => router.back()} className="mb-4 flex items-center gap-2 text-on-background hover:text-primary transition-colors font-label-caps tracking-wider uppercase">
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </button>
+      <DesktopSidebar />
 
-        <div className="bg-surface-container-high border-4 border-black shadow-[6px_6px_0_0_rgba(0,0,0,1)]">
-          {/* Header */}
-          <div className="px-6 py-4 border-b-4 border-black bg-surface-container flex items-center gap-2">
-            <KeyRound className="w-5 h-5 text-primary" />
-            <h2 className="font-headline-sm text-primary uppercase tracking-wider">Change Password</h2>
+      <main className="flex-1 flex flex-col w-full md:h-screen relative px-3 md:px-0 pb-24 md:pb-0 overflow-y-auto overflow-x-hidden">
+        <div className="w-full p-margin-mobile md:p-8 flex flex-col gap-stack-md">
+          <button type="button" onClick={() => router.back()} className="flex items-center gap-2 mt-2 text-on-background hover:text-primary transition-colors font-label-caps tracking-wider uppercase">
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </button>
+
+          <div className="mt-2 bg-surface-container-high border-4 border-black shadow-[6px_6px_0_0_rgba(0,0,0,1)]">
+            {/* Header */}
+            <div className="px-6 py-4 border-b-4 border-black bg-surface-container flex items-center gap-2">
+              <KeyRound className="w-5 h-5 text-primary" />
+              <h2 className="font-headline-sm text-primary uppercase tracking-wider">Change Password</h2>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="px-6 py-6 flex flex-col gap-5">
+              <Input
+                label="Current Password"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => {
+                  setCurrentPassword(e.target.value);
+                  setError(null);
+                }}
+                autoComplete="current-password"
+              />
+
+              <Input
+                label="New Password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => {
+                  setNewPassword(e.target.value);
+                  setError(null);
+                }}
+                autoComplete="new-password"
+              />
+
+              <Input
+                label="Confirm New Password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  setError(null);
+                }}
+                autoComplete="new-password"
+                error={error || undefined}
+              />
+
+              {success && <p className="font-mono text-label-caps text-primary uppercase border-4 border-black bg-surface-container p-3">Password changed successfully</p>}
+
+              <Button type="submit" disabled={loading} className="w-full py-3" variant="primary">
+                {loading ? 'Saving…' : 'Change Password'}
+              </Button>
+            </form>
           </div>
-
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="px-6 py-6 flex flex-col gap-5">
-            <Input
-              label="Current Password"
-              type="password"
-              value={currentPassword}
-              onChange={(e) => {
-                setCurrentPassword(e.target.value);
-                setError(null);
-              }}
-              autoComplete="current-password"
-            />
-
-            <Input
-              label="New Password"
-              type="password"
-              value={newPassword}
-              onChange={(e) => {
-                setNewPassword(e.target.value);
-                setError(null);
-              }}
-              autoComplete="new-password"
-            />
-
-            <Input
-              label="Confirm New Password"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => {
-                setConfirmPassword(e.target.value);
-                setError(null);
-              }}
-              autoComplete="new-password"
-              error={error || undefined}
-            />
-
-            {success && <p className="font-mono text-label-caps text-primary uppercase border-4 border-black bg-surface-container p-3">Password changed successfully</p>}
-
-            <Button type="submit" disabled={loading} className="w-full py-3" variant="primary">
-              {loading ? 'Saving…' : 'Change Password'}
-            </Button>
-          </form>
         </div>
-      </div>
+      </main>
+
+      <BottomNavBar />
     </div>
   );
 }

@@ -18,7 +18,7 @@ import {
   DeleteTagModal,
   DesktopSidebar,
 } from '@/components';
-import { User, Briefcase, Plus, Pencil, Star, Trash2, Repeat, Calendar, CalendarDays, TrendingDown, TrendingUp, Tag, Coins } from 'lucide-react';
+import { User, Briefcase, Plus, Pencil, Star, Trash2, Repeat, Calendar, CalendarDays, TrendingDown, TrendingUp, Tag, Coins, Search, ChevronDown } from 'lucide-react';
 import { iconMapper } from '@/lib/iconMapper';
 import { profileApi } from '@/lib/api';
 import type { VaultDto, TagDto, RecurringDto } from '@expense-tracker/shared';
@@ -70,6 +70,7 @@ export default function ProfilePage() {
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
   const [tagToEdit, setTagToEdit] = useState<{ id?: string; name: string; color: string; icon: string } | undefined>(undefined);
   const [tagToDelete, setTagToDelete] = useState<UiTag | null>(null);
+  const [tagSearch, setTagSearch] = useState('');
 
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState('/avatars/avatar1.jpeg');
@@ -81,6 +82,9 @@ export default function ProfilePage() {
 
   const [recurringQuests, setRecurringQuests] = useState<UiQuest[]>([]);
   const [tags, setTags] = useState<UiTag[]>([]);
+
+  const [openSections, setOpenSections] = useState({ profile: true, vaults: false, quests: false, tags: false });
+  const toggleSection = (key: keyof typeof openSections) => setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
 
   useEffect(() => {
     if (!user) return;
@@ -100,6 +104,8 @@ export default function ProfilePage() {
   useEffect(() => {
     if (userId) fetchAll(userId);
   }, [userId, fetchAll]);
+
+  const filteredTags = tags.filter((tag) => tag.name.toLowerCase().includes(tagSearch.trim().toLowerCase()));
 
   const handleSaveProfile = async () => {
     if (!userId) return;
@@ -199,43 +205,51 @@ export default function ProfilePage() {
 
       <DesktopSidebar name={playerName} avatar={avatarUrl} />
 
-      <main className="flex-1 flex flex-col w-full md:h-screen relative px-3 pb-24 md:pb-0 overflow-y-auto overflow-x-hidden">
+      <main className="flex-1 flex flex-col w-full md:h-screen relative px-3 md:px-0 pb-24 md:pb-0 overflow-y-auto overflow-x-hidden">
         <div className="w-full p-margin-mobile md:p-8 flex flex-col gap-3 md:gap-14">
           {/* Profile Section */}
           <section>
-            <h2 className="font-headline-lg text-primary mb-stack-sm flex items-center gap-2">
-              <User className="w-8 h-8" />
-              Player Profile
-            </h2>
-            <Card className="p-6 flex mt-2 flex-col md:flex-row gap-6 items-start md:items-center border-secondary-container bg-surface-container-low !shadow-[inset_2px_2px_0_rgba(255,255,255,0.2),inset_-2px_-2px_0_rgba(0,0,0,0.4)]">
-              <div className="w-24 h-24 border-4 border-black shrink-0 relative">
-                <img alt="Profile Edit" className="w-full h-full object-cover [image-rendering:pixelated]" src={avatarUrl} />
-                <Button variant="primary" className="absolute -bottom-2 -right-2 w-8 h-8 !p-0 flex items-center justify-center rounded-none" onClick={() => setIsAvatarModalOpen(true)}>
-                  <Pencil className="w-4 h-4" />
-                </Button>
-              </div>
-              <div className="flex-1 space-y-4 w-full">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Input label="Player Name" value={playerName} onChange={(e) => setPlayerName(e.target.value)} />
-                  </div>
-                </div>
-                <div className="flex justify-start">
-                  <Button variant="primary" className="font-label-caps px-6 py-2 w-full" onClick={handleSaveProfile}>
-                    Save changes
+            <button type="button" onClick={() => toggleSection('profile')} className="w-full flex justify-between items-center mt-2 md:mt-0 mb-stack-sm">
+              <h2 className="font-headline-lg text-primary flex items-center gap-2">
+                <User className="w-8 h-8" />
+                Player Profile
+              </h2>
+              <ChevronDown className={`w-6 h-6 text-primary transition-transform ${openSections.profile ? 'rotate-180' : ''}`} />
+            </button>
+            {openSections.profile && (
+              <Card className="p-6 flex mt-2 flex-col md:flex-row gap-6 items-start md:items-center border-secondary-container bg-surface-container-low !shadow-[inset_2px_2px_0_rgba(255,255,255,0.2),inset_-2px_-2px_0_rgba(0,0,0,0.4)]">
+                <div className="w-24 h-24 border-4 border-black shrink-0 relative">
+                  <img alt="Profile Edit" className="w-full h-full object-cover [image-rendering:pixelated]" src={avatarUrl} />
+                  <Button variant="primary" className="absolute -bottom-2 -right-2 w-8 h-8 !p-0 flex items-center justify-center rounded-none" onClick={() => setIsAvatarModalOpen(true)}>
+                    <Pencil className="w-4 h-4" />
                   </Button>
                 </div>
-              </div>
-            </Card>
+                <div className="flex-1 space-y-4 w-full">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Input label="Player Name" value={playerName} onChange={(e) => setPlayerName(e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="flex justify-start">
+                    <Button variant="primary" className="font-label-caps px-6 py-2 w-full" onClick={handleSaveProfile}>
+                      Save changes
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            )}
           </section>
 
           {/* Vaults Section */}
           <section>
             <div className="flex justify-between items-end mb-stack-sm border-b-4 border-outline-variant pb-2">
-              <h2 className="font-headline-lg text-primary flex items-center gap-2">
-                <Briefcase className="w-8 h-8" />
-                Your Vaults
-              </h2>
+              <button type="button" onClick={() => toggleSection('vaults')} className="flex items-center gap-2 flex-1 text-left">
+                <h2 className="font-headline-lg text-primary flex items-center gap-2">
+                  <Briefcase className="w-8 h-8" />
+                  Your Vaults
+                </h2>
+                <ChevronDown className={`w-6 h-6 text-primary transition-transform ${openSections.vaults ? 'rotate-180' : ''}`} />
+              </button>
               <Button
                 variant="primary"
                 className="flex items-center gap-1 font-label-caps px-4 py-2 border-b-primary-container"
@@ -247,50 +261,34 @@ export default function ProfilePage() {
                 <Plus className="w-[18px] h-[18px]" /> Add
               </Button>
             </div>
-            {loading ? (
-              <p className="font-body-sm text-on-surface-variant">Loading...</p>
-            ) : (
-              <div className="grid grid-cols-2 gap-gutter">
-                {vaults.map((vault) => {
-                  const IconComp = iconMapper(vault.icon || 'Briefcase');
-                  return (
-                    <Card key={vault.id} className={`p-2 relative flex flex-col mt-2 justify-between ${vault.isDefault ? 'border-primary mt-2' : 'border-outline-variant'}`}>
-                      <div>
-                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
-                          <div className="flex items-center gap-2 mb-1">
-                            <div className="w-8 h-8 flex items-center justify-center border-2 border-black shrink-0" style={{ backgroundColor: vault.color || '#3b82f6' }}>
-                              <IconComp size={16} className="text-black drop-shadow-sm" />
+            {openSections.vaults &&
+              (loading ? (
+                <p className="font-body-sm text-on-surface-variant">Loading...</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-gutter">
+                  {vaults.map((vault) => {
+                    const IconComp = iconMapper(vault.icon || 'Briefcase');
+                    return (
+                      <Card key={vault.id} className={`p-2 relative flex flex-col mt-2 justify-between ${vault.isDefault ? 'border-primary mt-2' : 'border-outline-variant'}`}>
+                        <div>
+                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="w-8 h-8 flex items-center justify-center border-2 border-black shrink-0" style={{ backgroundColor: vault.color || '#3b82f6' }}>
+                                <IconComp size={16} className="text-black drop-shadow-sm" />
+                              </div>
+                              <h3 className="font-headline-md text-on-surface">{vault.name}</h3>
                             </div>
-                            <h3 className="font-headline-md text-on-surface">{vault.name}</h3>
+                            {vault.isDefault && (
+                              <Badge variant="primary" className="text-[10px] w-fit self-start sm:self-auto">
+                                DEFAULT
+                              </Badge>
+                            )}
                           </div>
-                          {vault.isDefault && (
-                            <Badge variant="primary" className="text-[10px] w-fit self-start sm:self-auto">
-                              DEFAULT
-                            </Badge>
-                          )}
+                          <p className="font-body-sm text-on-surface-variant mb-4">{vault.description}</p>
                         </div>
-                        <p className="font-body-sm text-on-surface-variant mb-4">{vault.description}</p>
-                      </div>
 
-                      {vault.isDefault ? (
-                        <div className="flex justify-end gap-2 mt-4">
-                          <Button
-                            variant="ghost"
-                            className="p-1 w-8 h-8 border-b-black bg-surface-container-highest text-on-surface flex items-center justify-center"
-                            onClick={() => {
-                              setVaultToEdit({ id: vault.id, name: vault.name, description: vault.description, icon: vault.icon, color: vault.color, budget: vault.monthlyBudget });
-                              setIsVaultModalOpen(true);
-                            }}
-                          >
-                            <Pencil className="w-5 h-5" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="flex justify-between items-center mt-4">
-                          <button className="font-label-caps text-secondary flex items-center gap-1 hover:underline text-sm" onClick={() => handleSetDefault(vault.id)}>
-                            <Star className="w-[16px] h-[16px]" />
-                          </button>
-                          <div className="flex gap-2">
+                        {vault.isDefault ? (
+                          <div className="flex justify-end gap-2 mt-4">
                             <Button
                               variant="ghost"
                               className="p-1 w-8 h-8 border-b-black bg-surface-container-highest text-on-surface flex items-center justify-center"
@@ -301,26 +299,46 @@ export default function ProfilePage() {
                             >
                               <Pencil className="w-5 h-5" />
                             </Button>
-                            <Button variant="danger" className="p-1 w-8 h-8 border-b-error flex items-center justify-center" onClick={() => setVaultToDelete({ id: vault.id, name: vault.name })}>
-                              <Trash2 className="w-5 h-5" />
-                            </Button>
                           </div>
-                        </div>
-                      )}
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
+                        ) : (
+                          <div className="flex justify-between items-center mt-4">
+                            <button className="font-label-caps text-secondary flex items-center gap-1 hover:underline text-sm" onClick={() => handleSetDefault(vault.id)}>
+                              <Star className="w-[16px] h-[16px]" />
+                            </button>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="ghost"
+                                className="p-1 w-8 h-8 border-b-black bg-surface-container-highest text-on-surface flex items-center justify-center"
+                                onClick={() => {
+                                  setVaultToEdit({ id: vault.id, name: vault.name, description: vault.description, icon: vault.icon, color: vault.color, budget: vault.monthlyBudget });
+                                  setIsVaultModalOpen(true);
+                                }}
+                              >
+                                <Pencil className="w-5 h-5" />
+                              </Button>
+                              <Button variant="danger" className="p-1 w-8 h-8 border-b-error flex items-center justify-center" onClick={() => setVaultToDelete({ id: vault.id, name: vault.name })}>
+                                <Trash2 className="w-5 h-5" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </Card>
+                    );
+                  })}
+                </div>
+              ))}
           </section>
 
           {/* Recurring Quests Section */}
           <section>
             <div className="flex justify-between items-end mb-stack-sm border-b-4 border-outline-variant pb-2">
-              <h2 className="font-headline-lg text-secondary flex items-center gap-2">
-                <Repeat className="w-8 h-8" />
-                Recurring Quests
-              </h2>
+              <button type="button" onClick={() => toggleSection('quests')} className="flex items-center gap-2 flex-1 text-left">
+                <h2 className="font-headline-lg text-secondary flex items-center gap-2">
+                  <Repeat className="w-8 h-8" />
+                  Recurring Quests
+                </h2>
+                <ChevronDown className={`w-6 h-6 text-secondary transition-transform ${openSections.quests ? 'rotate-180' : ''}`} />
+              </button>
               <Button
                 variant="primary"
                 className="flex items-center gap-1 font-label-caps px-4 py-2 border-b-primary-container"
@@ -332,65 +350,69 @@ export default function ProfilePage() {
                 <Plus className="w-[18px] h-[18px]" /> Add
               </Button>
             </div>
-            {loading ? (
-              <p className="font-body-sm text-on-surface-variant">Loading...</p>
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-gutter">
-                {recurringQuests.map((quest) => {
-                  const isExpense = quest.type === 'EXPENSE';
-                  const QuestIcon = isExpense ? Calendar : CalendarDays;
-                  return (
-                    <Card key={quest.id} className={`p-4 mt-2 relative overflow-hidden ${isExpense ? 'border-error-container' : 'border-primary-container'}`}>
-                      <div className={`absolute top-0 right-0 p-1.5 border-4 border-black border-t-0 border-r-0 ${isExpense ? 'bg-error text-on-error' : 'bg-primary text-on-primary'}`}>
-                        {isExpense ? <TrendingDown size={18} /> : <TrendingUp size={18} />}
-                      </div>
-                      <h3 className="font-headline-md text-on-surface mt-2 mb-1">{quest.title}</h3>
-                      <p className="font-body-sm text-on-surface-variant mb-4">{quest.description}</p>
-                      <div className="flex justify-between items-center bg-surface-dim border-4 border-black p-2 mb-4 border-t-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]">
-                        <span className={`font-body-lg font-bold flex items-center gap-1 ${isExpense ? 'text-error' : 'text-primary'}`}>
-                          {isExpense ? '-' : '+'} <Coins className="w-[16px] h-[16px]" /> {quest.amount.toFixed(2)}
-                        </span>
-                        <div className="flex items-center gap-1 bg-surface-container-high px-2 py-1 border-4 border-black text-on-surface-variant">
-                          <QuestIcon className="w-[16px] h-[16px]" />
-                          <span className="font-label-caps">{quest.frequency}</span>
+            {openSections.quests &&
+              (loading ? (
+                <p className="font-body-sm text-on-surface-variant">Loading...</p>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-gutter">
+                  {recurringQuests.map((quest) => {
+                    const isExpense = quest.type === 'EXPENSE';
+                    const QuestIcon = isExpense ? Calendar : CalendarDays;
+                    return (
+                      <Card key={quest.id} className={`p-4 mt-2 relative overflow-hidden ${isExpense ? 'border-error-container' : 'border-primary-container'}`}>
+                        <div className={`absolute top-0 right-0 p-1.5 border-4 border-black border-t-0 border-r-0 ${isExpense ? 'bg-error text-on-error' : 'bg-primary text-on-primary'}`}>
+                          {isExpense ? <TrendingDown size={18} /> : <TrendingUp size={18} />}
                         </div>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span
-                          className={`inline-block font-label-caps px-2 py-1 border-4 border-black ${isExpense ? 'bg-tertiary-container text-on-tertiary-container' : 'bg-secondary-container text-on-secondary-container'}`}
-                        >
-                          #{quest.category}
-                        </span>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            className="p-1 w-8 h-8 border-b-black bg-surface-container-highest text-on-surface flex items-center justify-center"
-                            onClick={() => {
-                              setQuestToEdit(quest);
-                              setIsQuestModalOpen(true);
-                            }}
+                        <h3 className="font-headline-md text-on-surface mt-2 mb-1">{quest.title}</h3>
+                        <p className="font-body-sm text-on-surface-variant mb-4">{quest.description}</p>
+                        <div className="flex justify-between items-center bg-surface-dim border-4 border-black p-2 mb-4 border-t-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]">
+                          <span className={`font-body-lg font-bold flex items-center gap-1 ${isExpense ? 'text-error' : 'text-primary'}`}>
+                            {isExpense ? '-' : '+'} <Coins className="w-[16px] h-[16px]" /> {quest.amount.toFixed(2)}
+                          </span>
+                          <div className="flex items-center gap-1 bg-surface-container-high px-2 py-1 border-4 border-black text-on-surface-variant">
+                            <QuestIcon className="w-[16px] h-[16px]" />
+                            <span className="font-label-caps">{quest.frequency}</span>
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span
+                            className={`inline-block font-label-caps px-2 py-1 border-4 border-black ${isExpense ? 'bg-tertiary-container text-on-tertiary-container' : 'bg-secondary-container text-on-secondary-container'}`}
                           >
-                            <Pencil className="w-5 h-5" />
-                          </Button>
-                          <Button variant="danger" className="p-1 w-8 h-8 border-b-error flex items-center justify-center" onClick={() => setQuestToDelete({ id: quest.id, title: quest.title })}>
-                            <Trash2 className="w-5 h-5" />
-                          </Button>
+                            #{quest.category}
+                          </span>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              className="p-1 w-8 h-8 border-b-black bg-surface-container-highest text-on-surface flex items-center justify-center"
+                              onClick={() => {
+                                setQuestToEdit(quest);
+                                setIsQuestModalOpen(true);
+                              }}
+                            >
+                              <Pencil className="w-5 h-5" />
+                            </Button>
+                            <Button variant="danger" className="p-1 w-8 h-8 border-b-error flex items-center justify-center" onClick={() => setQuestToDelete({ id: quest.id, title: quest.title })}>
+                              <Trash2 className="w-5 h-5" />
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
+                      </Card>
+                    );
+                  })}
+                </div>
+              ))}
           </section>
 
           {/* Tags */}
           <section>
             <div className="flex justify-between items-end mb-stack-sm border-b-4 border-outline-variant pb-2">
-              <h2 className="font-headline-lg text-tertiary flex items-center gap-2">
-                <Tag className="w-8 h-8" />
-                Tags
-              </h2>
+              <button type="button" onClick={() => toggleSection('tags')} className="flex items-center gap-2 flex-1 text-left">
+                <h2 className="font-headline-lg text-tertiary flex items-center gap-2">
+                  <Tag className="w-8 h-8" />
+                  Tags
+                </h2>
+                <ChevronDown className={`w-6 h-6 text-tertiary transition-transform ${openSections.tags ? 'rotate-180' : ''}`} />
+              </button>
               <Button
                 variant="primary"
                 className="flex items-center gap-1 font-label-caps px-4 py-2 border-b-primary-container"
@@ -402,44 +424,55 @@ export default function ProfilePage() {
                 <Plus className="w-[18px] h-[18px]" /> Add
               </Button>
             </div>
-            {loading ? (
-              <p className="font-body-sm text-on-surface-variant">Loading...</p>
-            ) : (
-              <div className="grid grid-cols-2 gap-3 mt-4 md:grid-cols-1 md:gap-gutter">
-                {tags.map((tag) => {
-                  const IconComp = iconMapper(tag.icon);
-                  return (
-                    <Card key={tag.id} className="p-3 flex items-center justify-between gap-2 border-outline-variant hover:border-black transition-colors relative group overflow-hidden">
-                      <div className="flex items-center gap-2 overflow-hidden min-w-0">
-                        <div className="w-8 h-8 flex items-center justify-center border-2 border-black shrink-0" style={{ backgroundColor: tag.color }}>
-                          <IconComp size={16} className="text-black drop-shadow-sm" />
-                        </div>
-                        <span className="font-headline-sm truncate min-w-0" title={tag.name}>
-                          {tag.name}
-                        </span>
-                      </div>
-                      <div className="flex opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity gap-1 ml-2 shrink-0 bg-surface-container-low">
-                        <button
-                          className="p-1 hover:bg-surface-container-highest border-2 border-transparent hover:border-black transition-all"
-                          onClick={() => {
-                            setTagToEdit({ id: tag.id, name: tag.name, color: tag.color, icon: tag.icon });
-                            setIsTagModalOpen(true);
-                          }}
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          className="p-1 hover:bg-error-container text-error hover:text-on-error-container border-2 border-transparent hover:border-error transition-all"
-                          onClick={() => setTagToDelete(tag)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
+            {openSections.tags &&
+              (loading ? (
+                <p className="font-body-sm text-on-surface-variant">Loading...</p>
+              ) : (
+                <>
+                  <div className="relative mt-4">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant pointer-events-none" />
+                    <Input placeholder="Search tags..." value={tagSearch} onChange={(e) => setTagSearch(e.target.value)} className="pl-9" aria-label="Search tags" />
+                  </div>
+                  {filteredTags.length === 0 ? (
+                    <p className="font-body-sm text-on-surface-variant mt-4">No tags found.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-3 mt-4 md:grid-cols-2 md:gap-gutter">
+                      {filteredTags.map((tag) => {
+                        const IconComp = iconMapper(tag.icon);
+                        return (
+                          <Card key={tag.id} className="p-3 flex items-center justify-between gap-2 border-outline-variant hover:border-black transition-colors relative group overflow-hidden">
+                            <div className="flex items-center gap-2 overflow-hidden min-w-0">
+                              <div className="w-8 h-8 flex items-center justify-center border-2 border-black shrink-0" style={{ backgroundColor: tag.color }}>
+                                <IconComp size={16} className="text-black drop-shadow-sm" />
+                              </div>
+                              <span className="font-headline-sm truncate min-w-0" title={tag.name}>
+                                {tag.name}
+                              </span>
+                            </div>
+                            <div className="flex opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity gap-1 ml-2 shrink-0 bg-surface-container-low">
+                              <button
+                                className="p-1 hover:bg-surface-container-highest border-2 border-transparent hover:border-black transition-all"
+                                onClick={() => {
+                                  setTagToEdit({ id: tag.id, name: tag.name, color: tag.color, icon: tag.icon });
+                                  setIsTagModalOpen(true);
+                                }}
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <button
+                                className="p-1 hover:bg-error-container text-error hover:text-on-error-container border-2 border-transparent hover:border-error transition-all"
+                                onClick={() => setTagToDelete(tag)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              ))}
           </section>
         </div>
       </main>

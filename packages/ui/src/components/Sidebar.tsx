@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { X, Coins, KeyRound, LogOut } from 'lucide-react';
+import { X, Coins, LogOut, Settings } from 'lucide-react';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -50,21 +50,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onLogout }) =
 
         <nav className="flex-1 flex flex-col p-4 gap-2 overflow-y-auto">
           <Link
-            href="/debts"
+            href="/settings"
             onClick={onClose}
             className="flex items-center gap-3 p-3 text-on-surface bg-surface-container-low border-4 border-black hover:bg-primary hover:text-on-primary hover:translate-x-1 active:translate-y-0.5 transition-all"
           >
-            <Coins className="w-5 h-5" />
-            <span className="font-label-caps tracking-wider uppercase">Debts</span>
-          </Link>
-
-          <Link
-            href="/change-password"
-            onClick={onClose}
-            className="flex items-center gap-3 p-3 text-on-surface bg-surface-container-low border-4 border-black hover:bg-primary hover:text-on-primary hover:translate-x-1 active:translate-y-0.5 transition-all"
-          >
-            <KeyRound className="w-5 h-5" />
-            <span className="font-label-caps tracking-wider uppercase">Change Password</span>
+            <Settings className="w-5 h-5" />
+            <span className="font-label-caps tracking-wider uppercase">Settings</span>
           </Link>
         </nav>
 
