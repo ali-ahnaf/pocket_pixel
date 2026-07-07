@@ -339,11 +339,11 @@ export default function StatsPage() {
       <DesktopSidebar name={profile?.name} email={profile?.email} avatar={profile?.avatar} />
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col w-full md:h-screen relative px-3 pb-24 md:pb-0 overflow-y-auto overflow-x-hidden" onClick={closeDropdowns}>
+      <main className="flex-1 flex flex-col w-full md:h-screen relative px-3 md:px-0 pb-24 md:pb-0 overflow-y-auto overflow-x-hidden" onClick={closeDropdowns}>
         <div className="w-full p-margin-mobile md:p-8 flex flex-col gap-stack-md">
           {/* Header & Controls */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b-4 border-surface-container-highest pb-4">
-            <div>
+            <div className="mt-2 md:mt-0">
               <h2 className="font-headline-lg text-headline-lg text-primary">Analytics</h2>
               <p className="font-body-sm text-on-surface-variant">Track your loot and resource consumption.</p>
             </div>

@@ -5,6 +5,7 @@ import { VaultsRepository } from './vaults.repository';
 import { DebtsRepository } from './debts.repository';
 import { AnalyticsRepository } from './analytics.repository';
 import { RecurringRepository } from './recurring.repository';
+import { PreferencesRepository } from './preferences.repository';
 
 export const transactionsRepository = new TransactionsRepository();
 export const usersRepository = new UsersRepository();
@@ -13,5 +14,6 @@ export const vaultsRepository = new VaultsRepository();
 export const debtsRepository = new DebtsRepository();
 export const analyticsRepository = new AnalyticsRepository();
 export const recurringRepository = new RecurringRepository();
+export const preferencesRepository = new PreferencesRepository();
 
-export { TransactionsRepository, UsersRepository, TagsRepository, VaultsRepository, DebtsRepository, AnalyticsRepository, RecurringRepository };
+export { TransactionsRepository, UsersRepository, TagsRepository, VaultsRepository, DebtsRepository, AnalyticsRepository, RecurringRepository, PreferencesRepository };

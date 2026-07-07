@@ -7,3 +7,4 @@ export * from './debts';
 export * from './tags';
 export * from './vaults';
 export * from './recurring';
+export * from './preferences';

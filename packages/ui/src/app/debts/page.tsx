@@ -112,10 +112,10 @@ function DebtsContent() {
 
       <DesktopSidebar />
 
-      <main className="flex-1 flex flex-col w-full md:h-screen relative px-3 pb-24 md:pb-0 overflow-y-auto overflow-x-hidden">
+      <main className="flex-1 flex flex-col w-full md:h-screen relative px-3 md:px-0 pb-24 md:pb-0 overflow-y-auto overflow-x-hidden">
         <div className="w-full p-margin-mobile md:p-8 flex flex-col gap-stack-md">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b-4 border-surface-container-highest pb-4">
-            <div>
+            <div className="mt-2 md:mt-0">
               <h2 className="font-headline-lg text-headline-lg text-primary">
                 <Link href="/" className="text-primary no-underline">
                   Debts
@@ -177,7 +177,7 @@ function DebtsContent() {
 
               <Button variant="primary" className="flex h-14 items-center gap-2 whitespace-nowrap" onClick={() => setAddOpen(true)}>
                 <Plus className="w-5 h-5" />
-                <span className="font-label-caps uppercase tracking-wider whitespace-nowrap">New Due</span>
+                <span className="font-label-caps uppercase tracking-wider whitespace-nowrap">New</span>
               </Button>
             </div>
           </div>

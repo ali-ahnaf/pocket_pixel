@@ -15,6 +15,7 @@ import recurringRouter from './routes/recurring.routes';
 import debtsRouter from './routes/debts.routes';
 import promptRouter from './routes/prompt.routes';
 import wizardRouter from './routes/wizard.routes';
+import preferencesRouter from './routes/preferences.routes';
 import { authenticate, requireAuth } from './middleware/auth';
 import { errorHandler } from './middleware/error-handler';
 import { restoreAllRecurringJobs } from './scheduler/recurring-scheduler';
@@ -48,6 +49,7 @@ app.use('/api/users/:userId/vaults', requireAuth, vaultsRouter);
 app.use('/api/users/:userId/tags', requireAuth, tagsRouter);
 app.use('/api/users/:userId/recurring', requireAuth, recurringRouter);
 app.use('/api/users/:userId/debts', requireAuth, debtsRouter);
+app.use('/api/users/:userId/preferences', requireAuth, preferencesRouter);
 
 // Serve static files from the Next.js build
 const uiDir = path.join(__dirname, '../../ui/out');

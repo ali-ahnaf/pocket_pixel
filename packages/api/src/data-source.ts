@@ -9,6 +9,7 @@ import { Tag } from './entities/Tag.entity';
 import { TransactionTag } from './entities/TransactionTag.entity';
 import { RecurringOccurrenceSkip } from './entities/RecurringOccurrenceSkip.entity';
 import { Debt } from './entities/Debt.entity';
+import { UserPreference } from './entities/UserPreference.entity';
 
 const isTsNode = !!(process as any)[Symbol.for('ts-node.register.instance')];
 
@@ -19,7 +20,7 @@ export const DB_PATH = process.env.NODE_ENV === 'production' ? '/var/www/pocket_
 export const AppDataSource = new DataSource({
   type: 'better-sqlite3',
   database: DB_PATH,
-  entities: [User, Expense, Vault, Tag, TransactionTag, RecurringOccurrenceSkip, Debt],
+  entities: [User, Expense, Vault, Tag, TransactionTag, RecurringOccurrenceSkip, Debt, UserPreference],
   migrations: [isTsNode ? 'src/migrations/*.ts' : 'dist/migrations/*.js'],
   synchronize: false,
   logging: false,

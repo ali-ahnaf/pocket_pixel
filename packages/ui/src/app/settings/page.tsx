@@ -1,0 +1,90 @@
+'use client';
+
+import React from 'react';
+import Link from 'next/link';
+import { Settings as SettingsIcon, TrendingUp, TrendingDown, KeyRound, ChevronRight, type LucideIcon } from 'lucide-react';
+import { AppBar, BottomNavBar, DesktopSidebar } from '@/components';
+import { useDisplaySettings } from '@/hooks/useDisplaySettings';
+
+interface SettingToggleProps {
+  label: string;
+  description: string;
+  icon: LucideIcon;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+}
+
+function SettingToggle({ label, description, icon: Icon, checked, onChange }: SettingToggleProps) {
+  return (
+    <div className="flex items-center justify-between gap-4 bg-surface p-4 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="h-10 w-10 border-2 border-black flex items-center justify-center shrink-0 bg-secondary-container">
+          <Icon size={20} />
+        </div>
+        <div className="min-w-0">
+          <p className="font-body-sm font-bold text-on-surface truncate">{label}</p>
+          <p className="text-[12px] text-on-surface-variant truncate">{description}</p>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        onClick={() => onChange(!checked)}
+        className={`relative h-8 w-16 shrink-0 border-4 border-black transition-colors active:translate-y-0.5 ${checked ? 'bg-primary' : 'bg-surface-container-highest'}`}
+      >
+        <span className={`absolute top-0 bottom-0 my-auto h-5 w-5 bg-surface border-2 border-black transition-all ${checked ? 'right-0.5' : 'left-0.5'}`} />
+      </button>
+    </div>
+  );
+}
+
+export default function SettingsPage() {
+  const { showIncome, showExpense, setShowIncome, setShowExpense } = useDisplaySettings();
+
+  return (
+    <div className="bg-background text-on-background font-body-lg min-h-screen flex flex-col md:flex-row overflow-x-hidden selection:bg-primary selection:text-on-primary">
+      <AppBar />
+
+      <DesktopSidebar />
+
+      <main className="flex-1 flex flex-col w-full md:h-screen relative px-3 md:px-0 pb-24 md:pb-0 overflow-y-auto overflow-x-hidden">
+        <div className="w-full p-margin-mobile md:p-8 flex flex-col gap-stack-md">
+          <section className="flex items-center gap-3 bg-surface-container border-4 border-black p-4 shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]">
+            <SettingsIcon className="text-primary" />
+            <h1 className="font-headline-md text-primary tracking-tight">SETTINGS</h1>
+          </section>
+
+          <section className="flex flex-col gap-stack-md bg-surface-container border-4 border-black p-4">
+            <h2 className="font-label-caps text-outline uppercase border-b-4 border-black pb-2">Dashboard Visibility</h2>
+            <SettingToggle label="Show Income" description="Reveal Loot Gained on the home dashboard" icon={TrendingUp} checked={showIncome} onChange={setShowIncome} />
+            <SettingToggle label="Show Expense" description="Reveal Gold Spent on the home dashboard" icon={TrendingDown} checked={showExpense} onChange={setShowExpense} />
+          </section>
+
+          <section className="flex flex-col gap-stack-md bg-surface-container border-4 border-black p-4">
+            <h2 className="font-label-caps text-outline uppercase border-b-4 border-black pb-2">Account</h2>
+            <Link
+              href="/change-password"
+              className="flex items-center justify-between gap-4 bg-surface p-4 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)] hover:bg-primary hover:text-on-primary active:translate-y-0.5 transition-colors"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="h-10 w-10 border-2 border-black flex items-center justify-center shrink-0 bg-secondary-container">
+                  <KeyRound size={20} />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-body-sm font-bold truncate">Change Password</p>
+                  <p className="text-[12px] text-on-surface-variant truncate">Update your secret passphrase</p>
+                </div>
+              </div>
+              <ChevronRight className="shrink-0" />
+            </Link>
+          </section>
+        </div>
+      </main>
+
+      <BottomNavBar />
+    </div>
+  );
+}
