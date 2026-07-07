@@ -105,17 +105,18 @@ describe('AvatarPickerModal', () => {
     // Dot buttons are inside the pagination container (a div with class "flex gap-2")
     const dotButtons = container.querySelectorAll('.flex.gap-2 button');
 
-    // There should be 3 dot buttons (14 total avatars / 6 per page = 3 pages)
+    // There should be 3 dot buttons (17 total avatars / 6 per page = 3 pages)
     expect(dotButtons).toHaveLength(3);
 
     // Click the third dot (page index 2)
     fireEvent.click(dotButtons[2]);
 
-    // Verify page 2 avatars (index 12 to 13)
+    // Verify page 2 avatars (index 12 to 16)
     const images = screen.getAllByAltText('Avatar option');
-    expect(images).toHaveLength(2);
-    expect(images[0]).toHaveAttribute('src', AVATARS[12]);
-    expect(images[1]).toHaveAttribute('src', AVATARS[13]);
+    expect(images).toHaveLength(AVATARS.length - 12);
+    images.forEach((img, i) => {
+      expect(img).toHaveAttribute('src', AVATARS[12 + i]);
+    });
   });
 
   it('disables ChevronLeft on first page and ChevronRight on last page', () => {
