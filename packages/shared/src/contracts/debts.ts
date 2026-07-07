@@ -9,6 +9,13 @@ export interface CreateDebtInput {
   notes?: string | null;
 }
 
+export interface UpdateDebtRequest {
+  title?: string;
+  amount?: number;
+  type?: TransactionType;
+  notes?: string | null;
+}
+
 export interface UpdateDebtInput {
   title?: string;
   amount?: number;
