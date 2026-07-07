@@ -15,6 +15,7 @@ vi.mock('lucide-react', () => ({
   X: () => React.createElement('span', null, 'X'),
   Coins: () => React.createElement('span', null, 'Coins'),
   KeyRound: () => React.createElement('span', null, 'KeyRound'),
+  Settings: () => React.createElement('span', null, 'SettingsIcon'),
   LogOut: () => React.createElement('span', null, 'LogOut'),
 }));
 
@@ -34,16 +35,15 @@ describe('Sidebar Component', () => {
     render(React.createElement(Sidebar, defaultProps));
 
     expect(screen.getByText('Menu')).toBeInTheDocument();
-    expect(screen.getByText('Debts')).toBeInTheDocument();
-    expect(screen.getByText('Change Password')).toBeInTheDocument();
+    expect(screen.getByText('Settings')).toBeInTheDocument();
   });
 
-  it('renders a Change Password link pointing at /change-password and closes on click', () => {
+  it('renders a Settings link pointing at /settings and closes on click', () => {
     const onClose = vi.fn();
     render(React.createElement(Sidebar, { ...defaultProps, onClose }));
 
-    const link = screen.getByText('Change Password').closest('a');
-    expect(link).toHaveAttribute('href', '/change-password');
+    const link = screen.getByText('Settings').closest('a');
+    expect(link).toHaveAttribute('href', '/settings');
 
     fireEvent.click(link!);
     expect(onClose).toHaveBeenCalledTimes(1);
