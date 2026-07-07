@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Plus, Save, Coins, CalendarDays, ChevronDown } from 'lucide-react';
+import { X, Plus, Save, Coins, CalendarDays } from 'lucide-react';
 import { iconMapper } from '../lib/iconMapper';
 import { Button } from './Button';
 import { Input } from './Input';
@@ -76,7 +76,6 @@ export function AddRecurringQuestModal({ isOpen, onClose, title, initialData, on
       ? INTERVALS.find((i) => i.toLowerCase() === initialData.frequency.toLowerCase()) || INTERVALS[2]
       : INTERVALS[2],
   );
-  const [isIntervalDropdownOpen, setIsIntervalDropdownOpen] = useState(false);
 
   const selectedVault = availableVaults.find((v) => v.id === selectedVaultId) || availableVaults[0];
   const SelectedVaultIcon = iconMapper(selectedVault?.icon || 'Briefcase');
@@ -148,7 +147,6 @@ export function AddRecurringQuestModal({ isOpen, onClose, title, initialData, on
     } else {
       setIsVisible(false);
       setIsVaultDropdownOpen(false);
-      setIsIntervalDropdownOpen(false);
       const timer = setTimeout(() => setShouldRender(false), 300);
       return () => clearTimeout(timer);
     }
@@ -326,7 +324,7 @@ export function AddRecurringQuestModal({ isOpen, onClose, title, initialData, on
           {availableVaults.length > 0 && (
             <div className="space-y-2">
               <label className="pixel-input-label ml-1">SOURCE VAULT</label>
-              <Dropdown<VaultDto>
+              <Dropdown
                 options={availableVaults}
                 value={selectedVault}
                 onChange={(vault) => setSelectedVaultId(vault.id)}
@@ -360,50 +358,25 @@ export function AddRecurringQuestModal({ isOpen, onClose, title, initialData, on
           {/* Interval Dropdown */}
           <div className="space-y-2">
             <label className="pixel-input-label ml-1">INTERVAL</label>
-            <div className="relative">
-              <button
-                onClick={() => setIsIntervalDropdownOpen(!isIntervalDropdownOpen)}
-                className={`w-full h-14 px-4 border-4 border-black flex items-center justify-between font-body-lg transition-all active:translate-y-0.5 active:shadow-none group bg-surface-container-lowest hover:bg-surface-container-low ${
-                  isIntervalDropdownOpen ? 'ring-4 ring-primary/20' : ''
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <CalendarDays className="text-secondary" size={20} />
-                  <span className="text-primary font-bold">{selectedInterval}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-1 h-6 bg-black/10 rounded-full" />
-                  <ChevronDown className={`text-outline transition-transform duration-300 ${isIntervalDropdownOpen ? 'rotate-180' : ''}`} size={20} />
-                </div>
-              </button>
-
-              {isIntervalDropdownOpen && (
+            <Dropdown
+              options={INTERVALS}
+              value={selectedInterval}
+              onChange={setSelectedInterval}
+              keyExtractor={(interval) => interval}
+              direction="up"
+              renderValue={(interval) => (
                 <>
-                  <div className="fixed inset-0 z-[115]" onClick={() => setIsIntervalDropdownOpen(false)} />
-                  <div
-                    className={`absolute bottom-[calc(100%+4px)] left-0 right-0 z-[120] bg-surface-container-high border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] transition-all duration-200 ${isIntervalDropdownOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}`}
-                  >
-                    <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                      {INTERVALS.map((interval) => (
-                        <button
-                          key={interval}
-                          onClick={() => {
-                            setSelectedInterval(interval);
-                            setIsIntervalDropdownOpen(false);
-                          }}
-                          className={`w-full h-14 px-4 flex items-center justify-between font-body-lg transition-colors hover:bg-surface-container-highest group ${
-                            selectedInterval === interval ? 'bg-surface-container-highest' : 'bg-surface-container-low'
-                          }`}
-                        >
-                          <span className={`font-body-lg ${selectedInterval === interval ? 'text-primary font-bold' : 'text-on-surface'}`}>{interval}</span>
-                          {selectedInterval === interval && <div className="w-4 h-4 bg-primary border-2 border-black" />}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  <CalendarDays className="text-secondary" size={20} />
+                  <span className="text-primary font-bold">{interval}</span>
                 </>
               )}
-            </div>
+              renderOption={(interval, isSelected) => (
+                <>
+                  <span className={`font-body-lg ${isSelected ? 'text-primary font-bold' : 'text-on-surface'}`}>{interval}</span>
+                  {isSelected && <div className="w-4 h-4 bg-primary border-2 border-black" />}
+                </>
+              )}
+            />
           </div>
 
           <div className="pt-2">

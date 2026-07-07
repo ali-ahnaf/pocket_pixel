@@ -14,16 +14,7 @@ interface DropdownProps<T> {
   triggerClassName?: string;
 }
 
-export function Dropdown<T>({
-  options,
-  value,
-  onChange,
-  renderValue,
-  renderOption,
-  keyExtractor,
-  direction = 'down',
-  triggerClassName = '',
-}: DropdownProps<T>) {
+export function Dropdown<T>({ options, value, onChange, renderValue, renderOption, keyExtractor, direction = 'down', triggerClassName = '' }: DropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
 
   const directionClasses =
@@ -46,15 +37,10 @@ export function Dropdown<T>({
           isOpen ? 'ring-4 ring-primary/20' : ''
         } ${triggerClassName}`}
       >
-        <div className="flex items-center gap-3">
-          {renderValue(value)}
-        </div>
+        <div className="flex items-center gap-3">{renderValue(value)}</div>
         <div className="flex items-center gap-2">
           <div className="w-1 h-6 bg-black/10 rounded-full" />
-          <ChevronDown
-            className={`text-outline transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
-            size={20}
-          />
+          <ChevronDown className={`text-outline transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} size={20} />
         </div>
       </button>
 
