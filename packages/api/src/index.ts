@@ -14,9 +14,12 @@ import tagsRouter from './routes/tags.routes';
 import recurringRouter from './routes/recurring.routes';
 import debtsRouter from './routes/debts.routes';
 import promptRouter from './routes/prompt.routes';
+import wizardRouter from './routes/wizard.routes';
+import preferencesRouter from './routes/preferences.routes';
 import { authenticate, requireAuth } from './middleware/auth';
 import { errorHandler } from './middleware/error-handler';
 import { restoreAllRecurringJobs } from './scheduler/recurring-scheduler';
+import { startBackupScheduler } from './scheduler/backup-scheduler';
 import { logger } from './services/logger.service';
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -39,12 +42,14 @@ app.use('/api/auth', authRouter);
 
 app.use('/api/users', requireAuth, usersRouter);
 app.use('/api/users/:userId/prompt', requireAuth, promptRouter);
+app.use('/api/users/:userId/wizard', requireAuth, wizardRouter);
 app.use('/api/users/:userId/transactions', requireAuth, transactionsRouter);
 app.use('/api/users/:userId/analytics', requireAuth, analyticsRouter);
 app.use('/api/users/:userId/vaults', requireAuth, vaultsRouter);
 app.use('/api/users/:userId/tags', requireAuth, tagsRouter);
 app.use('/api/users/:userId/recurring', requireAuth, recurringRouter);
 app.use('/api/users/:userId/debts', requireAuth, debtsRouter);
+app.use('/api/users/:userId/preferences', requireAuth, preferencesRouter);
 
 // Serve static files from the Next.js build
 const uiDir = path.join(__dirname, '../../ui/out');
@@ -66,6 +71,7 @@ AppDataSource.initialize()
     } catch (err) {
       logger.error('Failed to restore recurring jobs:', err);
     }
+    startBackupScheduler();
     app.listen(PORT, () => {
       logger.info(`Node env: ${process.env.NODE_ENV}`);
       logger.info(`API running at http://localhost:${PORT}`);

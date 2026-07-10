@@ -13,7 +13,7 @@ jest.mock('../services', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
 
-type UsersRepositoryMock = jest.Mocked<Pick<UsersRepository, 'findByEmail' | 'createEntity' | 'save'>>;
+type UsersRepositoryMock = jest.Mocked<Pick<UsersRepository, 'findById' | 'findByEmail' | 'createEntity' | 'save'>>;
 type VaultsRepositoryMock = jest.Mocked<Pick<VaultsRepository, 'createEntity' | 'save'>>;
 
 const buildUser = (overrides: Partial<User> = {}): User =>
@@ -33,6 +33,7 @@ describe('AuthService', () => {
 
   beforeEach(() => {
     users = {
+      findById: jest.fn(),
       findByEmail: jest.fn(),
       createEntity: jest.fn((data) => data as User),
       save: jest.fn(),
@@ -157,6 +158,43 @@ describe('AuthService', () => {
         constructor: AppError,
         statusCode: 401,
       });
+    });
+  });
+
+  describe('changePassword', () => {
+    const payload = { currentPassword: 's3cret', newPassword: 'n3w-p4ssword' };
+
+    it('hashes and saves the new password when the current one matches', async () => {
+      const user = buildUser({ password: await bcrypt.hash(payload.currentPassword, 4) });
+      users.findById.mockResolvedValue(user);
+      users.save.mockResolvedValue(user);
+
+      await service.changePassword(user.id, payload);
+
+      const saved = users.save.mock.calls[0][0];
+      expect(saved.password).not.toBe(payload.newPassword);
+      await expect(bcrypt.compare(payload.newPassword, saved.password)).resolves.toBe(true);
+    });
+
+    it('throws a 401 AppError when the current password is incorrect', async () => {
+      const user = buildUser({ password: await bcrypt.hash('a-different-password', 4) });
+      users.findById.mockResolvedValue(user);
+
+      await expect(service.changePassword(user.id, payload)).rejects.toMatchObject({
+        constructor: AppError,
+        statusCode: 401,
+      });
+      expect(users.save).not.toHaveBeenCalled();
+    });
+
+    it('throws a 404 AppError when the user does not exist', async () => {
+      users.findById.mockResolvedValue(null);
+
+      await expect(service.changePassword('missing', payload)).rejects.toMatchObject({
+        constructor: AppError,
+        statusCode: 404,
+      });
+      expect(users.save).not.toHaveBeenCalled();
     });
   });
 });

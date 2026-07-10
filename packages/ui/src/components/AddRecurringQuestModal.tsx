@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Plus, Save, TrendingDown, TrendingUp, Coins, CalendarDays, ChevronDown } from 'lucide-react';
+import { X, Plus, Save, Coins, CalendarDays } from 'lucide-react';
 import { iconMapper } from '../lib/iconMapper';
 import { Button } from './Button';
 import { Input } from './Input';
-import type { ApiTag, ApiVault } from '../lib/api/ProfileApi';
+import { TransactionTypeToggle } from './TransactionTypeToggle';
+import { Dropdown } from './Dropdown';
+import type { TagDto, VaultDto } from '@expense-tracker/shared';
 
 interface AddRecurringQuestModalProps {
   isOpen: boolean;
@@ -13,9 +15,9 @@ interface AddRecurringQuestModalProps {
   title: string;
   initialData?: any;
   onSave?: (data: any) => void;
-  availableTags?: ApiTag[];
-  availableVaults?: ApiVault[];
-  onCreateTag?: (name: string) => Promise<ApiTag | null>;
+  availableTags?: TagDto[];
+  availableVaults?: VaultDto[];
+  onCreateTag?: (name: string) => Promise<TagDto | null>;
 }
 
 const INTERVALS = ['Daily', 'Weekly', 'Monthly', 'Yearly'];
@@ -74,7 +76,6 @@ export function AddRecurringQuestModal({ isOpen, onClose, title, initialData, on
       ? INTERVALS.find((i) => i.toLowerCase() === initialData.frequency.toLowerCase()) || INTERVALS[2]
       : INTERVALS[2],
   );
-  const [isIntervalDropdownOpen, setIsIntervalDropdownOpen] = useState(false);
 
   const selectedVault = availableVaults.find((v) => v.id === selectedVaultId) || availableVaults[0];
   const SelectedVaultIcon = iconMapper(selectedVault?.icon || 'Briefcase');
@@ -146,7 +147,6 @@ export function AddRecurringQuestModal({ isOpen, onClose, title, initialData, on
     } else {
       setIsVisible(false);
       setIsVaultDropdownOpen(false);
-      setIsIntervalDropdownOpen(false);
       const timer = setTimeout(() => setShouldRender(false), 300);
       return () => clearTimeout(timer);
     }
@@ -236,30 +236,7 @@ export function AddRecurringQuestModal({ isOpen, onClose, title, initialData, on
           {/* Transaction Type Toggle */}
           <div className="space-y-2">
             <label className="pixel-input-label ml-1">TYPE</label>
-            <div className="grid grid-cols-2 gap-1 bg-black p-1 border-4 border-black">
-              <button
-                onClick={() => setIsExpense(true)}
-                className={`py-3 px-4 font-label-caps flex items-center justify-center gap-2 ${
-                  isExpense
-                    ? 'bg-error-container text-on-error-container border-4 border-black shadow-[inset_2px_2px_0px_rgba(255,255,255,0.1),_inset_-2px_-2px_0px_rgba(0,0,0,0.4)]'
-                    : 'bg-surface-container-low text-outline hover:bg-surface-container-highest transition-colors'
-                }`}
-              >
-                <TrendingDown size={18} />
-                EXPENSE
-              </button>
-              <button
-                onClick={() => setIsExpense(false)}
-                className={`py-3 px-4 font-label-caps flex items-center justify-center gap-2 ${
-                  !isExpense
-                    ? 'bg-primary-container text-on-primary-container border-4 border-black shadow-[inset_2px_2px_0px_rgba(255,255,255,0.1),_inset_-2px_-2px_0px_rgba(0,0,0,0.4)]'
-                    : 'bg-surface-container-low text-outline hover:bg-surface-container-highest transition-colors'
-                }`}
-              >
-                <TrendingUp size={18} />
-                INCOME
-              </button>
-            </div>
+            <TransactionTypeToggle isExpense={isExpense} onChange={setIsExpense} />
           </div>
 
           {/* Tags Autocomplete Section */}
@@ -347,107 +324,59 @@ export function AddRecurringQuestModal({ isOpen, onClose, title, initialData, on
           {availableVaults.length > 0 && (
             <div className="space-y-2">
               <label className="pixel-input-label ml-1">SOURCE VAULT</label>
-              <div className="relative">
-                <button
-                  onClick={() => setIsVaultDropdownOpen(!isVaultDropdownOpen)}
-                  className={`w-full h-14 px-4 border-4 border-black flex items-center justify-between font-body-lg transition-all active:translate-y-0.5 active:shadow-none group bg-surface-container-lowest hover:bg-surface-container-low ${
-                    isVaultDropdownOpen ? 'ring-4 ring-primary/20' : ''
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <SelectedVaultIcon className="text-secondary" size={20} />
-                    <span className="text-primary font-bold">{selectedVault?.name || 'Select vault'}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-1 h-6 bg-black/10 rounded-full" />
-                    <ChevronDown className={`text-outline transition-transform duration-300 ${isVaultDropdownOpen ? 'rotate-180' : ''}`} size={20} />
-                  </div>
-                </button>
-
-                {isVaultDropdownOpen && (
-                  <>
-                    <div className="fixed inset-0 z-[115]" onClick={() => setIsVaultDropdownOpen(false)} />
-                    <div
-                      className={`absolute top-[calc(100%+4px)] left-0 right-0 z-[120] bg-surface-container-high border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] transition-all duration-200 ${isVaultDropdownOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
-                    >
-                      <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                        {availableVaults.map((vault) => {
-                          const VaultIcon = iconMapper(vault.icon || 'Briefcase');
-                          const isSelected = selectedVaultId === vault.id;
-                          return (
-                            <button
-                              key={vault.id}
-                              onClick={() => {
-                                setSelectedVaultId(vault.id);
-                                setIsVaultDropdownOpen(false);
-                              }}
-                              className={`w-full h-14 px-4 flex items-center justify-between font-body-lg transition-colors hover:bg-surface-container-highest group ${
-                                isSelected ? 'bg-surface-container-highest' : 'bg-surface-container-low'
-                              }`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <VaultIcon className={isSelected ? 'text-secondary' : 'text-outline'} size={20} />
-                                <span className={`font-body-lg ${isSelected ? 'text-primary font-bold' : 'text-on-surface'}`}>{vault.name}</span>
-                              </div>
-                              {isSelected && <div className="w-4 h-4 bg-primary border-2 border-black" />}
-                            </button>
-                          );
-                        })}
+              <Dropdown
+                options={availableVaults}
+                value={selectedVault}
+                onChange={(vault) => setSelectedVaultId(vault.id)}
+                keyExtractor={(vault) => vault.id}
+                direction="down"
+                renderValue={(vault) => {
+                  const VaultIcon = iconMapper(vault?.icon || 'Briefcase');
+                  return (
+                    <>
+                      <VaultIcon className="text-secondary" size={20} />
+                      <span className="text-primary font-bold">{vault?.name || 'Select vault'}</span>
+                    </>
+                  );
+                }}
+                renderOption={(vault, isSelected) => {
+                  const VaultIcon = iconMapper(vault.icon || 'Briefcase');
+                  return (
+                    <>
+                      <div className="flex items-center gap-3">
+                        <VaultIcon className={isSelected ? 'text-secondary' : 'text-outline'} size={20} />
+                        <span className={`font-body-lg ${isSelected ? 'text-primary font-bold' : 'text-on-surface'}`}>{vault.name}</span>
                       </div>
-                    </div>
-                  </>
-                )}
-              </div>
+                      {isSelected && <div className="w-4 h-4 bg-primary border-2 border-black" />}
+                    </>
+                  );
+                }}
+              />
             </div>
           )}
 
           {/* Interval Dropdown */}
           <div className="space-y-2">
             <label className="pixel-input-label ml-1">INTERVAL</label>
-            <div className="relative">
-              <button
-                onClick={() => setIsIntervalDropdownOpen(!isIntervalDropdownOpen)}
-                className={`w-full h-14 px-4 border-4 border-black flex items-center justify-between font-body-lg transition-all active:translate-y-0.5 active:shadow-none group bg-surface-container-lowest hover:bg-surface-container-low ${
-                  isIntervalDropdownOpen ? 'ring-4 ring-primary/20' : ''
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <CalendarDays className="text-secondary" size={20} />
-                  <span className="text-primary font-bold">{selectedInterval}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-1 h-6 bg-black/10 rounded-full" />
-                  <ChevronDown className={`text-outline transition-transform duration-300 ${isIntervalDropdownOpen ? 'rotate-180' : ''}`} size={20} />
-                </div>
-              </button>
-
-              {isIntervalDropdownOpen && (
+            <Dropdown
+              options={INTERVALS}
+              value={selectedInterval}
+              onChange={setSelectedInterval}
+              keyExtractor={(interval) => interval}
+              direction="up"
+              renderValue={(interval) => (
                 <>
-                  <div className="fixed inset-0 z-[115]" onClick={() => setIsIntervalDropdownOpen(false)} />
-                  <div
-                    className={`absolute bottom-[calc(100%+4px)] left-0 right-0 z-[120] bg-surface-container-high border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] transition-all duration-200 ${isIntervalDropdownOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}`}
-                  >
-                    <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                      {INTERVALS.map((interval) => (
-                        <button
-                          key={interval}
-                          onClick={() => {
-                            setSelectedInterval(interval);
-                            setIsIntervalDropdownOpen(false);
-                          }}
-                          className={`w-full h-14 px-4 flex items-center justify-between font-body-lg transition-colors hover:bg-surface-container-highest group ${
-                            selectedInterval === interval ? 'bg-surface-container-highest' : 'bg-surface-container-low'
-                          }`}
-                        >
-                          <span className={`font-body-lg ${selectedInterval === interval ? 'text-primary font-bold' : 'text-on-surface'}`}>{interval}</span>
-                          {selectedInterval === interval && <div className="w-4 h-4 bg-primary border-2 border-black" />}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  <CalendarDays className="text-secondary" size={20} />
+                  <span className="text-primary font-bold">{interval}</span>
                 </>
               )}
-            </div>
+              renderOption={(interval, isSelected) => (
+                <>
+                  <span className={`font-body-lg ${isSelected ? 'text-primary font-bold' : 'text-on-surface'}`}>{interval}</span>
+                  {isSelected && <div className="w-4 h-4 bg-primary border-2 border-black" />}
+                </>
+              )}
+            />
           </div>
 
           <div className="pt-2">

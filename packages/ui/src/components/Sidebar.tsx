@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { X, Coins, LogOut } from 'lucide-react';
+import { X, Coins, LogOut, Settings } from 'lucide-react';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -30,12 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onLogout }) =
 
   return (
     <>
-      <div
-        className={`fixed inset-0 bg-black/70 z-[100] transition-opacity duration-300 ease-in-out ${
-          isVisible ? 'opacity-100' : 'opacity-0'
-        }`}
-        onClick={onClose}
-      />
+      <div className={`fixed inset-0 bg-black/70 z-[100] transition-opacity duration-300 ease-in-out ${isVisible ? 'opacity-100' : 'opacity-0'}`} onClick={onClose} />
 
       <aside
         className={`fixed top-0 left-0 bottom-0 z-[110] w-72 max-w-[85vw] bg-surface-container-high border-r-4 border-black shadow-[4px_0_0_0_rgba(0,0,0,1)] flex flex-col transition-transform duration-300 ease-in-out ${
@@ -55,12 +50,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onLogout }) =
 
         <nav className="flex-1 flex flex-col p-4 gap-2 overflow-y-auto">
           <Link
-            href="/debts"
+            href="/settings"
             onClick={onClose}
             className="flex items-center gap-3 p-3 text-on-surface bg-surface-container-low border-4 border-black hover:bg-primary hover:text-on-primary hover:translate-x-1 active:translate-y-0.5 transition-all"
           >
-            <Coins className="w-5 h-5" />
-            <span className="font-label-caps tracking-wider uppercase">Debts</span>
+            <Settings className="w-5 h-5" />
+            <span className="font-label-caps tracking-wider uppercase">Settings</span>
           </Link>
         </nav>
 

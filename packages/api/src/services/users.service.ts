@@ -1,14 +1,11 @@
+import { UpdateUserInput, CreateUserInput } from '@expense-tracker/shared';
 import { User } from '../entities/User.entity';
 import { AppError } from '../errors/app-error';
 import { UsersRepository } from '../repositories/users.repository';
 import { usersRepository } from '../repositories';
-import { UpdateUserInput } from '@expense-tracker/shared';
 import { logger } from '.';
 
-export interface CreateUserInput {
-  name: string;
-  email: string;
-}
+export type { CreateUserInput };
 
 /**
  * Business logic for users. The repository is injected (defaults to the shared

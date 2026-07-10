@@ -106,4 +106,7 @@ export const AVATARS = [
   '/avatars/Avatar12.png',
   '/avatars/Avatar13.png',
   '/avatars/Avatar14.png',
+  '/avatars/avatar15.png',
+  '/avatars/avatar16.png',
+  '/avatars/avatar17.png',
 ];
