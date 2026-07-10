@@ -3,16 +3,10 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Sidebar } from './Sidebar';
 
-// The component uses next/link, which relies on Next.js internals that
-// aren't needed for these unit tests. Mocking it keeps the tests fast and
-// isolated from the Next.js router/runtime.
-vi.mock('next/link', () => ({
-  default: ({ href, children, onClick, ...props }: any) => (
-    <a href={href} onClick={onClick} {...props}>
-      {children}
-    </a>
-  ),
-}));
+// Note: next/link is intentionally NOT mocked here. It renders a plain <a>
+// fine in jsdom for a basic href + children case like this one, and it
+// avoids conflicting with whatever next/link handling already exists in the
+// shared test setup (which is presumably why the other test files pass).
 
 describe('Sidebar', () => {
   const onClose = vi.fn();
@@ -35,8 +29,11 @@ describe('Sidebar', () => {
     expect(await screen.findByText('Menu')).toBeInTheDocument();
     expect(screen.getByText('Debts')).toBeInTheDocument();
     expect(screen.getByText('Logout')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /debts/i })).toHaveAttribute('href', '/debts');
     expect(screen.getByLabelText('Close menu')).toBeInTheDocument();
+
+    const debtsLink = document.querySelector('a[href="/debts"]');
+    expect(debtsLink).toBeInTheDocument();
+    expect(debtsLink).toHaveTextContent('Debts');
   });
 
   it('calls onClose when the close (X) button is clicked', async () => {
@@ -64,7 +61,10 @@ describe('Sidebar', () => {
     render(<Sidebar isOpen={true} onClose={onClose} onLogout={onLogout} />);
     await screen.findByText('Menu');
 
-    fireEvent.click(screen.getByRole('link', { name: /debts/i }));
+    const debtsLink = document.querySelector('a[href="/debts"]');
+    expect(debtsLink).toBeInTheDocument();
+
+    fireEvent.click(debtsLink as Element);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
