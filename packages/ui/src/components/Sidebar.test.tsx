@@ -3,10 +3,8 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Sidebar } from './Sidebar';
 
-// Note: next/link is intentionally NOT mocked here. It renders a plain <a>
-// fine in jsdom for a basic href + children case like this one, and it
-// avoids conflicting with whatever next/link handling already exists in the
-// shared test setup (which is presumably why the other test files pass).
+// Note: next/link is intentionally NOT mocked here — it renders a plain <a>
+// fine in jsdom for a basic href + children case like this one.
 
 describe('Sidebar', () => {
   const onClose = vi.fn();
@@ -27,13 +25,13 @@ describe('Sidebar', () => {
 
     // The component delays adding the "visible" class by ~20ms, so wait for it.
     expect(await screen.findByText('Menu')).toBeInTheDocument();
-    expect(screen.getByText('Debts')).toBeInTheDocument();
+    expect(screen.getByText('Settings')).toBeInTheDocument();
     expect(screen.getByText('Logout')).toBeInTheDocument();
     expect(screen.getByLabelText('Close menu')).toBeInTheDocument();
 
-    const debtsLink = document.querySelector('a[href="/debts"]');
-    expect(debtsLink).toBeInTheDocument();
-    expect(debtsLink).toHaveTextContent('Debts');
+    const settingsLink = document.querySelector('a[href="/settings"]');
+    expect(settingsLink).toBeInTheDocument();
+    expect(settingsLink).toHaveTextContent('Settings');
   });
 
   it('calls onClose when the close (X) button is clicked', async () => {
@@ -57,14 +55,14 @@ describe('Sidebar', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('calls onClose when the Debts nav link is clicked', async () => {
+  it('calls onClose when the Settings nav link is clicked', async () => {
     render(<Sidebar isOpen={true} onClose={onClose} onLogout={onLogout} />);
     await screen.findByText('Menu');
 
-    const debtsLink = document.querySelector('a[href="/debts"]');
-    expect(debtsLink).toBeInTheDocument();
+    const settingsLink = document.querySelector('a[href="/settings"]');
+    expect(settingsLink).toBeInTheDocument();
 
-    fireEvent.click(debtsLink as Element);
+    fireEvent.click(settingsLink as Element);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
