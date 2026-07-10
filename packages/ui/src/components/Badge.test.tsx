@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
 import { Badge } from "./Badge";
 
 describe("Badge", () => {
@@ -38,5 +38,14 @@ describe("Badge", () => {
       </Badge>
     );
     expect(screen.getByTestId("badge")).toHaveAttribute("title", "hello");
+  });
+
+  it("calls onClick when clicked", () => {
+    const handleClick = vi.fn();
+    render(<Badge onClick={handleClick}>Interactive</Badge>);
+
+    fireEvent.click(screen.getByText("Interactive"));
+
+    expect(handleClick).toHaveBeenCalledTimes(1);
   });
 });
