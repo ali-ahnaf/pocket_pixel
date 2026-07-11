@@ -15,7 +15,7 @@
     "@expense-tracker/shared": "*",
     "axios": "^1.16.0",
     "lucide-react": "^1.14.0",
-    "next": "^16.2.10",
+    "next": "^9.3.3",
     "react": "^18.0.0",
     "react-dom": "^18.0.0"
   },
