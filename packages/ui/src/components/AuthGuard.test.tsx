@@ -67,18 +67,56 @@ it('redirects unauthenticated users from protected pages', () => {
   expect(replaceMock).toHaveBeenCalledWith('/signin');
 });
 
-it('renders children when the user is authenticated on a protected page', () => {
-  pathnameMock.mockReturnValue('/dashboard');
-  localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, 'token');
+  it('renders children when the user is authenticated on a protected page', () => {
+    pathnameMock.mockReturnValue('/dashboard');
+    localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, 'token');
 
-  render(
-    <AuthGuard>
-      <div>Protected Content</div>
-    </AuthGuard>,
-  );
+    render(
+      <AuthGuard>
+        <div>Protected Content</div>
+      </AuthGuard>,
+    );
 
-  expect(screen.getByText('Protected Content')).toBeInTheDocument();
-  expect(replaceMock).not.toHaveBeenCalled();
-});
+    expect(screen.getByText('Protected Content')).toBeInTheDocument();
+    expect(replaceMock).not.toHaveBeenCalled();
+  });
 
+  it('renders children when the user is unauthenticated on a public page', () => {
+    pathnameMock.mockReturnValue('/signin');
+
+    render(
+      <AuthGuard>
+        <div>Public Content</div>
+      </AuthGuard>,
+    );
+
+    expect(screen.getByText('Public Content')).toBeInTheDocument();
+    expect(replaceMock).not.toHaveBeenCalled();
+  });
+
+  it('redirects authenticated users away from subpaths of public pages', () => {
+    pathnameMock.mockReturnValue('/signin/extra-path');
+    localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, 'token');
+
+    render(
+      <AuthGuard>
+        <div>Protected Content</div>
+      </AuthGuard>,
+    );
+
+    expect(replaceMock).toHaveBeenCalledWith('/');
+  });
+
+  it('does not transition state if pathname is empty/undefined', () => {
+    pathnameMock.mockReturnValue(undefined);
+
+    render(
+      <AuthGuard>
+        <div>Protected Content</div>
+      </AuthGuard>,
+    );
+
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    expect(replaceMock).not.toHaveBeenCalled();
+  });
 });
