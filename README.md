@@ -13,21 +13,9 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![Stars](https://img.shields.io/github/stars/ali-ahnaf/pocket_pixel?style=social)](https://github.com/ali-ahnaf/pocket_pixel)
 
-</div>
-
----
-
-<div align="center">
-
-### Screenshots
-
-| Dashboard                        | Analytics                             |
-| -------------------------------- | ------------------------------------- |
-| ![Dashboard](assets/ss_home.png) | ![Analytics](assets/ss_analytics.png) |
+![Banner](assets/banner.png)
 
 </div>
-
----
 
 ## What is Pocket Pixel?
 
@@ -52,20 +40,6 @@ Pocket Pixel is a **gamified personal finance tracker** built for people who wan
 | Validation      | Joi                                                         |
 | Process Manager | PM2                                                         |
 | Monorepo        | npm workspaces                                              |
-
----
-
-## ⚠️ Caution
-
-This project was entirely **vibe coded** with claude, gemini models, and codex. The UI was designed with Google stitch. It is full of sloppy code and possible bugs with many features still under development.
-
-**Google stitch**: https://stitch.withgoogle.com/projects/14795631199624450898
-
-## Agentic coding
-
-The repository has a bunch of skills/rules defined in `.agents` or `.claude` folders. These are supported by codex and gemini models.
-
----
 
 ## Project Structure
 
