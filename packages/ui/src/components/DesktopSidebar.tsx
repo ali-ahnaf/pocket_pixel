@@ -33,7 +33,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ name, email, ava
   const [hasCheckedStorage, setHasCheckedStorage] = useState(false);
   const [avatarLoaded, setAvatarLoaded] = useState(false);
   const rawPathname = usePathname();
-  const pathname = rawPathname?.replace('/\/$/', '') || '/';
+  const pathname = rawPathname?.replace(/\/$/, '') || '/';
   const router = useRouter();
   const { signOut } = useAuth();
 
