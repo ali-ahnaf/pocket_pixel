@@ -17,7 +17,11 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('next/link', () => ({
-  default: ({ children, href }: any) => <a href={href}>{children}</a>,
+  default: ({ children, href, ...rest }: any) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  ),
 }));
 
 vi.mock('@/hooks/useAuth', () => ({
