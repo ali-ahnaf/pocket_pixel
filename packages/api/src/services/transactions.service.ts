@@ -43,15 +43,12 @@ export class TransactionsService {
   }
 
   async create(userId: string, input: CreateTransactionInput): Promise<Expense> {
-    const { tagIds = [], date, amount, type, title, vaultId } = input;
+    const { tagIds = [], date, ...rest } = input;
     const transactionDate = date ?? new Date().toISOString().split('T')[0];
 
     const transaction = this.transactions.createEntity({
+      ...rest,
       userId,
-      amount,
-      type: type || 'expense',
-      title,
-      vaultId,
       date: transactionDate,
     });
 
@@ -64,7 +61,7 @@ export class TransactionsService {
     return saved;
   }
 
-  async createTransferTransaction(userId: string, input: CreateTransactionInput): Promise<Expense> {
+  async createTransferTransaction(userId: string, input: CreateTransactionInput & { targetVaultId: string }): Promise<Expense> {
     const { tagIds = [], date, amount, title, vaultId, targetVaultId } = input;
     const transactionDate = date ?? new Date().toISOString().split('T')[0];
 
@@ -117,7 +114,7 @@ export class TransactionsService {
       throw new AppError('Transaction not found', 404);
     }
 
-    const { tagIds, targetVaultId, ...rest } = input;
+    const { tagIds, ...rest } = input;
     Object.assign(transaction, rest);
     const saved = await this.transactions.save(transaction);
 
