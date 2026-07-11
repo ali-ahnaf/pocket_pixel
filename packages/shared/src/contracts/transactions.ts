@@ -14,7 +14,6 @@ export interface CreateTransactionInput {
   tagIds?: string[];
   title?: string | null;
   vaultId?: string | null;
-  targetVaultId?: string | null;
   date?: string;
 }
 
@@ -24,7 +23,6 @@ export interface UpdateTransactionInput {
   tagIds?: string[];
   title?: string | null;
   vaultId?: string | null;
-  targetVaultId?: string | null;
   date?: string;
 }
 

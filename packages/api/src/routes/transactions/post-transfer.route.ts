@@ -6,9 +6,8 @@ import { asyncHandler } from '../../middleware/error-handler';
 
 const router = Router({ mergeParams: true });
 
-const createTransferSchema = Joi.object<CreateTransactionInput>({
+const createTransferSchema = Joi.object<CreateTransactionInput & { targetVaultId: string }>({
   amount: Joi.number().positive().precision(2).required(),
-  type: Joi.string().valid('transfer').required(),
   tagIds: Joi.array().items(Joi.string().uuid()).default([]),
   title: Joi.string().max(200).allow(null, '').optional(),
   vaultId: Joi.string().uuid().required().messages({
@@ -29,7 +28,7 @@ router.post(
     const { error, value } = createTransferSchema.validate(req.body);
     if (error) return utilService.replyError(res, error.message);
 
-    const saved = await transactionsService.createTransferTransaction(req.user!.userId, value as CreateTransactionInput);
+    const saved = await transactionsService.createTransferTransaction(req.user!.userId, value as CreateTransactionInput & { targetVaultId: string });
     return utilService.replyCreated(res, saved);
   }),
 );
