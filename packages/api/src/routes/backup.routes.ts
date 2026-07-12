@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import exportRouter from './backup/export';
-import importRouter from './backup/import';
+import exportRouter from './backup/export.route';
+import importRouter from './backup/import.route';
 
 const router = Router({ mergeParams: true });
 
