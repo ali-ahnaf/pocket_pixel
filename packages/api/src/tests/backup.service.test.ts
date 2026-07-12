@@ -1,6 +1,6 @@
-import type { ImportDataRequest } from '@expense-tracker/shared';
 import { AppDataSource } from '../data-source';
 import { AppError } from '../errors/app-error';
+import { gzipSync } from 'zlib';
 import { Debt } from '../entities/Debt.entity';
 import { Expense } from '../entities/Expense.entity';
 import { RecurringOccurrenceSkip } from '../entities/RecurringOccurrenceSkip.entity';
@@ -10,6 +10,7 @@ import { User } from '../entities/User.entity';
 import { UserPreference } from '../entities/UserPreference.entity';
 import { Vault } from '../entities/Vault.entity';
 import { BackupService } from '../services/backup.service';
+import type { BackupPayload } from '../types/backup';
 
 jest.mock('../services', () => ({
   logger: {
@@ -34,7 +35,7 @@ jest.mock('../data-source', () => ({
   },
 }));
 
-const buildImportRequest = (overrides: Partial<ImportDataRequest> = {}): ImportDataRequest => ({
+const buildImportRequest = (overrides: Partial<BackupPayload> = {}): BackupPayload => ({
   appVersion: '1.0',
   exportedAt: '2026-07-08T00:00:00.000Z',
   data: {
@@ -151,10 +152,9 @@ describe('BackupService', () => {
   const getById = jest.fn();
   const debtsList = jest.fn();
   const vaultsList = jest.fn();
-  const getOrCreate = jest.fn();
   const tagsList = jest.fn();
 
-  const service = new BackupService({ getById } as never, { list: debtsList } as never, { list: vaultsList } as never, { getOrCreate } as never, { list: tagsList } as never);
+  const service = new BackupService({ getById } as never, { list: debtsList } as never, { list: vaultsList } as never, { list: tagsList } as never);
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -168,12 +168,11 @@ describe('BackupService', () => {
     });
     debtsList.mockResolvedValue([]);
     vaultsList.mockResolvedValue([]);
-    getOrCreate.mockResolvedValue({ showIncome: true, showExpense: false });
     tagsList.mockResolvedValue([]);
   });
 
   describe('exportData', () => {
-    it('includes backup-only recurring state and strips the password field from the user payload', async () => {
+    it('returns a binary backup that includes backup-only recurring state and strips the password field from the user payload', async () => {
       const expenseRepo = {
         find: jest
           .fn()
@@ -220,34 +219,82 @@ describe('BackupService', () => {
       getRepositoryMock.mockImplementation((entity) => {
         if (entity === Expense) return expenseRepo as never;
         if (entity === RecurringOccurrenceSkip) return skipRepo as never;
+        if (entity === UserPreference) return { findOneBy: jest.fn().mockResolvedValue({ showIncome: true, showExpense: false }) } as never;
         throw new Error('Unexpected repository');
       });
 
       const result = await service.exportData('user-1');
+      const parsed = service.parseBackupFile(result) as BackupPayload;
 
       expect(debtsList).toHaveBeenCalledWith('user-1', 'all');
-      expect(result.data.debts).toEqual([]);
-      expect(result.data.user).toEqual({
+      expect(parsed.data.debts).toEqual([]);
+      expect(parsed.data.user).toEqual({
         id: 'user-1',
         name: 'Ada Lovelace',
         email: 'ada@example.com',
         avatar: 'avatar.png',
         disableAiPrompt: true,
       });
-      expect(result.data.transactions[0]).toEqual(
+      expect(parsed.data.transactions[0]).toEqual(
         expect.objectContaining({
           id: 'tx-1',
           sourceRecurringId: 'recurring-1',
         }),
       );
-      expect(result.data.recurrings[0]).toEqual(
+      expect(parsed.data.recurrings[0]).toEqual(
         expect.objectContaining({
           id: 'recurring-1',
           deletedAt: '2026-12-01T00:00:00.000Z',
         }),
       );
-      expect(result.data.recurringSkips).toEqual([{ recurringId: 'recurring-1', date: '2026-08-01', userId: 'user-1' }]);
-      expect(result.data.user).not.toHaveProperty('password');
+      expect(parsed.data.recurringSkips).toEqual([{ recurringId: 'recurring-1', date: '2026-08-01', userId: 'user-1' }]);
+      expect(parsed.data.preference).toEqual({ showIncome: true, showExpense: false });
+      expect(parsed.data.user).not.toHaveProperty('password');
+    });
+
+    it('throws a 400 AppError instead of exporting a backup that exceeds the import size limit', async () => {
+      getById.mockResolvedValue({
+        id: 'user-1',
+        name: 'Ada Lovelace',
+        email: 'ada@example.com',
+        avatar: 'x'.repeat(10 * 1024 * 1024),
+        disableAiPrompt: true,
+      });
+
+      getRepositoryMock.mockImplementation((entity) => {
+        if (entity === Expense || entity === RecurringOccurrenceSkip) return { find: jest.fn().mockResolvedValue([]) } as never;
+        if (entity === UserPreference) return { findOneBy: jest.fn().mockResolvedValue({ showIncome: true, showExpense: false }) } as never;
+        throw new Error('Unexpected repository');
+      });
+
+      await expect(service.exportData('user-1')).rejects.toMatchObject({
+        constructor: AppError,
+        statusCode: 400,
+      });
+    });
+
+    it('throws a 400 AppError when parsing an invalid backup file', () => {
+      try {
+        service.parseBackupFile(Buffer.from('not-a-backup'));
+        throw new Error('Expected parseBackupFile to throw');
+      } catch (error) {
+        expect(error).toMatchObject({
+          constructor: AppError,
+          statusCode: 400,
+        });
+      }
+    });
+
+    it('throws a 400 AppError when a compressed backup exceeds the decompressed size limit', () => {
+      const oversizedPayload = gzipSync(Buffer.alloc(10 * 1024 * 1024 + 1));
+      const file = Buffer.concat([Buffer.from('PPBK', 'ascii'), Buffer.from([1]), oversizedPayload]);
+
+      expect(() => service.parseBackupFile(file)).toThrow(
+        expect.objectContaining({
+          constructor: AppError,
+          statusCode: 400,
+        }),
+      );
     });
   });
 
@@ -299,15 +346,14 @@ describe('BackupService', () => {
       expect(transactionMock).not.toHaveBeenCalled();
     });
 
-    it('upserts the imported records in a single transaction', async () => {
+    it('replaces the imported records in a single transaction', async () => {
       const dto = buildImportRequest();
       const entityManager = {
         find: jest.fn().mockResolvedValue([{ id: 'legacy-transaction' }, { id: 'tx-1' }, { id: 'recurring-1' }]),
-        restore: jest.fn(),
+        findOne: jest.fn().mockResolvedValue({ id: 'pref-1', userId: 'user-1' }),
         save: jest.fn(),
         softDelete: jest.fn(),
         update: jest.fn(),
-        upsert: jest.fn(),
       };
 
       transactionMock.mockImplementation(async (firstArg, secondArg) => {
@@ -396,18 +442,23 @@ describe('BackupService', () => {
           deletedAt: new Date('2026-07-08T00:00:00.000Z'),
         }),
       ]);
-      expect(entityManager.upsert).toHaveBeenCalledWith(
+      expect(entityManager.findOne).toHaveBeenCalledWith(
         UserPreference,
-        [
-          expect.objectContaining({
-            userId: 'user-1',
-            showIncome: true,
-            showExpense: false,
-          }),
-        ],
-        expect.objectContaining({ conflictPaths: ['userId'] }),
+        expect.objectContaining({
+          where: { userId: 'user-1' },
+          withDeleted: true,
+        }),
       );
-      expect(entityManager.restore).toHaveBeenCalledWith(UserPreference, { userId: 'user-1' });
+      expect(entityManager.save).toHaveBeenCalledWith(
+        UserPreference,
+        expect.objectContaining({
+          id: 'pref-1',
+          userId: 'user-1',
+          showIncome: true,
+          showExpense: false,
+          deletedAt: null,
+        }),
+      );
       expect(entityManager.save).toHaveBeenCalledWith(
         TransactionTag,
         expect.arrayContaining([
