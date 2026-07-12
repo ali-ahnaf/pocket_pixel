@@ -2,7 +2,7 @@
 import Link from 'next/link';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Plus, Check, Trash2, TrendingDown, TrendingUp, Coins, ChevronDown } from 'lucide-react';
+import { Plus, Check, Trash2, TrendingDown, TrendingUp, Coins, ChevronDown, CalendarClock } from 'lucide-react';
 
 import { AppBar, BottomNavBar, Button, Card, AddDebtModal, DesktopSidebar, DiscardDebtModal, ApplyDebtModal, QueryParamsProvider, useQueryParams } from '@/components';
 import { useAuth } from '@/hooks/useAuth';
@@ -25,6 +25,12 @@ function isDebtType(value: string | null): value is DebtType {
 
 function formatCurrency(amount: number): string {
   return `⛁ ${Math.abs(amount).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+}
+
+function formatDueDate(dueDate: string): string {
+  const [year, month, day] = dueDate.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function DebtsContent() {
@@ -66,13 +72,13 @@ function DebtsContent() {
     void fetchData();
   }, [fetchData]);
 
-  const handleCreate = async (data: { title: string; amount: number; type: 'expense' | 'income'; notes: string | null }) => {
+  const handleCreate = async (data: { title: string; amount: number; type: 'expense' | 'income'; notes: string | null; dueDate: string | null }) => {
     if (!userId) return;
     const created = await profileApi.createDebt(userId, data);
     setDebts((prev) => [created, ...prev]);
   };
 
-  const handleUpdate = async (data: { title: string; amount: number; type: 'expense' | 'income'; notes: string | null }) => {
+  const handleUpdate = async (data: { title: string; amount: number; type: 'expense' | 'income'; notes: string | null; dueDate: string | null }) => {
     if (!userId || !editDebt) return;
     const updated = await profileApi.updateDebt(userId, editDebt.id, data);
     setDebts((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
@@ -221,6 +227,12 @@ function DebtsContent() {
                         <span className={`font-label-caps text-[11px] uppercase ${isIncome ? 'text-primary' : 'text-error'}`}>
                           {formatCurrency(debt.amount)} · {debt.type}
                         </span>
+                        {debt.dueDate && (
+                          <span className="font-label-caps text-[11px] uppercase text-on-surface-variant mt-0.5 flex items-center gap-1">
+                            <CalendarClock className="w-3 h-3" />
+                            Due {formatDueDate(debt.dueDate)}
+                          </span>
+                        )}
                         {debt.notes && <span className="font-body-sm text-on-surface-variant truncate mt-0.5">{debt.notes}</span>}
                       </div>
                     </button>
