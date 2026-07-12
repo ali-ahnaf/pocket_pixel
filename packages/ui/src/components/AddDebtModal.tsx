@@ -46,6 +46,13 @@ export function AddDebtModal({ isOpen, onClose, onSave, debt = null }: AddDebtMo
 
   const canSave = name.trim().length > 0 && parseFloat(amount) > 0;
 
+  const formatDisplayDate = (iso: string): string => {
+    if (!iso) return '';
+    const [year, month, day] = iso.split('-');
+    if (!year || !month || !day) return '';
+    return `${day}/${month}/${year}`;
+  };
+
   const handleSave = () => {
     if (!canSave) return;
     const trimmedNotes = notes.trim();
@@ -122,14 +129,14 @@ export function AddDebtModal({ isOpen, onClose, onSave, debt = null }: AddDebtMo
             <div className="flex items-center gap-3">
               <input
                 id="debt-due-date"
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="flex-1 h-16 px-4 bg-surface-container-lowest border-4 border-black shadow-[inset_4px_4px_0px_rgba(0,0,0,0.6),_inset_-2px_-2px_0px_rgba(255,255,255,0.05)] font-body-lg text-on-surface placeholder:text-surface-variant focus:outline-none focus:ring-0"
+                type="text"
+                readOnly
+                value={formatDisplayDate(dueDate)}
+                placeholder="DD/MM/YYYY"
+                className="flex-1 h-16 px-4 bg-surface-container-lowest border-4 border-black shadow-[inset_4px_4px_0px_rgba(0,0,0,0.6),_inset_-2px_-2px_0px_rgba(255,255,255,0.05)] font-body-lg text-on-surface placeholder:text-surface-variant focus:outline-none focus:ring-0 cursor-default"
               />
               <PixelDatePicker value={dueDate} onChange={setDueDate} />
             </div>
-            {dueDate && <p className="font-label-caps text-xs text-outline pl-1">{new Date(`${dueDate}T00:00:00`).toLocaleDateString('en-GB')}</p>}
           </div>
 
           <div className="space-y-2">

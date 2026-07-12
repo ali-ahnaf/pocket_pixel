@@ -28,9 +28,8 @@ function formatCurrency(amount: number): string {
 }
 
 function formatDueDate(dueDate: string): string {
-  const [year, month, day] = dueDate.split('-').map(Number);
-  const date = new Date(year, month - 1, day);
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const [year, month, day] = dueDate.split('-');
+  return `${day}/${month}/${year}`;
 }
 
 function DebtsContent() {
