@@ -11,6 +11,10 @@ const updateDebtSchema = Joi.object<UpdateDebtInput>({
   amount: Joi.number().positive().precision(2).optional(),
   type: Joi.string().valid('expense', 'income').optional(),
   notes: Joi.string().allow(null, '').max(2000).optional(),
+  dueDate: Joi.string()
+    .pattern(/^\d{4}-\d{2}-\d{2}$/)
+    .allow(null)
+    .optional(),
 }).min(1);
 
 router.put(

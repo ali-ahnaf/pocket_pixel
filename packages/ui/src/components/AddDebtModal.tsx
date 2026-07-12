@@ -4,13 +4,14 @@ import { useEffect, useState } from 'react';
 import { X, Plus, Save, Coins, Pencil } from 'lucide-react';
 import { Button } from './Button';
 import { Input } from './Input';
+import { PixelDatePicker } from './PixelDatePicker';
 import { TransactionTypeToggle } from './TransactionTypeToggle';
 import type { DebtDto } from '@expense-tracker/shared';
 
 interface AddDebtModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: { title: string; amount: number; type: 'expense' | 'income'; notes: string | null }) => void;
+  onSave: (data: { title: string; amount: number; type: 'expense' | 'income'; notes: string | null; dueDate: string | null }) => void;
   debt?: DebtDto | null;
 }
 
@@ -22,6 +23,7 @@ export function AddDebtModal({ isOpen, onClose, onSave, debt = null }: AddDebtMo
   const [amount, setAmount] = useState('');
   const [isExpense, setIsExpense] = useState(true);
   const [notes, setNotes] = useState('');
+  const [dueDate, setDueDate] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -29,6 +31,7 @@ export function AddDebtModal({ isOpen, onClose, onSave, debt = null }: AddDebtMo
       setAmount(debt ? String(debt.amount) : '');
       setIsExpense(debt ? debt.type === 'expense' : true);
       setNotes(debt?.notes ?? '');
+      setDueDate(debt?.dueDate ?? '');
       setShouldRender(true);
       const t = setTimeout(() => setIsVisible(true), 20);
       return () => clearTimeout(t);
@@ -51,6 +54,7 @@ export function AddDebtModal({ isOpen, onClose, onSave, debt = null }: AddDebtMo
       amount: parseFloat(amount),
       type: isExpense ? 'expense' : 'income',
       notes: trimmedNotes.length > 0 ? trimmedNotes : null,
+      dueDate: dueDate.length > 0 ? dueDate : null,
     });
     onClose();
   };
@@ -109,6 +113,23 @@ export function AddDebtModal({ isOpen, onClose, onSave, debt = null }: AddDebtMo
           <div className="space-y-2">
             <label className="pixel-input-label ml-1">TYPE</label>
             <TransactionTypeToggle isExpense={isExpense} onChange={setIsExpense} />
+          </div>
+
+          <div className="space-y-2">
+            <label className="pixel-input-label ml-1" htmlFor="debt-due-date">
+              DUE DATE
+            </label>
+            <div className="flex items-center gap-3">
+              <input
+                id="debt-due-date"
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="flex-1 h-16 px-4 bg-surface-container-lowest border-4 border-black shadow-[inset_4px_4px_0px_rgba(0,0,0,0.6),_inset_-2px_-2px_0px_rgba(255,255,255,0.05)] font-body-lg text-on-surface placeholder:text-surface-variant focus:outline-none focus:ring-0"
+              />
+              <PixelDatePicker value={dueDate} onChange={setDueDate} />
+            </div>
+            {dueDate && <p className="font-label-caps text-xs text-outline pl-1">{new Date(`${dueDate}T00:00:00`).toLocaleDateString('en-GB')}</p>}
           </div>
 
           <div className="space-y-2">

@@ -27,6 +27,7 @@ const buildDebt = (overrides: Partial<Debt> = {}): Debt =>
     amount: 1000,
     type: 'expense' as TransactionType,
     notes: null,
+    dueDate: null,
     createdAt: new Date(),
     ...overrides,
   }) as Debt;
@@ -82,6 +83,7 @@ describe('DebtsService', () => {
           amount: debt.amount,
           type: debt.type,
           notes: null,
+          dueDate: null,
           createdAt: debt.createdAt,
           completed: undefined,
           discarded: false,
@@ -138,6 +140,7 @@ describe('DebtsService', () => {
         amount: saved.amount,
         type: saved.type,
         notes: null,
+        dueDate: null,
         createdAt: saved.createdAt,
       });
     });
@@ -158,6 +161,7 @@ describe('DebtsService', () => {
         amount: input.amount,
         type: input.type,
         notes: null,
+        dueDate: null,
       });
     });
 
@@ -169,6 +173,16 @@ describe('DebtsService', () => {
 
       expect(debts.createEntity).toHaveBeenCalledWith(expect.objectContaining({ notes: 'pay back by August' }));
       expect(result.notes).toBe('pay back by August');
+    });
+
+    it('persists the dueDate field when provided', async () => {
+      const saved = buildDebt({ dueDate: '2026-08-15' });
+      debts.save.mockResolvedValue(saved);
+
+      const result = await service.create('user-1', { ...input, dueDate: '2026-08-15' });
+
+      expect(debts.createEntity).toHaveBeenCalledWith(expect.objectContaining({ dueDate: '2026-08-15' }));
+      expect(result.dueDate).toBe('2026-08-15');
     });
   });
 
@@ -193,6 +207,26 @@ describe('DebtsService', () => {
       const result = await service.update('user-1', 'debt-1', { notes: null });
 
       expect(result.notes).toBeNull();
+    });
+
+    it('sets the dueDate when provided', async () => {
+      const debt = buildDebt();
+      debts.findOneForUser.mockResolvedValue(debt);
+      debts.save.mockImplementation(async (d) => d);
+
+      const result = await service.update('user-1', 'debt-1', { dueDate: '2026-08-15' });
+
+      expect(result.dueDate).toBe('2026-08-15');
+    });
+
+    it('clears dueDate when null is passed', async () => {
+      const debt = buildDebt({ dueDate: '2026-08-15' });
+      debts.findOneForUser.mockResolvedValue(debt);
+      debts.save.mockImplementation(async (d) => d);
+
+      const result = await service.update('user-1', 'debt-1', { dueDate: null });
+
+      expect(result.dueDate).toBeNull();
     });
 
     it('throws when the debt is missing', async () => {
