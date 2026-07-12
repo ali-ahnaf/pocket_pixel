@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface PixelDatePickerProps {
@@ -41,10 +42,24 @@ export function PixelDatePicker({ value, onChange }: PixelDatePickerProps) {
   const selected = parseDate(value);
   const today = new Date();
   const [isOpen, setIsOpen] = useState(false);
+  const [coords, setCoords] = useState<{ left: number; top?: number; bottom?: number }>({ left: 0 });
   const [viewDate, setViewDate] = useState<Date>(selected ?? today);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const open = (): void => {
     setViewDate(selected ?? today);
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (!rect) {
+      setIsOpen(true);
+      return;
+    }
+    const POPUP_HEIGHT = 380;
+    const POPUP_WIDTH = 288;
+    const GAP = 8;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUp = spaceBelow < POPUP_HEIGHT && rect.top > POPUP_HEIGHT;
+    const left = Math.max(GAP, Math.min(rect.right - POPUP_WIDTH, window.innerWidth - POPUP_WIDTH - GAP));
+    setCoords(openUp ? { left, bottom: window.innerHeight - rect.top + GAP } : { left, top: rect.bottom + GAP });
     setIsOpen(true);
   };
 
@@ -63,6 +78,7 @@ export function PixelDatePicker({ value, onChange }: PixelDatePickerProps) {
   return (
     <div className="relative">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => (isOpen ? setIsOpen(false) : open())}
         aria-label="Change date"
@@ -72,83 +88,88 @@ export function PixelDatePicker({ value, onChange }: PixelDatePickerProps) {
         <input type="date" value={value} readOnly tabIndex={-1} aria-hidden="true" className="hidden" />
       </button>
 
-      {isOpen && (
-        <>
-          <div className="fixed inset-0 z-[65]" onClick={() => setIsOpen(false)} />
-          <div className="absolute right-0 top-[calc(100%+8px)] z-[70] w-72 bg-surface-container-high border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] p-3">
-            <div className="flex items-center justify-between mb-3">
-              <span className="font-headline-md text-primary uppercase text-lg">{monthLabel}</span>
-              <div className="flex gap-1">
-                <button
-                  type="button"
-                  onClick={() => goToMonth(-1)}
-                  aria-label="Previous month"
-                  className="w-8 h-8 bg-surface-container-lowest border-2 border-black flex items-center justify-center text-on-surface hover:bg-surface-container-highest active:translate-y-0.5 transition-transform"
-                >
-                  <ChevronLeft size={16} strokeWidth={3} />
+      {isOpen &&
+        createPortal(
+          <>
+            <div className="fixed inset-0 z-[115]" onClick={() => setIsOpen(false)} />
+            <div
+              style={{ left: coords.left, top: coords.top, bottom: coords.bottom }}
+              className="fixed z-[120] w-72 bg-surface-container-high border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] p-3"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="font-headline-md text-primary uppercase text-lg">{monthLabel}</span>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => goToMonth(-1)}
+                    aria-label="Previous month"
+                    className="w-8 h-8 bg-surface-container-lowest border-2 border-black flex items-center justify-center text-on-surface hover:bg-surface-container-highest active:translate-y-0.5 transition-transform"
+                  >
+                    <ChevronLeft size={16} strokeWidth={3} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => goToMonth(1)}
+                    aria-label="Next month"
+                    className="w-8 h-8 bg-surface-container-lowest border-2 border-black flex items-center justify-center text-on-surface hover:bg-surface-container-highest active:translate-y-0.5 transition-transform"
+                  >
+                    <ChevronRight size={16} strokeWidth={3} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-7 gap-1 mb-1">
+                {WEEKDAYS.map((weekday, index) => (
+                  <div key={index} className="h-7 flex items-center justify-center font-label-caps text-[10px] text-outline">
+                    {weekday}
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-7 gap-1">
+                {days.map((day) => {
+                  const isCurrentMonth = day.getMonth() === viewDate.getMonth();
+                  const isSelected = selected !== null && isSameDay(day, selected);
+                  const isToday = isSameDay(day, today);
+                  const stateClass = isSelected
+                    ? 'bg-primary text-on-primary border-black font-bold'
+                    : isToday
+                      ? 'border-primary text-primary hover:bg-surface-container-highest'
+                      : isCurrentMonth
+                        ? 'border-transparent text-on-surface hover:bg-surface-container-highest'
+                        : 'border-transparent text-outline/50 hover:bg-surface-container-highest';
+                  return (
+                    <button
+                      key={formatDate(day)}
+                      type="button"
+                      onClick={() => selectDay(day)}
+                      className={`h-9 flex items-center justify-center font-body-sm border-2 transition-colors active:translate-y-0.5 ${stateClass}`}
+                    >
+                      {day.getDate()}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex justify-between items-center mt-3 pt-3 border-t-2 border-outline-variant">
+                <button type="button" onClick={() => selectDay(today)} className="font-label-caps text-xs text-primary uppercase hover:underline">
+                  Today
                 </button>
                 <button
                   type="button"
-                  onClick={() => goToMonth(1)}
-                  aria-label="Next month"
-                  className="w-8 h-8 bg-surface-container-lowest border-2 border-black flex items-center justify-center text-on-surface hover:bg-surface-container-highest active:translate-y-0.5 transition-transform"
+                  onClick={() => {
+                    onChange('');
+                    setIsOpen(false);
+                  }}
+                  className="font-label-caps text-xs text-outline uppercase hover:text-error hover:underline"
                 >
-                  <ChevronRight size={16} strokeWidth={3} />
+                  Clear
                 </button>
               </div>
             </div>
-
-            <div className="grid grid-cols-7 gap-1 mb-1">
-              {WEEKDAYS.map((weekday, index) => (
-                <div key={index} className="h-7 flex items-center justify-center font-label-caps text-[10px] text-outline">
-                  {weekday}
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-7 gap-1">
-              {days.map((day) => {
-                const isCurrentMonth = day.getMonth() === viewDate.getMonth();
-                const isSelected = selected !== null && isSameDay(day, selected);
-                const isToday = isSameDay(day, today);
-                const stateClass = isSelected
-                  ? 'bg-primary text-on-primary border-black font-bold'
-                  : isToday
-                    ? 'border-primary text-primary hover:bg-surface-container-highest'
-                    : isCurrentMonth
-                      ? 'border-transparent text-on-surface hover:bg-surface-container-highest'
-                      : 'border-transparent text-outline/50 hover:bg-surface-container-highest';
-                return (
-                  <button
-                    key={formatDate(day)}
-                    type="button"
-                    onClick={() => selectDay(day)}
-                    className={`h-9 flex items-center justify-center font-body-sm border-2 transition-colors active:translate-y-0.5 ${stateClass}`}
-                  >
-                    {day.getDate()}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="flex justify-between items-center mt-3 pt-3 border-t-2 border-outline-variant">
-              <button type="button" onClick={() => selectDay(today)} className="font-label-caps text-xs text-primary uppercase hover:underline">
-                Today
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  onChange('');
-                  setIsOpen(false);
-                }}
-                className="font-label-caps text-xs text-outline uppercase hover:text-error hover:underline"
-              >
-                Clear
-              </button>
-            </div>
-          </div>
-        </>
-      )}
+          </>,
+          document.body,
+        )}
     </div>
   );
 }

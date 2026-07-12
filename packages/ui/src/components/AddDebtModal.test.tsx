@@ -169,16 +169,17 @@ describe('AddDebtModal', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('pre-fills the due date input when editing an existing due', () => {
+  it('pre-fills the due date input with the DD/MM/YYYY display value when editing', () => {
     render(<AddDebtModal {...baseProps} debt={mockDebt} />);
     act(() => {
       vi.runAllTimers();
     });
 
-    expect(screen.getByLabelText(/due date/i)).toHaveValue('2026-08-15');
+    expect(screen.getByLabelText(/due date/i)).toHaveValue('15/08/2026');
   });
 
-  it('sends the entered due date through onSave', () => {
+  it('sends the picked due date through onSave', () => {
+    vi.setSystemTime(new Date(2026, 8, 1));
     const onSave = vi.fn();
     render(<AddDebtModal {...baseProps} onSave={onSave} />);
     act(() => {
@@ -187,21 +188,27 @@ describe('AddDebtModal', () => {
 
     fireEvent.change(screen.getByPlaceholderText(/e.g. Rent, Loan Repayment/i), { target: { value: 'Rent' } });
     fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '100' } });
-    fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '2026-09-01' } });
+
+    // Open the pixel date picker and select today (system time fixed to 2026-09-01).
+    fireEvent.click(screen.getByRole('button', { name: /change date/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^today$/i }));
 
     fireEvent.click(screen.getByRole('button', { name: /save due/i }));
 
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ dueDate: '2026-09-01' }));
   });
 
-  it('sends dueDate as null when the field is cleared while editing', () => {
+  it('sends dueDate as null when the date is cleared while editing', () => {
     const onSave = vi.fn();
     render(<AddDebtModal {...baseProps} debt={mockDebt} onSave={onSave} />);
     act(() => {
       vi.runAllTimers();
     });
 
-    fireEvent.change(screen.getByLabelText(/due date/i), { target: { value: '' } });
+    // Open the pixel date picker and clear the selected date.
+    fireEvent.click(screen.getByRole('button', { name: /change date/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^clear$/i }));
+
     fireEvent.click(screen.getByRole('button', { name: /update due/i }));
 
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ dueDate: null }));
