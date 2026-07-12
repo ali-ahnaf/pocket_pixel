@@ -8,4 +8,3 @@ export * from './tags';
 export * from './vaults';
 export * from './recurring';
 export * from './preferences';
-export * from './backup';

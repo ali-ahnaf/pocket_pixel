@@ -1,4 +1,5 @@
-import { BackupDebtDto, BackupRecurringSkipDto, BackupTransactionDto, ExportDataResponse, ImportDataRequest, RecurringDto, TransactionDto } from '@expense-tracker/shared';
+import { RecurringDto, TransactionDto } from '@expense-tracker/shared';
+import { gunzipSync, gzipSync } from 'zlib';
 import { EntityManager, In, IsNull, Not } from 'typeorm';
 import { AppDataSource } from '../data-source';
 import { Debt } from '../entities/Debt.entity';
@@ -10,9 +11,9 @@ import { User } from '../entities/User.entity';
 import { UserPreference } from '../entities/UserPreference.entity';
 import { Vault } from '../entities/Vault.entity';
 import { AppError } from '../errors/app-error';
-import { debtsService, logger, preferencesService, tagsService, usersService, vaultsService } from '../services';
+import { debtsService, logger, tagsService, usersService, vaultsService } from '../services';
+import { BACKUP_MAX_FILE_SIZE_BYTES, BackupDebtDto, BackupPayload, BackupRecurringSkipDto, BackupTransactionDto } from '../types/backup';
 import { DebtsService } from './debts.service';
-import { PreferencesService } from './preferences.service';
 import { TagsService } from './tags.service';
 import { UsersService } from './users.service';
 import { VaultsService } from './vaults.service';
@@ -21,23 +22,71 @@ type ImportedTagLink = Pick<TransactionTag, 'transactionId' | 'tagId'>;
 
 export class BackupService {
   private readonly appVersion = '1.0';
+  private readonly binaryFormatMagic = 'PPBK';
+  private readonly binaryFormatVersion = 1;
+  private readonly maxDecompressedBackupSizeBytes = BACKUP_MAX_FILE_SIZE_BYTES;
 
   constructor(
     private readonly users: UsersService = usersService,
     private readonly debts: DebtsService = debtsService,
     private readonly vaults: VaultsService = vaultsService,
-    private readonly preference: PreferencesService = preferencesService,
     private readonly tags: TagsService = tagsService,
   ) {}
 
-  async exportData(userId: string): Promise<ExportDataResponse> {
+  async exportData(userId: string): Promise<Buffer> {
+    const payload = await this.buildBackupPayload(userId);
+    const buffer = this.serializeBackupPayload(userId, payload);
+
+    logger.info('Created backup export file', {
+      userId,
+      sizeBytes: buffer.length,
+    });
+
+    return buffer;
+  }
+
+  parseBackupFile(file: Buffer): unknown {
+    if (!Buffer.isBuffer(file) || file.length <= 5) {
+      throw new AppError('Invalid backup file', 400);
+    }
+
+    const magic = file.subarray(0, 4).toString('ascii');
+    if (magic !== this.binaryFormatMagic) {
+      throw new AppError('Unsupported backup file format', 400);
+    }
+
+    const formatVersion = file.readUInt8(4);
+    if (formatVersion !== this.binaryFormatVersion) {
+      throw new AppError(`Unsupported backup file version: ${formatVersion}`, 400);
+    }
+
+    try {
+      const decompressedPayload = gunzipSync(file.subarray(5), {
+        maxOutputLength: this.maxDecompressedBackupSizeBytes,
+      });
+      const payload = JSON.parse(decompressedPayload.toString('utf8'));
+      logger.debug('Parsed backup file', {
+        formatVersion,
+        sizeBytes: file.length,
+        decompressedSizeBytes: decompressedPayload.length,
+      });
+      return payload;
+    } catch (error) {
+      logger.warn('Failed to parse backup file', {
+        error: error instanceof Error ? error.message : error,
+      });
+      throw new AppError('Backup file could not be parsed', 400);
+    }
+  }
+
+  private async buildBackupPayload(userId: string): Promise<BackupPayload> {
     const user = await this.users.getById(userId);
     const debts = await this.listDebtsForBackup(userId);
     const vaults = await this.vaults.list(userId);
     const transactions = await this.listTransactionsForBackup(userId);
     const recurrings = await this.listRecurringsForBackup(userId);
     const recurringSkips = await this.listRecurringSkipsForBackup(userId);
-    const preference = await this.preference.getOrCreate(userId);
+    const preference = await this.listPreferenceForBackup(userId);
     const tags = await this.tags.list(userId);
 
     return {
@@ -62,7 +111,7 @@ export class BackupService {
     };
   }
 
-  async importData(userId: string, dto: ImportDataRequest): Promise<void> {
+  async importData(userId: string, dto: BackupPayload): Promise<void> {
     this.validateImportPayload(userId, dto);
     await this.users.getById(userId);
 
@@ -77,8 +126,6 @@ export class BackupService {
     });
 
     await AppDataSource.transaction(async (entityManager: EntityManager) => {
-      const existingExpenseIds = await this.listExistingExpenseIds(entityManager, userId);
-
       await entityManager.update(
         User,
         { id: userId },
@@ -90,26 +137,46 @@ export class BackupService {
         },
       );
 
-      await this.resetBackupData(entityManager, userId, existingExpenseIds);
-      logger.debug('Reset existing backup data before restore', {
-        userId,
-        existingExpenses: existingExpenseIds.length,
-      });
-
-      await this.upsertTags(entityManager, userId, dto);
-      await this.upsertVaults(entityManager, userId, dto);
-      await this.upsertTransactions(entityManager, userId, dto);
-      await this.upsertRecurrings(entityManager, userId, dto);
-      await this.upsertDebts(entityManager, userId, dto);
-      await this.upsertPreference(entityManager, userId, dto);
-      await this.replaceTransactionTags(entityManager, dto);
-      await this.replaceRecurringSkips(entityManager, userId, dto);
+      await this.clearExistingBackupData(entityManager, userId);
+      await this.saveTags(entityManager, userId, dto);
+      await this.saveVaults(entityManager, userId, dto);
+      await this.saveTransactions(entityManager, userId, dto);
+      await this.saveRecurrings(entityManager, userId, dto);
+      await this.saveDebts(entityManager, userId, dto);
+      await this.savePreference(entityManager, userId, dto);
+      await this.saveTransactionTags(entityManager, dto);
+      await this.saveRecurringSkips(entityManager, userId, dto);
     });
 
     logger.info('Completed backup import', { userId });
   }
 
-  private validateImportPayload(userId: string, dto: ImportDataRequest): void {
+  private serializeBackupPayload(userId: string, payload: BackupPayload): Buffer {
+    const payloadBytes = Buffer.from(JSON.stringify(payload), 'utf8');
+    if (payloadBytes.length > this.maxDecompressedBackupSizeBytes) {
+      logger.warn('Backup export exceeds decompressed size limit', {
+        userId,
+        payloadSizeBytes: payloadBytes.length,
+        maxSizeBytes: this.maxDecompressedBackupSizeBytes,
+      });
+      throw new AppError('Backup data exceeds the maximum supported size', 400);
+    }
+
+    const compressedPayload = gzipSync(payloadBytes);
+    const file = Buffer.concat([Buffer.from(this.binaryFormatMagic, 'ascii'), Buffer.from([this.binaryFormatVersion]), compressedPayload]);
+    if (file.length > BACKUP_MAX_FILE_SIZE_BYTES) {
+      logger.warn('Backup export exceeds file size limit', {
+        userId,
+        sizeBytes: file.length,
+        maxSizeBytes: BACKUP_MAX_FILE_SIZE_BYTES,
+      });
+      throw new AppError('Backup data exceeds the maximum supported size', 400);
+    }
+
+    return file;
+  }
+
+  private validateImportPayload(userId: string, dto: BackupPayload): void {
     if (dto.appVersion !== this.appVersion) {
       throw new AppError(`Unsupported backup version: ${dto.appVersion}`, 400);
     }
@@ -234,7 +301,9 @@ export class BackupService {
     return expenses.map((expense) => expense.id);
   }
 
-  private async resetBackupData(entityManager: EntityManager, userId: string, existingExpenseIds: string[]): Promise<void> {
+  private async clearExistingBackupData(entityManager: EntityManager, userId: string): Promise<void> {
+    const existingExpenseIds = await this.listExistingExpenseIds(entityManager, userId);
+
     if (existingExpenseIds.length > 0) {
       await entityManager.softDelete(TransactionTag, { transactionId: In(existingExpenseIds) });
     }
@@ -245,9 +314,14 @@ export class BackupService {
     await entityManager.softDelete(Vault, { userId });
     await entityManager.softDelete(Tag, { userId });
     await entityManager.softDelete(UserPreference, { userId });
+
+    logger.debug('Soft deleted existing backup data before import', {
+      userId,
+      existingExpenses: existingExpenseIds.length,
+    });
   }
 
-  private async upsertTags(entityManager: EntityManager, userId: string, dto: ImportDataRequest): Promise<void> {
+  private async saveTags(entityManager: EntityManager, userId: string, dto: BackupPayload): Promise<void> {
     if (dto.data.tags.length === 0) return;
 
     await entityManager.save(
@@ -265,7 +339,7 @@ export class BackupService {
     );
   }
 
-  private async upsertVaults(entityManager: EntityManager, userId: string, dto: ImportDataRequest): Promise<void> {
+  private async saveVaults(entityManager: EntityManager, userId: string, dto: BackupPayload): Promise<void> {
     if (dto.data.vaults.length === 0) return;
 
     await entityManager.save(
@@ -286,7 +360,7 @@ export class BackupService {
     );
   }
 
-  private async upsertTransactions(entityManager: EntityManager, userId: string, dto: ImportDataRequest): Promise<void> {
+  private async saveTransactions(entityManager: EntityManager, userId: string, dto: BackupPayload): Promise<void> {
     if (dto.data.transactions.length === 0) return;
 
     await entityManager.save(
@@ -312,7 +386,7 @@ export class BackupService {
     );
   }
 
-  private async upsertRecurrings(entityManager: EntityManager, userId: string, dto: ImportDataRequest): Promise<void> {
+  private async saveRecurrings(entityManager: EntityManager, userId: string, dto: BackupPayload): Promise<void> {
     if (dto.data.recurrings.length === 0) return;
 
     await entityManager.save(
@@ -338,7 +412,7 @@ export class BackupService {
     );
   }
 
-  private async upsertDebts(entityManager: EntityManager, userId: string, dto: ImportDataRequest): Promise<void> {
+  private async saveDebts(entityManager: EntityManager, userId: string, dto: BackupPayload): Promise<void> {
     if (dto.data.debts.length === 0) return;
 
     await entityManager.save(
@@ -359,26 +433,25 @@ export class BackupService {
     );
   }
 
-  private async upsertPreference(entityManager: EntityManager, userId: string, dto: ImportDataRequest): Promise<void> {
-    await entityManager.upsert(
-      UserPreference,
-      [
-        {
-          userId,
-          showIncome: dto.data.preference.showIncome,
-          showExpense: dto.data.preference.showExpense,
-        },
-      ],
-      {
-        conflictPaths: ['userId'],
-        skipUpdateIfNoValuesChanged: true,
-      },
-    );
+  private async savePreference(entityManager: EntityManager, userId: string, dto: BackupPayload): Promise<void> {
+    const existingPreference = await entityManager.findOne(UserPreference, {
+      where: { userId },
+      withDeleted: true,
+    });
 
-    await entityManager.restore(UserPreference, { userId });
+    await entityManager.save(
+      UserPreference,
+      Object.assign(new UserPreference(), {
+        id: existingPreference?.id,
+        userId,
+        showIncome: dto.data.preference.showIncome,
+        showExpense: dto.data.preference.showExpense,
+        deletedAt: null,
+      }),
+    );
   }
 
-  private async replaceTransactionTags(entityManager: EntityManager, dto: ImportDataRequest): Promise<void> {
+  private async saveTransactionTags(entityManager: EntityManager, dto: BackupPayload): Promise<void> {
     const links = this.buildImportedTagLinks(dto.data.transactions, dto.data.recurrings);
     if (links.length === 0) return;
 
@@ -394,7 +467,7 @@ export class BackupService {
     );
   }
 
-  private async replaceRecurringSkips(entityManager: EntityManager, userId: string, dto: ImportDataRequest): Promise<void> {
+  private async saveRecurringSkips(entityManager: EntityManager, userId: string, dto: BackupPayload): Promise<void> {
     if (dto.data.recurringSkips.length === 0) return;
 
     await entityManager.save(
@@ -408,6 +481,15 @@ export class BackupService {
         }),
       ),
     );
+  }
+
+  private async listPreferenceForBackup(userId: string): Promise<BackupPayload['data']['preference']> {
+    const preference = await AppDataSource.getRepository(UserPreference).findOneBy({ userId });
+
+    return {
+      showIncome: preference?.showIncome ?? false,
+      showExpense: preference?.showExpense ?? false,
+    };
   }
 
   private buildImportedTagLinks(transactions: TransactionDto[], recurrings: RecurringDto[]): ImportedTagLink[] {
