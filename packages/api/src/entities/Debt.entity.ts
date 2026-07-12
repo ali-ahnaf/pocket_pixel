@@ -23,6 +23,9 @@ export class Debt extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   notes: string | null;
 
+  @Column({ type: 'date', nullable: true })
+  dueDate: string | null;
+
   @Column({ type: 'boolean', default: false })
   completed: boolean;
 
