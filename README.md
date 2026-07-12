@@ -269,7 +269,7 @@ Open an issue with:
 <div align="center">
 
 <!-- CONTRIBUTORS:START -->
-<img src="https://img.shields.io/badge/PARTY_SIZE-55_HEROES-2ea44f?style=for-the-badge&logo=github&logoColor=white" alt="party size"/>
+<img src="https://img.shields.io/badge/PARTY_SIZE-56_HEROES-2ea44f?style=for-the-badge&logo=github&logoColor=white" alt="party size"/>
 <img src="https://img.shields.io/badge/QUEST-EXPENSE_TRACKER-8B5CF6?style=for-the-badge" alt="quest"/>
 
 <table>
@@ -386,14 +386,21 @@ Open an issue with:
       <img src="https://img.shields.io/badge/LVL_2-KNIGHT-C0C0C0?style=for-the-badge&labelColor=1a1a1a" alt="Knight"/>
     </td>
     <td align="center">
+      <a href="https://github.com/AimanCrafts">
+        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/192534791&w=100&h=100&fit=cover" width="100" alt="AimanCrafts"/><br/>
+        <sub><b>AimanCrafts</b></sub>
+      </a><br/>
+      <img src="https://img.shields.io/badge/LVL_1-MONK-DD6B20?style=for-the-badge&labelColor=1a1a1a" alt="Monk"/>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
       <a href="https://github.com/Talha-Morshed">
         <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/273560396&w=100&h=100&fit=cover" width="100" alt="Talha-Morshed"/><br/>
         <sub><b>Talha-Morshed</b></sub>
       </a><br/>
       <img src="https://img.shields.io/badge/LVL_1-MONK-DD6B20?style=for-the-badge&labelColor=1a1a1a" alt="Monk"/>
     </td>
-  </tr>
-  <tr>
     <td align="center">
       <a href="https://github.com/tarannum007">
         <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/198879222&w=100&h=100&fit=cover" width="100" alt="tarannum007"/><br/>
@@ -415,6 +422,8 @@ Open an issue with:
       </a><br/>
       <img src="https://img.shields.io/badge/LVL_1-MONK-DD6B20?style=for-the-badge&labelColor=1a1a1a" alt="Monk"/>
     </td>
+  </tr>
+  <tr>
     <td align="center">
       <a href="https://github.com/abidhasan176">
         <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/203552162&w=100&h=100&fit=cover" width="100" alt="abidhasan176"/><br/>
@@ -422,8 +431,6 @@ Open an issue with:
       </a><br/>
       <img src="https://img.shields.io/badge/LVL_1-MONK-DD6B20?style=for-the-badge&labelColor=1a1a1a" alt="Monk"/>
     </td>
-  </tr>
-  <tr>
     <td align="center">
       <a href="https://github.com/afra012">
         <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/198680918&w=100&h=100&fit=cover" width="100" alt="afra012"/><br/>
@@ -445,6 +452,8 @@ Open an issue with:
       </a><br/>
       <img src="https://img.shields.io/badge/LVL_1-MONK-DD6B20?style=for-the-badge&labelColor=1a1a1a" alt="Monk"/>
     </td>
+  </tr>
+  <tr>
     <td align="center">
       <a href="https://github.com/eshaaaa1212">
         <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/195303313&w=100&h=100&fit=cover" width="100" alt="eshaaaa1212"/><br/>
@@ -452,8 +461,6 @@ Open an issue with:
       </a><br/>
       <img src="https://img.shields.io/badge/LVL_1-MONK-DD6B20?style=for-the-badge&labelColor=1a1a1a" alt="Monk"/>
     </td>
-  </tr>
-  <tr>
     <td align="center">
       <a href="https://github.com/faysaliqbal007">
         <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/198849341&w=100&h=100&fit=cover" width="100" alt="faysaliqbal007"/><br/>
@@ -475,6 +482,8 @@ Open an issue with:
       </a><br/>
       <img src="https://img.shields.io/badge/LVL_1-MONK-DD6B20?style=for-the-badge&labelColor=1a1a1a" alt="Monk"/>
     </td>
+  </tr>
+  <tr>
     <td align="center">
       <a href="https://github.com/mashru04">
         <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/203539625&w=100&h=100&fit=cover" width="100" alt="mashru04"/><br/>
@@ -482,8 +491,6 @@ Open an issue with:
       </a><br/>
       <img src="https://img.shields.io/badge/LVL_1-MONK-DD6B20?style=for-the-badge&labelColor=1a1a1a" alt="Monk"/>
     </td>
-  </tr>
-  <tr>
     <td align="center">
       <a href="https://github.com/minhalriaz">
         <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/203744899&w=100&h=100&fit=cover" width="100" alt="minhalriaz"/><br/>
@@ -505,6 +512,8 @@ Open an issue with:
       </a><br/>
       <img src="https://img.shields.io/badge/LVL_1-MONK-DD6B20?style=for-the-badge&labelColor=1a1a1a" alt="Monk"/>
     </td>
+  </tr>
+  <tr>
     <td align="center">
       <a href="https://github.com/razihasan98">
         <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/198874549&w=100&h=100&fit=cover" width="100" alt="razihasan98"/><br/>
@@ -512,8 +521,6 @@ Open an issue with:
       </a><br/>
       <img src="https://img.shields.io/badge/LVL_1-MONK-DD6B20?style=for-the-badge&labelColor=1a1a1a" alt="Monk"/>
     </td>
-  </tr>
-  <tr>
     <td align="center">
       <a href="https://github.com/0xAhnaf">
         <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/173501441&w=100&h=100&fit=cover" width="100" alt="0xAhnaf"/><br/>
@@ -532,13 +539,6 @@ Open an issue with:
       <a href="https://github.com/tashrik404">
         <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/169609646&w=100&h=100&fit=cover" width="100" alt="tashrik404"/><br/>
         <sub><b>tashrik404</b></sub>
-      </a><br/>
-      <img src="https://img.shields.io/badge/LVL_1-MONK-DD6B20?style=for-the-badge&labelColor=1a1a1a" alt="Monk"/>
-    </td>
-    <td align="center">
-      <a href="https://github.com/AimanCrafts">
-        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/192534791&w=100&h=100&fit=cover" width="100" alt="AimanCrafts"/><br/>
-        <sub><b>AimanCrafts</b></sub>
       </a><br/>
       <img src="https://img.shields.io/badge/LVL_1-MONK-DD6B20?style=for-the-badge&labelColor=1a1a1a" alt="Monk"/>
     </td>
@@ -656,14 +656,21 @@ Open an issue with:
       <img src="https://img.shields.io/badge/LVL_1-MONK-DD6B20?style=for-the-badge&labelColor=1a1a1a" alt="Monk"/>
     </td>
     <td align="center">
+      <a href="https://github.com/RaisulSifat">
+        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/198881006&w=100&h=100&fit=cover" width="100" alt="RaisulSifat"/><br/>
+        <sub><b>RaisulSifat</b></sub>
+      </a><br/>
+      <img src="https://img.shields.io/badge/LVL_1-MONK-DD6B20?style=for-the-badge&labelColor=1a1a1a" alt="Monk"/>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
       <a href="https://github.com/CodeWizard973">
         <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/197094928&w=100&h=100&fit=cover" width="100" alt="CodeWizard973"/><br/>
         <sub><b>CodeWizard973</b></sub>
       </a><br/>
       <img src="https://img.shields.io/badge/LVL_1-MONK-DD6B20?style=for-the-badge&labelColor=1a1a1a" alt="Monk"/>
     </td>
-  </tr>
-  <tr>
     <td align="center">
       <a href="https://github.com/Sadman-Wolfie">
         <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/203669289&w=100&h=100&fit=cover" width="100" alt="Sadman-Wolfie"/><br/>
