@@ -8,14 +8,17 @@ const mockUsageCompletions = jest.fn();
 jest.mock('../services', () => ({
   logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
   tagsService: { listCached: jest.fn() },
+  vaultsService: { list: jest.fn() },
 }));
 
 jest.mock('openai');
 
-const { tagsService } = jest.requireMock('../services') as {
+const { tagsService, vaultsService } = jest.requireMock('../services') as {
   tagsService: { listCached: jest.Mock };
+  vaultsService: { list: jest.Mock };
 };
 const mockListCached = tagsService.listCached;
+const mockListVaults = vaultsService.list;
 const mockedOpenAI = OpenAI as unknown as jest.Mock;
 
 describe('PromptService', () => {
@@ -65,11 +68,15 @@ describe('PromptService', () => {
       expect(mockResponsesCreate).not.toHaveBeenCalled();
     });
 
-    it('returns the parsed transaction and resolves tag names back to ids', async () => {
+    it('returns the parsed transaction and resolves tag and vault names back to ids', async () => {
       process.env.OPENAI_API_KEY = 'test-openai-key';
       mockListCached.mockResolvedValue([
         { id: 'tag-food', name: 'Food' },
         { id: 'tag-travel', name: 'Travel' },
+      ]);
+      mockListVaults.mockResolvedValue([
+        { id: 'vault-wallet', name: 'Wallet' },
+        { id: 'vault-savings', name: 'Savings' },
       ]);
       mockResponsesCreate.mockResolvedValue({
         output_text: JSON.stringify({
@@ -77,6 +84,7 @@ describe('PromptService', () => {
           amount: 4.5,
           type: 'expense',
           tags: ['food', 'TRAVEL', 'unknown', 123],
+          vault: 'wallet',
         }),
       });
 
@@ -84,6 +92,7 @@ describe('PromptService', () => {
 
       expect(mockedOpenAI).toHaveBeenCalledWith();
       expect(mockListCached).toHaveBeenCalledWith('user-1');
+      expect(mockListVaults).toHaveBeenCalledWith('user-1');
       expect(mockResponsesCreate).toHaveBeenCalledWith({
         model: OPENAI_MODEL,
         input: expect.stringContaining('prompt: Bought coffee before work'),
@@ -98,28 +107,75 @@ describe('PromptService', () => {
                   type: 'array',
                   items: { type: 'string', enum: ['Food', 'Travel'] },
                 },
+                vault: {
+                  type: ['string', 'null'],
+                  enum: ['Wallet', 'Savings', null],
+                },
               }),
+              required: ['title', 'amount', 'type', 'tags', 'vault'],
             }),
           },
         },
       });
+      expect(mockResponsesCreate.mock.calls[0][0].input).toContain("User's vaults: Wallet, Savings");
       expect(result).toEqual({
         title: 'Morning coffee',
         amount: 4.5,
         type: 'expense',
         tagIds: ['tag-food', 'tag-travel'],
+        vaultId: 'vault-wallet',
       });
     });
 
-    it('falls back to a plain string-array schema when the user has no tags', async () => {
+    it('returns a null vaultId when the model does not identify one', async () => {
       process.env.OPENAI_API_KEY = 'test-openai-key';
       mockListCached.mockResolvedValue([]);
+      mockListVaults.mockResolvedValue([{ id: 'vault-wallet', name: 'Wallet' }]);
+      mockResponsesCreate.mockResolvedValue({
+        output_text: JSON.stringify({
+          title: 'Coffee',
+          amount: 3,
+          type: 'expense',
+          tags: [],
+          vault: null,
+        }),
+      });
+
+      const result = await service.parseTransaction('user-1', 'Coffee');
+
+      expect(result.vaultId).toBeNull();
+    });
+
+    it('drops a hallucinated vault name and returns null', async () => {
+      process.env.OPENAI_API_KEY = 'test-openai-key';
+      mockListCached.mockResolvedValue([]);
+      mockListVaults.mockResolvedValue([{ id: 'vault-wallet', name: 'Wallet' }]);
+      mockResponsesCreate.mockResolvedValue({
+        output_text: JSON.stringify({
+          title: 'Coffee',
+          amount: 3,
+          type: 'expense',
+          tags: [],
+          vault: 'Imaginary',
+        }),
+      });
+
+      const result = await service.parseTransaction('user-1', 'Coffee');
+
+      expect(result.vaultId).toBeNull();
+    });
+
+    it('falls back to plain schemas when the user has no tags or vaults', async () => {
+      process.env.OPENAI_API_KEY = 'test-openai-key';
+      mockListCached.mockResolvedValue([]);
+      mockListVaults.mockResolvedValue([]);
       mockResponsesCreate.mockResolvedValue({
         output_text: JSON.stringify({
           title: 'Monthly salary',
           amount: 3000,
           type: 'income',
           tags: ['Salary'],
+          vault: null,
         }),
       });
 
@@ -129,17 +185,22 @@ describe('PromptService', () => {
         type: 'array',
         items: { type: 'string' },
       });
+      expect(mockResponsesCreate.mock.calls[0][0].text.format.schema.properties.vault).toEqual({
+        type: ['string', 'null'],
+      });
       expect(result).toEqual({
         title: 'Monthly salary',
         amount: 3000,
         type: 'income',
         tagIds: [],
+        vaultId: null,
       });
     });
 
     it('throws a 502 AppError when the AI response is not valid JSON', async () => {
       process.env.OPENAI_API_KEY = 'test-openai-key';
       mockListCached.mockResolvedValue([]);
+      mockListVaults.mockResolvedValue([]);
       mockResponsesCreate.mockResolvedValue({ output_text: 'not-json' });
 
       await expect(service.parseTransaction('user-1', 'Coffee')).rejects.toMatchObject({

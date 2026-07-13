@@ -3,6 +3,7 @@ export interface ParsedTransaction {
   amount: number;
   type: 'expense' | 'income';
   tagIds: string[];
+  vaultId: string | null;
 }
 
 export interface ModelUsage {
