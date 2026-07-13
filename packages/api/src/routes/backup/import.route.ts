@@ -52,6 +52,10 @@ const importDataSchema = Joi.object<BackupPayload>({
           amount: Joi.number().positive().precision(2).required(),
           type: Joi.string().valid('expense', 'income').required(),
           notes: Joi.string().allow(null, '').max(2000).optional(),
+          dueDate: Joi.string()
+            .pattern(/^\d{4}-\d{2}-\d{2}$/)
+            .allow(null)
+            .required(),
           createdAt: Joi.string().isoDate().required(),
           completed: Joi.boolean(),
           discarded: Joi.boolean(),

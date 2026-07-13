@@ -425,6 +425,7 @@ export class BackupService {
           amount: debt.amount,
           type: debt.type,
           notes: debt.notes ?? null,
+          dueDate: debt.dueDate,
           completed: debt.completed ?? false,
           createdAt: new Date(debt.createdAt),
           deletedAt: debt.completed || debt.discarded ? new Date(dto.exportedAt) : null,
