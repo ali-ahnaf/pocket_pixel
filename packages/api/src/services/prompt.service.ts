@@ -1,18 +1,19 @@
 import OpenAI from 'openai';
 import { ParsedTransaction, ModelUsage, UsageReport } from '@expense-tracker/shared';
 import { AppError } from '../errors/app-error';
-import { logger, tagsService } from '.';
+import { logger, tagsService, vaultsService } from '.';
 
 export type { ParsedTransaction, ModelUsage, UsageReport };
 
 export const OPENAI_MODEL = 'gpt-5.4-nano';
 
-// What the model returns: tags by name, never by id.
+// What the model returns: tags and vault by name, never by id.
 interface ModelTransaction {
   title: string;
   amount: number;
   type: 'expense' | 'income';
   tags: string[];
+  vault: string | null;
 }
 
 /**
@@ -42,23 +43,29 @@ export class PromptService {
       throw new AppError('OPENAI_API_KEY is not configured', 500);
     }
 
-    const tags = await tagsService.listCached(userId);
+    const [tags, vaults] = await Promise.all([tagsService.listCached(userId), vaultsService.list(userId)]);
     // Resolve names back to ids; lowercased so the model's casing doesn't matter.
     const tagIdsByName = new Map(tags.map((tag) => [tag.name.toLowerCase(), tag.id]));
+    const vaultIdsByName = new Map(vaults.map((vault) => [vault.name.toLowerCase(), vault.id]));
     const tagList = tags.map((tag) => `- ${tag.name}`).join('\n');
+    const vaultList = vaults.map((vault) => vault.name).join(', ');
 
     const seedPrompt = `This is an expense tracker app. Translate the user's prompt into a transaction.
 Only pick existing tag names from this list. Do not create new tags:
 ${tagList}
+User's vaults: ${vaultList}
+Only pick a vault when the user explicitly names one from the list. Do not invent a vault, and return null when no vault is mentioned.
 "title" should be a short 3-4 word description of the transaction.
 
 prompt: ${prompt}`;
 
-    // Constrain tags to existing names via an enum so the model cannot invent any.
-    // An empty enum is an invalid schema, so fall back to a plain string array when
-    // the user has no tags yet.
+    // Constrain tags/vaults to existing names via an enum so the model cannot invent any.
+    // An empty enum is an invalid schema, so fall back to a plain string array (or a
+    // nullable string for vaults) when the user has no tags/vaults yet.
     const tagNames = tags.map((tag) => tag.name);
+    const vaultNames = vaults.map((vault) => vault.name);
     const tagsSchema = tagNames.length > 0 ? { type: 'array', items: { type: 'string', enum: tagNames } } : { type: 'array', items: { type: 'string' } };
+    const vaultSchema = vaultNames.length > 0 ? { type: ['string', 'null'], enum: [...vaultNames, null] } : { type: ['string', 'null'] };
 
     const response = await this.openai().responses.create({
       model: OPENAI_MODEL,
@@ -75,8 +82,9 @@ prompt: ${prompt}`;
               amount: { type: 'number' },
               type: { type: 'string', enum: ['expense', 'income'] },
               tags: tagsSchema,
+              vault: vaultSchema,
             },
-            required: ['title', 'amount', 'type', 'tags'],
+            required: ['title', 'amount', 'type', 'tags', 'vault'],
             additionalProperties: false,
           },
         },
@@ -100,8 +108,11 @@ prompt: ${prompt}`;
           .filter((id): id is string => typeof id === 'string')
       : [];
 
-    logger.debug('Parsed AI transaction', { userId, tagCount: tagIds.length });
-    return { title: candidate.title, amount: candidate.amount, type: candidate.type, tagIds };
+    // Resolve the vault name back to an id; anything the model hallucinated maps to null.
+    const vaultId = typeof candidate.vault === 'string' ? (vaultIdsByName.get(candidate.vault.toLowerCase()) ?? null) : null;
+
+    logger.debug('Parsed AI transaction', { userId, tagCount: tagIds.length, vaultResolved: vaultId !== null });
+    return { title: candidate.title, amount: candidate.amount, type: candidate.type, tagIds, vaultId };
   }
 
   /**
