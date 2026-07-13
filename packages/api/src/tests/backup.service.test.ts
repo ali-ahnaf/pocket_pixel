@@ -54,6 +54,7 @@ const buildImportRequest = (overrides: Partial<BackupPayload> = {}): BackupPaylo
         amount: 50,
         type: 'expense',
         notes: 'July',
+        dueDate: '2026-07-15',
         createdAt: '2026-07-01T00:00:00.000Z',
         completed: true,
         discarded: false,
@@ -439,6 +440,7 @@ describe('BackupService', () => {
           id: 'debt-1',
           userId: 'user-1',
           title: 'Water bill',
+          dueDate: '2026-07-15',
           deletedAt: new Date('2026-07-08T00:00:00.000Z'),
         }),
       ]);
