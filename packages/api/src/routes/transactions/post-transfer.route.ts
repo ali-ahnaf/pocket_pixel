@@ -1,12 +1,12 @@
 import { Request, Response, Router } from 'express';
 import Joi from 'joi';
-import { CreateTransactionInput } from '@expense-tracker/shared';
+import { CreateTransferInput } from '@expense-tracker/shared';
 import { transactionsService, utilService } from '../../services';
 import { asyncHandler } from '../../middleware/error-handler';
 
 const router = Router({ mergeParams: true });
 
-const createTransferSchema = Joi.object<CreateTransactionInput & { targetVaultId: string }>({
+const createTransferSchema = Joi.object<CreateTransferInput>({
   amount: Joi.number().positive().precision(2).required(),
   tagIds: Joi.array().items(Joi.string().uuid()).default([]),
   title: Joi.string().max(200).allow(null, '').optional(),
@@ -28,7 +28,7 @@ router.post(
     const { error, value } = createTransferSchema.validate(req.body);
     if (error) return utilService.replyError(res, error.message);
 
-    const saved = await transactionsService.createTransferTransaction(req.user!.userId, value as CreateTransactionInput & { targetVaultId: string });
+    const saved = await transactionsService.createTransferTransaction(req.user!.userId, value as CreateTransferInput);
     return utilService.replyCreated(res, saved);
   }),
 );
