@@ -25,12 +25,12 @@ vi.mock('../lib/iconMapper', () => ({
 }));
 
 vi.mock('./TransactionTypeToggle', () => ({
-  TransactionTypeToggle: ({ isExpense, onChange }: { isExpense: boolean; onChange: (value: boolean) => void }) => (
+  TransactionTypeToggle: ({ value, onChange }: { value: 'expense' | 'income' | 'transfer'; onChange: (value: 'expense' | 'income' | 'transfer') => void }) => (
     <div>
-      <button type="button" onClick={() => onChange(true)} aria-pressed={isExpense}>
+      <button type="button" onClick={() => onChange('expense')} aria-pressed={value === 'expense'}>
         Expense
       </button>
-      <button type="button" onClick={() => onChange(false)} aria-pressed={!isExpense}>
+      <button type="button" onClick={() => onChange('income')} aria-pressed={value === 'income'}>
         Income
       </button>
     </div>

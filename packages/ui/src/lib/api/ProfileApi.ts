@@ -12,6 +12,8 @@ import type {
   ChangePasswordPayload,
   UserPreferenceDto,
   UpdateUserPreferenceInput,
+  CreateTransactionInput,
+  CreateTransferInput,
 } from '@expense-tracker/shared';
 import ApiClient from './ApiClient';
 
@@ -97,8 +99,12 @@ export default class ProfileApi extends ApiClient {
     return this.get<TransactionDto[]>(`/users/${userId}/transactions?period=all`);
   }
 
-  createTransaction(userId: string, data: { amount: number; type?: string; tagIds?: string[]; title?: string; vaultId?: string | null; date?: string }): Promise<{ id: string }> {
+  createTransaction(userId: string, data: CreateTransactionInput): Promise<{ id: string }> {
     return this.post<{ id: string }>(`/users/${userId}/transactions`, data);
+  }
+
+  createTransfer(userId: string, data: CreateTransferInput): Promise<{ id: string }> {
+    return this.post<{ id: string }>(`/users/${userId}/transactions/transfer`, data);
   }
 
   updateTransaction(

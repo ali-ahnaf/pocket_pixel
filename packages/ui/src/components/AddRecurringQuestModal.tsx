@@ -236,7 +236,7 @@ export function AddRecurringQuestModal({ isOpen, onClose, title, initialData, on
           {/* Transaction Type Toggle */}
           <div className="space-y-2">
             <label className="pixel-input-label ml-1">TYPE</label>
-            <TransactionTypeToggle isExpense={isExpense} onChange={setIsExpense} />
+            <TransactionTypeToggle value={isExpense ? 'expense' : 'income'} onChange={(value) => setIsExpense(value === 'expense')} />
           </div>
 
           {/* Tags Autocomplete Section */}
