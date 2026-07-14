@@ -17,6 +17,10 @@ export interface CreateTransactionInput {
   date?: string;
 }
 
+export interface CreateTransferInput extends CreateTransactionInput {
+  targetVaultId: string;
+}
+
 export interface UpdateTransactionInput {
   amount?: number;
   type?: TransactionType;

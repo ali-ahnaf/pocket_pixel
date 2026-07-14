@@ -1,4 +1,4 @@
-import { CreateTransactionInput, ListTransactionsQuery, TransactionDto, UpdateTransactionInput } from '@expense-tracker/shared';
+import { CreateTransactionInput, CreateTransferInput, ListTransactionsQuery, TransactionDto, UpdateTransactionInput } from '@expense-tracker/shared';
 import { Expense } from '../entities/Expense.entity';
 import { AppError } from '../errors/app-error';
 import { TransactionsRepository, TransactionDateFilter } from '../repositories/transactions.repository';
@@ -61,7 +61,7 @@ export class TransactionsService {
     return saved;
   }
 
-  async createTransferTransaction(userId: string, input: CreateTransactionInput & { targetVaultId: string }): Promise<Expense> {
+  async createTransferTransaction(userId: string, input: CreateTransferInput): Promise<Expense> {
     const { tagIds = [], date, amount, title, vaultId, targetVaultId } = input;
     const transactionDate = date ?? new Date().toISOString().split('T')[0];
 
