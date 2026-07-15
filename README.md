@@ -286,7 +286,7 @@ Open an issue with:
         <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/6575515&w=100&h=100&fit=cover" width="100" alt="namahu"/><br/>
         <sub><b>namahu</b></sub>
       </a><br/>
-      <img src="https://img.shields.io/badge/LVL_7-ROGUE-2F855A?style=for-the-badge&labelColor=1a1a1a" alt="Rogue"/>
+      <img src="https://img.shields.io/badge/LVL_11-RANGER-38A169?style=for-the-badge&labelColor=1a1a1a" alt="Ranger"/>
     </td>
     <td align="center">
       <a href="https://github.com/Adolinnn">
