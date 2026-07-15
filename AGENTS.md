@@ -11,15 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) or any other agentic
 
 ### Github secrets
 
-```bash
-# the following are dummy example values
-HOSTINGER_VPS_HOST=145.223.71.24
-HOSTINGER_VPS_USER=deploy
-HOSTINGER_VPS_APP_DIR=/var/www/pocket_pixel
-HOSTINGER_VPS_SSH_KEY=<privatesshkey>
-API_ENV=<the entire content of .env>
-
-```
+Required deploy secrets and their meanings live in `documentation/DEPLOY.md`. Adding a new API env var means updating the `API_ENV` secret too, or prod silently runs without it.
 
 ## Commands
 
@@ -81,9 +73,9 @@ Layered: **route → service → repository → entity**.
 
 ### Persistence
 
-- Entities live in `entities/*.entity.ts` and extend `BaseEntity` (`createdAt`/`updatedAt`/`deletedAt`). Use **soft delete** (`softDelete`), never hard `delete`.
+- Entities live in `entities/*.entity.ts` and extend `BaseEntity` (`createdAt`/`updatedAt`/`deletedAt`). Prefer **soft delete** (`softDelete`); follow the existing pattern of the repository you're editing (transactions/debts/recurring soft-delete, tags currently hard-remove). Register new entities in `data-source.ts`.
 - `data-source.ts` configures TypeORM (SQLite at `packages/api/pocket_pixel.sqlite`); migrations are auto-discovered from `migrations/`. `env.ts` loads `.env` relative to the module (dev: package root; prod: `dist/`).
-- Per the backend-engineer skill: prefer `npm run migration:generate` over hand-writing migrations after entity changes. (Note: the skill's `repo-shape.md` describes an idealized layout — `config/`, `redis.ts`, `constants/` — that the current API does not all have; trust the actual tree.)
+- Per the backend-engineer skill: prefer `npm run migration:generate` over hand-writing migrations after entity changes. The seed migration `Z-seed-data.ts` must always sort last in `migrations/`.
 
 ### Other
 
