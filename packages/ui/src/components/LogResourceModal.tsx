@@ -73,6 +73,7 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
       setAmount(String(res.amount));
       setIsExpense(res.type === 'expense');
       setSelectedTags(availableTags.filter((tag) => res.tagIds.includes(tag.id)));
+      setSelectedVaultId(res?.vaultId ?? null);
       setManualEntry(true);
     } catch {
       setPromptResult('Something went wrong. Please try manual entry');
