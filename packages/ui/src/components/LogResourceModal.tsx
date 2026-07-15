@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Coins, ChevronDown, Plus, Package, Sparkles, Send, SlidersHorizontal } from 'lucide-react';
+import { X, Coins, Plus, Package, Sparkles, Send, SlidersHorizontal } from 'lucide-react';
 import { iconMapper } from '../lib/iconMapper';
 import { profileApi } from '../lib/api';
 import { TransactionTypeToggle } from './TransactionTypeToggle';
-import type { TagDto, VaultDto } from '@expense-tracker/shared';
+import { VaultPicker } from './VaultPicker';
+import type { TagDto, TransactionType, VaultDto } from '@expense-tracker/shared';
 
 interface LogResourceModalProps {
   isOpen: boolean;
@@ -22,7 +23,7 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
   const [isPrompting, setIsPrompting] = useState(false);
   const [promptResult, setPromptResult] = useState<string | null>(null);
 
-  const [isExpense, setIsExpense] = useState(true);
+  const [type, setType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState('');
   const [title, setTitle] = useState('');
   const [shouldRender, setShouldRender] = useState(isOpen);
@@ -37,9 +38,11 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
   // Vault state
   const [vaults, setVaults] = useState<VaultDto[]>([]);
   const [selectedVaultId, setSelectedVaultId] = useState<string | null>(null);
-  const [isVaultDropdownOpen, setIsVaultDropdownOpen] = useState(false);
+  const [targetVaultId, setTargetVaultId] = useState<string | null>(null);
 
-  const selectedVault = vaults.find((v) => v.id === selectedVaultId) ?? null;
+  const isTransfer = type === 'transfer';
+  const isSameVault = isTransfer && selectedVaultId !== null && selectedVaultId === targetVaultId;
+  const isTransferReady = isTransfer && selectedVaultId !== null && targetVaultId !== null && !isSameVault;
 
   const suggestions = availableTags.filter((tag) => !selectedTags.some((t) => t.id === tag.id) && tag.name.toLowerCase().includes(tagInput.toLowerCase())).slice(0, 3);
 
@@ -71,7 +74,7 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
       const res = await profileApi.sendPrompt(userId, promptText.trim());
       setTitle(res.title);
       setAmount(String(res.amount));
-      setIsExpense(res.type === 'expense');
+      setType(res.type === 'income' ? 'income' : 'expense');
       setSelectedTags(availableTags.filter((tag) => res.tagIds.includes(tag.id)));
       setManualEntry(true);
     } catch {
@@ -110,21 +113,42 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
     }
   };
 
+  const handleTypeChange = (next: TransactionType) => {
+    setType(next);
+    // When entering transfer mode, seed the target with a vault different from the source.
+    if (next === 'transfer' && (targetVaultId === null || targetVaultId === selectedVaultId)) {
+      const other = vaults.find((v) => v.id !== selectedVaultId);
+      setTargetVaultId(other?.id ?? null);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!userId || !amount || isSubmitting) return;
+    if (isTransfer && !isTransferReady) return;
     setIsSubmitting(true);
     const now = new Date();
     const isCurrentMonth = selectedMonth === undefined || selectedYear === undefined || (selectedMonth === now.getMonth() && selectedYear === now.getFullYear());
     const date = isCurrentMonth ? undefined : `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-01`;
     try {
-      await profileApi.createTransaction(userId, {
-        amount: parseFloat(amount),
-        type: isExpense ? 'expense' : 'income',
-        tagIds: selectedTags.map((t) => t.id),
-        title: title || undefined,
-        vaultId: selectedVaultId ?? null,
-        date,
-      });
+      if (isTransfer) {
+        await profileApi.createTransfer(userId, {
+          amount: parseFloat(amount),
+          tagIds: selectedTags.map((t) => t.id),
+          title: title || undefined,
+          vaultId: selectedVaultId!,
+          targetVaultId: targetVaultId!,
+          date,
+        });
+      } else {
+        await profileApi.createTransaction(userId, {
+          amount: parseFloat(amount),
+          type,
+          tagIds: selectedTags.map((t) => t.id),
+          title: title || undefined,
+          vaultId: selectedVaultId ?? null,
+          date,
+        });
+      }
       setAmount('');
       setTitle('');
       setSelectedTags([]);
@@ -143,7 +167,6 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
       return () => clearTimeout(timer);
     } else {
       setIsVisible(false);
-      setIsVaultDropdownOpen(false);
       const timer = setTimeout(() => setShouldRender(false), 300);
       return () => clearTimeout(timer);
     }
@@ -247,66 +270,42 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
 
               {/* Transaction Type Toggle */}
               <div className="space-y-2">
-                <TransactionTypeToggle isExpense={isExpense} onChange={setIsExpense} />
+                <TransactionTypeToggle value={type} onChange={handleTypeChange} showTransfer={true} />
               </div>
 
-              {/* Source Vault Selection */}
-              {vaults.length > 0 && (
-                <div className="space-y-2">
-                  <div className="relative">
-                    <button
-                      onClick={() => setIsVaultDropdownOpen(!isVaultDropdownOpen)}
-                      className={`w-full h-14 px-4 border-4 border-black flex items-center justify-between font-body-lg transition-all active:translate-y-0.5 active:shadow-none group bg-surface-container-lowest hover:bg-surface-container-low ${
-                        isVaultDropdownOpen ? 'ring-4 ring-primary/20' : ''
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        {selectedVault &&
-                          (() => {
-                            const VaultIcon = iconMapper(selectedVault.icon || 'Briefcase');
-                            return <VaultIcon className="text-primary" size={20} />;
-                          })()}
-                        <span className="text-primary font-bold">{selectedVault?.name ?? 'Select vault'}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-1 h-6 bg-black/10 rounded-full" />
-                        <ChevronDown className={`text-outline transition-transform duration-300 ${isVaultDropdownOpen ? 'rotate-180' : ''}`} size={20} />
-                      </div>
-                    </button>
-
-                    {isVaultDropdownOpen && (
-                      <>
-                        <div className="fixed inset-0 z-[65]" onClick={() => setIsVaultDropdownOpen(false)} />
-                        <div className="absolute top-[calc(100%+4px)] left-0 right-0 z-[70] bg-surface-container-high border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)]">
-                          <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                            {vaults.map((vault) => {
-                              const VaultIcon = iconMapper(vault.icon || 'Briefcase');
-                              return (
-                                <button
-                                  key={vault.id}
-                                  onClick={() => {
-                                    setSelectedVaultId(vault.id);
-                                    setIsVaultDropdownOpen(false);
-                                  }}
-                                  className={`w-full h-14 px-4 flex items-center justify-between font-body-lg transition-colors hover:bg-surface-container-highest group ${
-                                    selectedVaultId === vault.id ? 'bg-surface-container-highest' : 'bg-surface-container-low'
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-3">
-                                    <VaultIcon className={selectedVaultId === vault.id ? 'text-primary' : 'text-outline'} size={20} />
-                                    <span className={`font-body-lg uppercase ${selectedVaultId === vault.id ? 'text-primary font-bold' : 'text-on-surface'}`}>{vault.name}</span>
-                                  </div>
-                                  {selectedVaultId === vault.id && <div className="w-4 h-4 bg-primary border-2 border-black" />}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </>
-                    )}
+              {/* Vault Selection */}
+              {vaults.length > 0 &&
+                (isTransfer ? (
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <label className="font-label-caps text-xs text-outline">From (source)</label>
+                      <VaultPicker
+                        vaults={vaults}
+                        selectedVaultId={selectedVaultId}
+                        onSelect={setSelectedVaultId}
+                        disabledVaultId={targetVaultId}
+                        placeholder="Select source vault"
+                        ariaLabel="Source vault"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="font-label-caps text-xs text-outline">To (target)</label>
+                      <VaultPicker
+                        vaults={vaults}
+                        selectedVaultId={targetVaultId}
+                        onSelect={setTargetVaultId}
+                        disabledVaultId={selectedVaultId}
+                        placeholder="Select target vault"
+                        ariaLabel="Target vault"
+                      />
+                    </div>
+                    {isSameVault && <p className="font-label-caps text-xs text-error">Source and target must be different vaults.</p>}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="space-y-2">
+                    <VaultPicker vaults={vaults} selectedVaultId={selectedVaultId} onSelect={setSelectedVaultId} />
+                  </div>
+                ))}
 
               {/* Tags Autocomplete Section */}
               <div className="space-y-2">
@@ -377,7 +376,7 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
               <div className="pt-5">
                 <button
                   onClick={handleSubmit}
-                  disabled={!amount || isSubmitting}
+                  disabled={!amount || isSubmitting || (isTransfer && !isTransferReady)}
                   className="w-full h-20 bg-primary-container text-on-primary-container border-4 border-black shadow-[inset_2px_2px_0px_rgba(255,255,255,0.1),_inset_-2px_-2px_0px_rgba(0,0,0,0.4)] active:translate-y-0.5 active:shadow-none flex items-center justify-center gap-4 transition-transform group disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span className="font-headline-md font-black uppercase tracking-wider">{isSubmitting ? 'RECORDING...' : 'RECORD'}</span>

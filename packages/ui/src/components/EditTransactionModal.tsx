@@ -194,7 +194,7 @@ export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, trans
           </div>
 
           <div className="space-y-2">
-            <TransactionTypeToggle isExpense={isExpense} onChange={setIsExpense} />
+            <TransactionTypeToggle value={isExpense ? 'expense' : 'income'} onChange={(value) => setIsExpense(value === 'expense')} />
           </div>
 
           {vaults.length > 0 && (

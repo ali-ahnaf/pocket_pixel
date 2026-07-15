@@ -1,5 +1,7 @@
 ---
-trigger: always_on
+trigger: glob
+description: use it when working with API code located in packages/api/* workspace or the UI code in packages/ui/*
+globs: "**/*.ts, **/*.tsx"
 ---
 
 # Testing

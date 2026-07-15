@@ -229,11 +229,7 @@ export default function DashboardPage() {
   const filteredDrops = transactions
     .filter((t) => matchesVault(t.vaultId) && matchesTag(t.tags))
     .slice()
-    .sort((a, b) =>
-      dateSortOrder === 'desc'
-        ? b.date.localeCompare(a.date) || b.updatedAt.localeCompare(a.updatedAt)
-        : a.date.localeCompare(b.date) || a.updatedAt.localeCompare(b.updatedAt)
-    );
+    .sort((a, b) => (dateSortOrder === 'desc' ? b.date.localeCompare(a.date) || b.updatedAt.localeCompare(a.updatedAt) : a.date.localeCompare(b.date) || a.updatedAt.localeCompare(b.updatedAt)));
   const filteredOccurrences = occurrences.filter((o) => matchesVault(o.vaultId) && matchesTag(o.tags));
 
   const handleApplyOccurrence = async (occ: OccurrenceDto) => {
@@ -537,6 +533,7 @@ export default function DashboardPage() {
       <div className="fixed bottom-24 md:bottom-8 right-4 md:right-8 z-50">
         <Button
           onClick={() => setIsModalOpen(true)}
+          aria-label="Log new resource"
           variant="primary"
           className="h-16 w-16 flex items-center justify-center rounded-none relative focus:outline-none !p-0 shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:translate-y-0.5 hover:shadow-[2px_2px_0_0_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none transition-all"
         >
