@@ -305,13 +305,6 @@ Open an issue with:
   </tr>
   <tr>
     <td align="center">
-      <a href="https://github.com/Diyaaa-12">
-        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/189824242&w=100&h=100&fit=cover" width="100" alt="Diyaaa-12"/><br/>
-        <sub><b>Diyaaa-12</b></sub>
-      </a><br/>
-      <img src="https://img.shields.io/badge/LVL_3-KNIGHT-C0C0C0?style=for-the-badge&labelColor=1a1a1a" alt="Knight"/>
-    </td>
-    <td align="center">
       <a href="https://github.com/Wasif123-rgb">
         <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/199018168&w=100&h=100&fit=cover" width="100" alt="Wasif123-rgb"/><br/>
         <sub><b>Wasif123-rgb</b></sub>
@@ -332,8 +325,6 @@ Open an issue with:
       </a><br/>
       <img src="https://img.shields.io/badge/LVL_3-KNIGHT-C0C0C0?style=for-the-badge&labelColor=1a1a1a" alt="Knight"/>
     </td>
-  </tr>
-  <tr>
     <td align="center">
       <a href="https://github.com/Omee1612">
         <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/176672994&w=100&h=100&fit=cover" width="100" alt="Omee1612"/><br/>
@@ -341,6 +332,8 @@ Open an issue with:
       </a><br/>
       <img src="https://img.shields.io/badge/LVL_2-KNIGHT-C0C0C0?style=for-the-badge&labelColor=1a1a1a" alt="Knight"/>
     </td>
+  </tr>
+  <tr>
     <td align="center">
       <a href="https://github.com/nazifa-r">
         <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/172752707&w=100&h=100&fit=cover" width="100" alt="nazifa-r"/><br/>
@@ -362,8 +355,6 @@ Open an issue with:
       </a><br/>
       <img src="https://img.shields.io/badge/LVL_2-KNIGHT-C0C0C0?style=for-the-badge&labelColor=1a1a1a" alt="Knight"/>
     </td>
-  </tr>
-  <tr>
     <td align="center">
       <a href="https://github.com/developmentwithparth1311">
         <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/255421661&w=100&h=100&fit=cover" width="100" alt="developmentwithparth1311"/><br/>
@@ -371,10 +362,19 @@ Open an issue with:
       </a><br/>
       <img src="https://img.shields.io/badge/LVL_2-KNIGHT-C0C0C0?style=for-the-badge&labelColor=1a1a1a" alt="Knight"/>
     </td>
+  </tr>
+  <tr>
     <td align="center">
       <a href="https://github.com/afija0022-655">
         <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/251452707&w=100&h=100&fit=cover" width="100" alt="afija0022-655"/><br/>
         <sub><b>afija0022-655</b></sub>
+      </a><br/>
+      <img src="https://img.shields.io/badge/LVL_2-KNIGHT-C0C0C0?style=for-the-badge&labelColor=1a1a1a" alt="Knight"/>
+    </td>
+    <td align="center">
+      <a href="https://github.com/Diyaaa-12">
+        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/189824242&w=100&h=100&fit=cover" width="100" alt="Diyaaa-12"/><br/>
+        <sub><b>Diyaaa-12</b></sub>
       </a><br/>
       <img src="https://img.shields.io/badge/LVL_2-KNIGHT-C0C0C0?style=for-the-badge&labelColor=1a1a1a" alt="Knight"/>
     </td>
