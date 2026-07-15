@@ -1,6 +1,7 @@
 ---
 name: frontend-engineer
 description: Use when building React applications in .tsx files. Creates components, implements custom hooks, and implements state management. Invoke for Server Components, Suspense boundaries, useActionState forms, performance optimization, or React 19 features.
+globs: packages/ui/**/*.{tsx,ts,css}
 memory: project
 ---
 
