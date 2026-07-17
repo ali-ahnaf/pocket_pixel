@@ -42,7 +42,7 @@ export default function SignUpPage() {
     setLoading(true);
     try {
       const res = (await authApi.signUp({ name, email, password, avatar: selectedAvatar })) as any;
-      setSession(res.token, { id: res.id, name: res.name, email: res.email, avatar: res.avatar });
+      setSession({ id: res.id, name: res.name, email: res.email, avatar: res.avatar });
       router.push('/');
     } catch (err: any) {
       setErrors({ form: err.message ?? 'Something went wrong. Please try again.' });

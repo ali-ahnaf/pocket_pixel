@@ -15,21 +15,31 @@ declare global {
  * when one is present and valid, and silently leaves `req.user` unset on a
  * missing or invalid token. Never rejects — guarding is `requireAuth`'s job.
  */
+const AUTH_COOKIE_NAME = 'auth_token';
+
 export function authenticate(req: Request, _res: Response, next: NextFunction): void {
+  let token: string | undefined;
+
   const authorization = req.header('Authorization');
-  if (!authorization) {
-    return next();
+  if (authorization) {
+    const [scheme, headerToken] = authorization.split(' ');
+    if (scheme === 'Bearer' && headerToken) {
+      token = headerToken;
+    }
   }
 
-  const [scheme, token] = authorization.split(' ');
-  if (scheme !== 'Bearer' || !token) {
+  // Fallback to httpOnly cookie if no valid header token was found
+  if (!token) {
+    token = req.cookies?.[AUTH_COOKIE_NAME];
+  }
+
+  if (!token) {
     return next();
   }
 
   try {
     req.user = authService.verifyToken(token);
   } catch {
-    // Best-effort: an invalid/expired token simply leaves req.user unset.
     logger.debug('Ignoring invalid auth token');
   }
 

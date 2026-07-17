@@ -3,6 +3,7 @@ import Joi from 'joi';
 import type { SignUpPayload } from '@expense-tracker/shared';
 import { authService, utilService } from '../../services';
 import { asyncHandler } from '../../middleware/error-handler';
+import { setAuthCookie } from './cookie-options';
 
 const router = Router();
 const signUpSchema = Joi.object<SignUpPayload>({
@@ -17,8 +18,8 @@ router.post(
   asyncHandler(async (req: Request, res: Response) => {
     const { error, value } = signUpSchema.validate(req.body);
     if (error) return utilService.replyError(res, error.message);
-
     const result = await authService.signUp(value as SignUpPayload);
+    setAuthCookie(res, result.token);
     return utilService.replyCreated(res, result);
   }),
 );
