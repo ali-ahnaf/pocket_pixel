@@ -17,6 +17,8 @@ Deploy is fully automated on **push to `main`** via `.github/workflows/ci-cd.yml
 
 Adding a new env var to the API means updating the `API_ENV` secret too, or prod silently runs without it.
 
+Notably, `API_ENV` must include `OAUTH_CREDENTIALS_ENCRYPTION_KEY` — a 32-byte, base64-encoded key used to AES-256-GCM encrypt per-user Google OAuth client id/secret at rest (`packages/api/src/utils/oauth-credentials-encryption.util.ts`). That util validates the key eagerly as soon as it's imported and throws if it's missing or the wrong length, so once a consumer (service/route) imports it, a deploy without this var in `API_ENV` will fail to boot.
+
 ## Bundle contract (the fragile part)
 
 The build job hand-assembles `bundle/` with **hardcoded paths**:
