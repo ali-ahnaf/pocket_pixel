@@ -116,9 +116,11 @@ test.describe('Sign-up page', () => {
     // The dashboard lives at the app root.
     await expect(page).toHaveURL(/\/$/);
 
-    // The session is persisted so the user stays authenticated on reload.
-    const token = await page.evaluate(() => window.localStorage.getItem('auth_token'));
-    expect(token).toBe(AUTH_RESPONSE.token);
+    // The session is persisted (profile in localStorage; the session token itself
+    // now lives in an httpOnly cookie, which is not readable from JS).
+    const profile = await page.evaluate(() => window.localStorage.getItem('pocket_pixel_profile'));
+    expect(profile).not.toBeNull();
+    expect(JSON.parse(profile as string).id).toBe(AUTH_RESPONSE.id);
   });
 
   // Rafin034 - Test navigation back to login page
