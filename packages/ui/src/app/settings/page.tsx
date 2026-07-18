@@ -2,18 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import {
-  Settings as SettingsIcon,
-  TrendingUp,
-  TrendingDown,
-  KeyRound,
-  ChevronRight,
-  Rocket,
-  Code,
-  Bug,
-  BookOpen,
-  type LucideIcon,
-} from 'lucide-react';
+import { Settings as SettingsIcon, TrendingUp, TrendingDown, KeyRound, ChevronRight, Rocket, Code, Bug, BookOpen, ShieldCheck, type LucideIcon } from 'lucide-react';
 import { AppBar, BottomNavBar, DesktopSidebar } from '@/components';
 import { useDisplaySettings } from '@/hooks/useDisplaySettings';
 
@@ -95,37 +84,19 @@ export default function SettingsPage() {
         <div className="w-full p-margin-mobile md:p-8 flex flex-col gap-stack-md">
           <section className="flex items-center gap-3 bg-surface-container border-4 border-black p-4 shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]">
             <SettingsIcon className="text-primary" />
-            <h1 className="font-headline-md text-primary tracking-tight">
-              SETTINGS
-            </h1>
+            <h1 className="font-headline-md text-primary tracking-tight">SETTINGS</h1>
           </section>
 
           <section className="flex flex-col gap-stack-md bg-surface-container border-4 border-black p-4">
-            <h2 className="font-label-caps text-outline uppercase border-b-4 border-black pb-2">
-              Dashboard Visibility
-            </h2>
+            <h2 className="font-label-caps text-outline uppercase border-b-4 border-black pb-2">Dashboard Visibility</h2>
 
-            <SettingToggle
-              label="Show Income"
-              description="Reveal Loot Gained on the home dashboard"
-              icon={TrendingUp}
-              checked={showIncome}
-              onChange={setShowIncome}
-            />
+            <SettingToggle label="Show Income" description="Reveal Loot Gained on the home dashboard" icon={TrendingUp} checked={showIncome} onChange={setShowIncome} />
 
-            <SettingToggle
-              label="Show Expense"
-              description="Reveal Gold Spent on the home dashboard"
-              icon={TrendingDown}
-              checked={showExpense}
-              onChange={setShowExpense}
-            />
+            <SettingToggle label="Show Expense" description="Reveal Gold Spent on the home dashboard" icon={TrendingDown} checked={showExpense} onChange={setShowExpense} />
           </section>
 
           <section className="flex flex-col gap-stack-md bg-surface-container border-4 border-black p-4">
-            <h2 className="font-label-caps text-outline uppercase border-b-4 border-black pb-2">
-              Account
-            </h2>
+            <h2 className="font-label-caps text-outline uppercase border-b-4 border-black pb-2">Account</h2>
 
             <Link
               href="/change-password"
@@ -137,12 +108,26 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="min-w-0">
-                  <p className="font-body-sm font-bold truncate">
-                    Change Password
-                  </p>
-                  <p className="text-[12px] text-on-surface-variant truncate">
-                    Update your secret passphrase
-                  </p>
+                  <p className="font-body-sm font-bold truncate">Change Password</p>
+                  <p className="text-[12px] text-on-surface-variant truncate">Update your secret passphrase</p>
+                </div>
+              </div>
+
+              <ChevronRight className="shrink-0" />
+            </Link>
+
+            <Link
+              href="/settings/google-oauth"
+              className="flex items-center justify-between gap-4 bg-surface p-4 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)] hover:bg-primary hover:text-on-primary active:translate-y-0.5 transition-colors"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="h-10 w-10 border-2 border-black flex items-center justify-center shrink-0 bg-secondary-container">
+                  <ShieldCheck size={20} />
+                </div>
+
+                <div className="min-w-0">
+                  <p className="font-body-sm font-bold truncate">Setup Google OAuth</p>
+                  <p className="text-[12px] text-on-surface-variant truncate">Connect your own Google client credentials</p>
                 </div>
               </div>
 
@@ -152,30 +137,13 @@ export default function SettingsPage() {
 
           {/* Community Section */}
           <section className="flex flex-col gap-stack-md bg-surface-container border-4 border-black p-4">
-            <h2 className="font-label-caps text-outline uppercase border-b-4 border-black pb-2">
-              Community
-            </h2>
+            <h2 className="font-label-caps text-outline uppercase border-b-4 border-black pb-2">Community</h2>
 
-            <SettingLink
-              label="Request a Feature"
-              description="Suggest a new feature"
-              icon={Rocket}
-              href="https://github.com/ali-ahnaf/pocket_pixel/issues/new"
-            />
+            <SettingLink label="Request a Feature" description="Suggest a new feature" icon={Rocket} href="https://github.com/ali-ahnaf/pocket_pixel/issues/new" />
 
-            <SettingLink
-              label="Contribute on GitHub"
-              description="View the project repository"
-              icon={Code}
-              href="https://github.com/ali-ahnaf/pocket_pixel"
-            />
+            <SettingLink label="Contribute on GitHub" description="View the project repository" icon={Code} href="https://github.com/ali-ahnaf/pocket_pixel" />
 
-            <SettingLink
-              label="Report a Bug"
-              description="Report a problem"
-              icon={Bug}
-              href="https://github.com/ali-ahnaf/pocket_pixel/issues/new"
-            />
+            <SettingLink label="Report a Bug" description="Report a problem" icon={Bug} href="https://github.com/ali-ahnaf/pocket_pixel/issues/new" />
 
             <Link
               href="/settings/attributions"
@@ -187,12 +155,8 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="min-w-0">
-                  <p className="font-body-sm font-bold truncate">
-                    Attributions
-                  </p>
-                  <p className="text-[12px] text-on-surface-variant truncate">
-                    Third-party libraries and assets
-                  </p>
+                  <p className="font-body-sm font-bold truncate">Attributions</p>
+                  <p className="text-[12px] text-on-surface-variant truncate">Third-party libraries and assets</p>
                 </div>
               </div>
 
