@@ -1,4 +1,5 @@
-export * from "./contracts";
+export * from './contracts';
+export * from './constants';
 
 export interface SignUpPayload {
   name: string;
@@ -21,13 +22,7 @@ export interface Expense {
   date: string;
 }
 
-export type ExpenseCategory =
-  | "food"
-  | "transport"
-  | "housing"
-  | "entertainment"
-  | "health"
-  | "other";
+export type ExpenseCategory = 'food' | 'transport' | 'housing' | 'entertainment' | 'health' | 'other';
 
 export interface ApiResponse<T> {
   data: T;

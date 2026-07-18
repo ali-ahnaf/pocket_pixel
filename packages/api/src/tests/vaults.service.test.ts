@@ -28,6 +28,7 @@ const buildUser = (overrides: Partial<User> = {}): User => ({
   email: 'ada@example.com',
   avatar: 'avatar.png',
   password: 'secret',
+  googleId: null,
   disableAiPrompt: false,
   expenses: [],
   vaults: [],
