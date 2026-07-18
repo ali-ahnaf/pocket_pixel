@@ -154,11 +154,11 @@ export default class ProfileApi extends ApiClient {
     return this.get<DebtDto[]>(`/users/${userId}/debts?status=${status}`);
   }
 
-  createDebt(userId: string, data: { title: string; amount: number; type: 'expense' | 'income'; notes?: string | null }): Promise<DebtDto> {
+  createDebt(userId: string, data: { title: string; amount: number; type: 'expense' | 'income'; notes?: string | null; dueDate?: string | null }): Promise<DebtDto> {
     return this.post<DebtDto>(`/users/${userId}/debts`, data);
   }
 
-  updateDebt(userId: string, debtId: string, data: { title?: string; amount?: number; type?: 'expense' | 'income'; notes?: string | null }): Promise<DebtDto> {
+  updateDebt(userId: string, debtId: string, data: { title?: string; amount?: number; type?: 'expense' | 'income'; notes?: string | null; dueDate?: string | null }): Promise<DebtDto> {
     return this.put<DebtDto>(`/users/${userId}/debts/${debtId}`, data);
   }
 

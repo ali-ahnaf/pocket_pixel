@@ -7,23 +7,12 @@ import { useDisplaySettings } from '@/hooks/useDisplaySettings';
 import { Button, Card, ProgressBar, LogResourceModal, AppBar, BottomNavBar, DesktopSidebar, EditTransactionModal } from '@/components';
 import { iconMapper } from '@/lib/iconMapper';
 import { profileApi } from '@/lib/api';
+import { formatCurrency, formatDate, formatTime } from '@/lib/helpers/formatters';
 import type { User, VaultDto, TagDto, TransactionDto, OccurrenceDto } from '@expense-tracker/shared';
-import { Package, ChevronLeft, ChevronRight, ChevronDown, Plus, X, Repeat, Eye, EyeOff } from 'lucide-react';
+import { Package, ChevronLeft, ChevronRight, ChevronDown, Plus, X, Repeat, Eye, EyeOff, ArrowUpDown } from 'lucide-react';
 
 const MONTH_NAMES = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
 
-function formatCurrency(amount: number): string {
-  return `⛁ ${Math.abs(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-function formatDate(dateStr: string): string {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
-function formatTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-}
 
 function getTransactionIconName(tx: TransactionDto): string {
   if (tx.type === 'expense') {
@@ -163,6 +152,7 @@ export default function DashboardPage() {
   const tagDropdownRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [refetchKey, setRefetchKey] = useState(0);
+  const [dateSortOrder, setDateSortOrder] = useState<'desc' | 'asc'>('desc');
 
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
@@ -228,7 +218,11 @@ export default function DashboardPage() {
   const filteredDrops = transactions
     .filter((t) => matchesVault(t.vaultId) && matchesTag(t.tags))
     .slice()
-    .sort((a, b) => b.date.localeCompare(a.date) || b.updatedAt.localeCompare(a.updatedAt));
+    .sort((a, b) =>
+      dateSortOrder === 'desc'
+        ? b.date.localeCompare(a.date) || b.updatedAt.localeCompare(a.updatedAt)
+        : a.date.localeCompare(b.date) || a.updatedAt.localeCompare(b.updatedAt)
+    );
   const filteredOccurrences = occurrences.filter((o) => matchesVault(o.vaultId) && matchesTag(o.tags));
 
   const handleApplyOccurrence = async (occ: OccurrenceDto) => {
@@ -366,7 +360,18 @@ export default function DashboardPage() {
             {/* Transactions List */}
             <Card className="lg:col-span-2 flex flex-col gap-4 !p-4 bg-surface-container lg:min-h-0 lg:overflow-hidden">
               <div className="flex justify-between items-center border-b-4 border-black pb-2">
-                <h3 className="font-label-caps text-outline uppercase">Recent Drops</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-label-caps text-outline uppercase">Recent Drops</h3>
+                  <button
+                    onClick={() => setDateSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'))}
+                    aria-label="Sort by date"
+                    title={dateSortOrder === 'desc' ? 'Newest first' : 'Oldest first'}
+                    className="flex items-center gap-1 font-label-caps text-[10px] uppercase bg-surface border-2 border-black text-on-surface px-2 py-1 hover:bg-surface-container-highest active:translate-y-px transition-transform"
+                  >
+                    <ArrowUpDown size={10} className={`transition-transform ${dateSortOrder === 'asc' ? 'rotate-180' : ''}`} />
+                    {dateSortOrder === 'desc' ? 'Newest' : 'Oldest'}
+                  </button>
+                </div>
                 <div ref={vaultDropdownRef} className="relative">
                   <button
                     onClick={() => setVaultDropdownOpen((o) => !o)}

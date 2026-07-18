@@ -1,47 +1,30 @@
-## Authentication
+# Authentication
 
-### Middleware
+## Middleware (`middleware/auth.ts`)
 
-Two middlewares live in `api/src/middleware/auth.middleware.ts`:
+| **Middleware** | **Purpose** | **Behavior** |
+| :------------- | :---------- | :----------- |
+| **`authenticate`** | Parses and validates JWT authentication. | Mounted globally in `index.ts`. Reads the `Authorization: Bearer <token>` header, verifies the JWT, and sets `req.user: TokenPayload` when the token is valid. **Never rejects the request**—if the token is missing or invalid, `req.user` remains `undefined` and the request continues. |
+| **`requireAuth`** | Protects routes that require authentication. | Applied per route. Checks whether `req.user` is set. If not, responds with **`401 Unauthorized`** using `utilService.replyError({ message: 'Unauthorized' })`. Otherwise, calls `next()`, allowing downstream handlers to safely access `req.user!`. |
 
-| Middleware | Behaviour |
-| --- | --- |
-| `authenticate` | Runs on every request (mounted globally in `index.ts`). Reads `Authorization: Bearer <token>`, verifies the JWT against `conf.jwtSecret`, and sets `req.user: AuthUser` if valid. Always calls `next()` — never blocks. |
-| `requireAuth` | Guard middleware. Returns `{ success: false, message: 'Unauthorized' }` if `req.user` is not set; otherwise calls `next()`. |
+Tokens are JWTs with 30-day expiry, created/verified by `AuthService` (`createToken` / `verifyToken`). Passwords are bcrypt-hashed.
 
-`AuthUser` is declared globally in `api/src/types/express.d.ts`:
-
-```ts
-interface AuthUser {
-  id: string;
-  companyId: string;
-}
-```
-
-### Mounting pattern
+## Mounting pattern (`index.ts`)
 
 ```ts
-// index.ts
-app.use(authenticate); // always first — populates req.user on every request
+app.use(authenticate); // global, best-effort — populates req.user when possible
 
-// public routes
-app.use('/auth/login', loginRoute);
-app.use('/auth/register', registerRoute);
+// public
+app.use('/api/auth', authRouter);
 
-// protected routes — requireAuth blocks if req.user is unset
-app.use('/users/profile', requireAuth, profileRoute);
+// protected — requireAuth blocks when req.user is unset
+app.use('/api/users/:userId/tags', requireAuth, tagsRouter);
 ```
 
-### Current endpoints
+Every `/api/users/...` mount carries `requireAuth`. Routers under it use `Router({ mergeParams: true })` so `:userId` is visible — but handlers should identify the acting user with `req.user!.userId`, not the path param.
 
-| Path | Auth required | Route file |
-| --- | --- | --- |
-| `POST /auth/login` | No | `routes/login.route.ts` |
-| `POST /auth/register` | No | `routes/register.route.ts` |
-| `POST /users/profile` | Yes | `routes/profile.route.ts` |
+## Adding a new protected resource
 
-### Adding a new protected route
-
-1. Create `api/src/routes/<resource>.route.ts` — export a `Router` with `router.post('/', ...)`.
-2. Define a Joi schema at the top of the file and call `validate(schema)` before the handler.
-3. In `index.ts`, mount it: `app.use('/resource/action', requireAuth, resourceRoute);`
+1. Create `routes/<feature>/<verb>-<feature>.route.ts` files and an aggregator `routes/<feature>.routes.ts` (see conventions.md for the handler shape).
+2. Mount in `index.ts`: `app.use('/api/users/:userId/<feature>', requireAuth, featureRouter);`
+3. In handlers, use `req.user!.userId` for ownership scoping in every service call.

@@ -1,8 +1,8 @@
-import { CreateTransactionInput, ListTransactionsQuery, TransactionDto, UpdateTransactionInput } from '@expense-tracker/shared';
+import { CreateTransactionInput, CreateTransferInput, ListTransactionsQuery, TransactionDto, UpdateTransactionInput } from '@expense-tracker/shared';
 import { Expense } from '../entities/Expense.entity';
 import { AppError } from '../errors/app-error';
 import { TransactionsRepository, TransactionDateFilter } from '../repositories/transactions.repository';
-import { transactionsRepository } from '../repositories';
+import { transactionsRepository, vaultsRepository } from '../repositories';
 import { logger } from '.';
 
 /**
@@ -10,7 +10,11 @@ import { logger } from '.';
  * to the shared singleton) so the service can be unit-tested against a mock.
  */
 export class TransactionsService {
-  constructor(private readonly transactions: TransactionsRepository = transactionsRepository) {}
+  constructor(
+    private readonly transactions: TransactionsRepository = transactionsRepository,
+
+    private readonly vaults = vaultsRepository,
+  ) {}
 
   async list(userId: string, query: ListTransactionsQuery): Promise<TransactionDto[]> {
     const allTime = query.period === 'all';
@@ -40,10 +44,12 @@ export class TransactionsService {
 
   async create(userId: string, input: CreateTransactionInput): Promise<Expense> {
     const { tagIds = [], date, ...rest } = input;
+    const transactionDate = date ?? new Date().toISOString().split('T')[0];
+
     const transaction = this.transactions.createEntity({
       ...rest,
       userId,
-      date: date ?? new Date().toISOString().split('T')[0],
+      date: transactionDate,
     });
 
     const saved = await this.transactions.save(transaction);
@@ -53,6 +59,53 @@ export class TransactionsService {
 
     logger.info('Created transaction', { userId, transactionId: saved.id });
     return saved;
+  }
+
+  async createTransferTransaction(userId: string, input: CreateTransferInput): Promise<Expense> {
+    const { tagIds = [], date, amount, title, vaultId, targetVaultId } = input;
+    const transactionDate = date ?? new Date().toISOString().split('T')[0];
+
+    if (!vaultId || !targetVaultId) {
+      throw new AppError('Both source and target vaults are required for a transfer', 400);
+    }
+    if (vaultId === targetVaultId) {
+      throw new AppError('Source and target vaults must be different', 400);
+    }
+
+    const sourceVault = await this.vaults.findOneForUser(userId, vaultId);
+    const targetVault = await this.vaults.findOneForUser(userId, targetVaultId);
+
+    if (!sourceVault || !targetVault) {
+      throw new AppError('One or both vaults do not exist or do not belong to you', 403);
+    }
+
+    const expenseTx = this.transactions.createEntity({
+      userId,
+      amount,
+      type: 'expense',
+      vaultId: vaultId,
+      date: transactionDate,
+      title: title || 'Transfer Out',
+    });
+    const incomeTx = this.transactions.createEntity({
+      userId,
+      amount,
+      type: 'income',
+      vaultId: targetVaultId,
+      date: transactionDate,
+      title: title || 'Transfer In',
+    });
+
+    const savedExpense = await this.transactions.save(expenseTx);
+    const savedIncome = await this.transactions.save(incomeTx);
+
+    if (tagIds.length > 0) {
+      await this.transactions.replaceTags(savedExpense.id, tagIds);
+      await this.transactions.replaceTags(savedIncome.id, tagIds);
+    }
+
+    logger.info('Created transfer transactions', { userId, expenseId: savedExpense.id, incomeId: savedIncome.id });
+    return savedExpense;
   }
 
   async update(userId: string, id: string, input: UpdateTransactionInput): Promise<Expense> {

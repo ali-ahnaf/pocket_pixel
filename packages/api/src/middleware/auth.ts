@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import { authService, logger, utilService } from '../services';
 import type { TokenPayload } from '../services/auth.service';
+import { AUTH_COOKIE_NAME } from '../routes/auth/cookie-options';
 
 declare global {
   namespace Express {
@@ -15,7 +16,6 @@ declare global {
  * when one is present and valid, and silently leaves `req.user` unset on a
  * missing or invalid token. Never rejects — guarding is `requireAuth`'s job.
  */
-const AUTH_COOKIE_NAME = 'auth_token';
 
 export function authenticate(req: Request, _res: Response, next: NextFunction): void {
   let token: string | undefined;

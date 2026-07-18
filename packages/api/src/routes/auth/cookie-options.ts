@@ -1,6 +1,6 @@
 import { Response } from 'express';
 
-const AUTH_COOKIE_NAME = 'auth_token';
+export const AUTH_COOKIE_NAME = 'auth_token';
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
 export function setAuthCookie(res: Response, token: string): void {

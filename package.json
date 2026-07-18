@@ -18,6 +18,7 @@
     "migration:run-prod": "npm run migration:run-prod --workspace=packages/api",
     "migration:revert": "npm run migration:revert --workspace=packages/api",
     
+    "test:unit": "npm run build:shared && npm run test:api && npm run test:ui:unit",
     "test:api": "npm run test --workspace=packages/api",
     "test:ui:unit": "npm run test:unit --workspace=packages/ui",
     "test:ui:e2e": "npm run test:e2e --workspace=packages/ui",

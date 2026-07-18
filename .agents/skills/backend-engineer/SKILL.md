@@ -1,6 +1,7 @@
 ---
 name: backend-engineer
 description: Builds and updates the API in `packages/api` using this repo's module layout, shared DTOs, response envelope, guards, services, entities, and e2e test conventions. Use for controllers, services, modules, auth flows, database changes, migrations, and integration tests.
+globs: packages/api/**/*.ts
 memory: project
 ---
 
@@ -17,9 +18,8 @@ Read the following reference files based on the task context:
 - **API Implementation**:
   - Read [service-style.md](references/service-style.md) when implementing business logic in services.
 - **Persistence**: Read [database.md](references/database.md) when adding entities or migrations.
-- **Security**: Read [auth.md](references/auth.md) when working with authentication, permissions (CASL), or subscription gating.
+- **Security**: Read [auth.md](references/auth.md) when working with authentication or route guards (`authenticate` / `requireAuth`).
 
 ## Database
 
-- After every change in the database entities, do not manually create migration files. Instead, run `npm run migration:generate` from the root to create migration files. After migrations are generated, run `npm run migration:run` to automatically apply them to the database.
-- When deleting data, always use `.softDelete()` instead of `.delete()`.
+For entity changes, deletion strategy, and shared-contract updates, read [database.md](references/database.md). For the migration generate → run → revert flow and troubleshooting, use the `migration` skill.

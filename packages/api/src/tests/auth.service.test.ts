@@ -173,7 +173,7 @@ describe('AuthService', () => {
 
       const saved = users.save.mock.calls[0][0];
       expect(saved.password).not.toBe(payload.newPassword);
-      await expect(bcrypt.compare(payload.newPassword, saved.password)).resolves.toBe(true);
+      await expect(bcrypt.compare(payload.newPassword, saved.password!)).resolves.toBe(true);
     });
 
     it('throws a 401 AppError when the current password is incorrect', async () => {

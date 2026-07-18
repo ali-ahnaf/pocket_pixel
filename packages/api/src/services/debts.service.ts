@@ -26,6 +26,7 @@ export class DebtsService {
       amount: Number(debt.amount),
       type: debt.type,
       notes: debt.notes ?? null,
+      dueDate: debt.dueDate ?? null,
       createdAt: debt.createdAt,
       completed: debt.completed,
       // A soft-deleted due that was never applied was discarded by the user.
@@ -40,6 +41,7 @@ export class DebtsService {
       amount: input.amount,
       type: input.type,
       notes: input.notes ?? null,
+      dueDate: input.dueDate ?? null,
     });
     const saved = await this.debts.save(debt);
     logger.info('Created debt', { userId, debtId: saved.id });
@@ -50,6 +52,7 @@ export class DebtsService {
       amount: Number(saved.amount),
       type: saved.type,
       notes: saved.notes ?? null,
+      dueDate: saved.dueDate ?? null,
       createdAt: saved.createdAt,
     };
   }
@@ -64,6 +67,7 @@ export class DebtsService {
     if (input.amount !== undefined) debt.amount = input.amount;
     if (input.type !== undefined) debt.type = input.type;
     if (input.notes !== undefined) debt.notes = input.notes;
+    if (input.dueDate !== undefined) debt.dueDate = input.dueDate;
 
     const saved = await this.debts.save(debt);
     logger.info('Updated debt', { userId, debtId: id });
@@ -74,6 +78,7 @@ export class DebtsService {
       amount: Number(saved.amount),
       type: saved.type,
       notes: saved.notes ?? null,
+      dueDate: saved.dueDate ?? null,
       createdAt: saved.createdAt,
     };
   }

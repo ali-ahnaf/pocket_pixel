@@ -7,6 +7,7 @@ export interface CreateDebtInput {
   amount: number;
   type: TransactionType;
   notes?: string | null;
+  dueDate?: string | null;
 }
 
 export interface UpdateDebtInput {
@@ -14,6 +15,7 @@ export interface UpdateDebtInput {
   amount?: number;
   type?: TransactionType;
   notes?: string | null;
+  dueDate?: string | null;
 }
 
 export interface ApplyDebtInput {
@@ -28,6 +30,7 @@ export interface DebtDto {
   amount: number;
   type: TransactionType;
   notes: string | null;
+  dueDate: string | null;
   createdAt: Date;
   completed?: boolean;
   discarded?: boolean;
