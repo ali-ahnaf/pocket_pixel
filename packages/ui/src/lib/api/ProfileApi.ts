@@ -12,6 +12,8 @@ import type {
   ChangePasswordPayload,
   UserPreferenceDto,
   UpdateUserPreferenceInput,
+  OAuthCredentialsStatusDto,
+  SetOAuthCredentialsInput,
 } from '@expense-tracker/shared';
 import ApiClient from './ApiClient';
 
@@ -39,6 +41,15 @@ export default class ProfileApi extends ApiClient {
 
   updatePreferences(userId: string, data: UpdateUserPreferenceInput): Promise<UserPreferenceDto> {
     return this.put<UserPreferenceDto>(`/users/${userId}/preferences`, data);
+  }
+
+  // Google OAuth credentials (write-only from the client's perspective)
+  getOAuthCredentialsStatus(userId: string): Promise<OAuthCredentialsStatusDto> {
+    return this.get<OAuthCredentialsStatusDto>(`/users/${userId}/oauth-credentials`);
+  }
+
+  setOAuthCredentials(userId: string, data: SetOAuthCredentialsInput): Promise<OAuthCredentialsStatusDto> {
+    return this.put<OAuthCredentialsStatusDto>(`/users/${userId}/oauth-credentials`, data);
   }
 
   // Vaults

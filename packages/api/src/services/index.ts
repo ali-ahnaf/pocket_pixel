@@ -12,6 +12,7 @@ import { PromptService } from './prompt.service';
 import { WizardService } from './wizard.service';
 import { PreferencesService } from './preferences.service';
 import { BackupService } from './backup.service';
+import { UserOAuthCredentialService } from './user-oauth-credential.service';
 
 export const utilService = new UtilService();
 export const logger = new Logger();
@@ -27,6 +28,7 @@ export const promptService = new PromptService();
 export const wizardService = new WizardService();
 export const preferencesService = new PreferencesService();
 export const backupService = new BackupService();
+export const userOAuthCredentialService = new UserOAuthCredentialService();
 
 export {
   UtilService,
@@ -43,4 +45,5 @@ export {
   WizardService,
   PreferencesService,
   BackupService,
+  UserOAuthCredentialService,
 };
