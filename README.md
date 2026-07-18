@@ -296,25 +296,25 @@ Open an issue with:
       <img src="https://img.shields.io/badge/LVL_4-MAGE-8B5CF6?style=for-the-badge&labelColor=1a1a1a" alt="Mage"/>
     </td>
     <td align="center">
-      <a href="https://github.com/uttam12331">
-        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/159913047&w=100&h=100&fit=cover" width="100" alt="uttam12331"/><br/>
-        <sub><b>uttam12331</b></sub>
+      <a href="https://github.com/Diyaaa-12">
+        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/189824242&w=100&h=100&fit=cover" width="100" alt="Diyaaa-12"/><br/>
+        <sub><b>Diyaaa-12</b></sub>
       </a><br/>
       <img src="https://img.shields.io/badge/LVL_4-MAGE-8B5CF6?style=for-the-badge&labelColor=1a1a1a" alt="Mage"/>
     </td>
   </tr>
   <tr>
     <td align="center">
+      <a href="https://github.com/uttam12331">
+        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/159913047&w=100&h=100&fit=cover" width="100" alt="uttam12331"/><br/>
+        <sub><b>uttam12331</b></sub>
+      </a><br/>
+      <img src="https://img.shields.io/badge/LVL_4-MAGE-8B5CF6?style=for-the-badge&labelColor=1a1a1a" alt="Mage"/>
+    </td>
+    <td align="center">
       <a href="https://github.com/Ayu360">
         <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/81370467&w=100&h=100&fit=cover" width="100" alt="Ayu360"/><br/>
         <sub><b>Ayu360</b></sub>
-      </a><br/>
-      <img src="https://img.shields.io/badge/LVL_3-KNIGHT-C0C0C0?style=for-the-badge&labelColor=1a1a1a" alt="Knight"/>
-    </td>
-    <td align="center">
-      <a href="https://github.com/Diyaaa-12">
-        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/189824242&w=100&h=100&fit=cover" width="100" alt="Diyaaa-12"/><br/>
-        <sub><b>Diyaaa-12</b></sub>
       </a><br/>
       <img src="https://img.shields.io/badge/LVL_3-KNIGHT-C0C0C0?style=for-the-badge&labelColor=1a1a1a" alt="Knight"/>
     </td>
