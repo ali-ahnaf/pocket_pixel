@@ -7,3 +7,4 @@
 .env.local
 **/*.sqlite
 **/tsconfig.tsbuildinfo
+**/settings.local.json
