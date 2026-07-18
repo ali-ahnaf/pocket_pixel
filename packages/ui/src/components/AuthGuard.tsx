@@ -15,7 +15,18 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!pathname) return;
 
-    const hasProfile = typeof window === 'undefined' ? false : !!window.localStorage.getItem(PROFILE_STORAGE_KEY);
+    const hasProfile = (() => {
+      if (typeof window === 'undefined') return false;
+      const stored = window.localStorage.getItem(PROFILE_STORAGE_KEY);
+      if (!stored) return false;
+      try {
+        const parsed = JSON.parse(stored);
+        return !!parsed?.id;
+      } catch {
+        return false;
+      }
+    })();
+
     const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
 
     if (hasProfile && isPublic) {

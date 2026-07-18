@@ -38,7 +38,7 @@ describe('AuthGuard', () => {
 
   it('redirects authenticated users away from public pages', () => {
     pathnameMock.mockReturnValue('/signin');
-    localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify({ name: 'User' }));
+    localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify({ id: 'user-1', name: 'User' }));
     render(
       <AuthGuard>
         <div>Protected Content</div>
@@ -47,21 +47,21 @@ describe('AuthGuard', () => {
     expect(replaceMock).toHaveBeenCalledWith('/');
   });
 
-  it('redirects unauthenticated users from protected pages', () => {
-    pathnameMock.mockReturnValue('/dashboard');
-    localStorage.setItem('pocket_pixel_profile', JSON.stringify({ name: 'User' }));
-    render(
-      <AuthGuard>
-        <div>Protected Content</div>
-      </AuthGuard>,
-    );
-    expect(localStorage.getItem('pocket_pixel_profile')).toBeNull();
-    expect(replaceMock).toHaveBeenCalledWith('/signin');
-  });
+  it('redirects unauthenticated users from protected pages when profile is missing or invalid', () => {
+  pathnameMock.mockReturnValue('/dashboard');
+  localStorage.setItem('pocket_pixel_profile', JSON.stringify({ name: 'User' })); // no id — invalid
+  render(
+    <AuthGuard>
+      <div>Protected Content</div>
+    </AuthGuard>,
+  );
+  expect(localStorage.getItem('pocket_pixel_profile')).toBeNull();
+  expect(replaceMock).toHaveBeenCalledWith('/signin');
+});
 
   it('renders children when the user is authenticated on a protected page', () => {
     pathnameMock.mockReturnValue('/dashboard');
-    localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify({ name: 'User' }));
+    localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify({ id: 'user-1', name: 'User' }));
     render(
       <AuthGuard>
         <div>Protected Content</div>
@@ -84,7 +84,7 @@ describe('AuthGuard', () => {
 
   it('redirects authenticated users away from subpaths of public pages', () => {
     pathnameMock.mockReturnValue('/signin/extra-path');
-    localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify({ name: 'User' }));
+    localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify({ id: 'user-1', name: 'User' }));
     render(
       <AuthGuard>
         <div>Protected Content</div>
