@@ -22,6 +22,10 @@ export class UsersRepository {
     return this.repo.findOneBy({ email });
   }
 
+  findByGoogleId(googleId: string): Promise<User | null> {
+    return this.repo.findOneBy({ googleId });
+  }
+
   createEntity(data: Partial<User>): User {
     return this.repo.create(data);
   }

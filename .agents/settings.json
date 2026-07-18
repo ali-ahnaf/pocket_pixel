@@ -1,5 +1,4 @@
 {
-  "outputStyle": "Wizard",
   "permissions": {
     "allow": [
       "Bash(git *)",

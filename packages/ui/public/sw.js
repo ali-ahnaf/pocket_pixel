@@ -7,7 +7,7 @@
 //   - Static assets (icons, splash, fonts, JS/CSS): cache-first.
 // Bump CACHE_VERSION whenever you want clients to drop the old cache.
 
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const CACHE_NAME = `pocket-pixel-${CACHE_VERSION}`;
 
 // Pre-cache the app shell + core PWA assets so a cold offline launch works.

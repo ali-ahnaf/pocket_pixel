@@ -71,7 +71,6 @@ export default class ApiClient {
 
       return response.data;
     } catch (error: any) {
-      console.log('error', error);
       // Only treat a 401 as an expired session when we actually sent a token.
       // A 401 from an unauthenticated request (e.g. a failed sign-in) is an
       // expected error the caller should surface, not a reason to redirect.
