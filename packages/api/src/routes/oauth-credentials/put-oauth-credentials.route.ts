@@ -1,6 +1,5 @@
 import { Request, Response, Router } from 'express';
 import Joi from 'joi';
-import { OAuthCredentialsStatusDto } from '@expense-tracker/shared';
 import { userOAuthCredentialService, utilService } from '../../services';
 import { SetOAuthCredentialsInput } from '../../services/user-oauth-credential.service';
 import { asyncHandler } from '../../middleware/error-handler';
@@ -19,7 +18,7 @@ router.put(
     if (error) return utilService.replyError(res, error.message);
 
     await userOAuthCredentialService.setCredentials(req.user!.userId, value as SetOAuthCredentialsInput);
-    const status: OAuthCredentialsStatusDto = { configured: true };
+    const status = await userOAuthCredentialService.getStatus(req.user!.userId);
     return utilService.replyOk(res, status);
   }),
 );

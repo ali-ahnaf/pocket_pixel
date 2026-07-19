@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { ShieldCheck, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { ShieldCheck, ArrowLeft, CheckCircle2, Mail } from 'lucide-react';
 import { AppBar, BottomNavBar, DesktopSidebar } from '@/components';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
@@ -11,15 +11,26 @@ import { profileApi } from '@/lib/api';
 
 export default function GoogleOAuthSettingsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
 
   const [clientId, setClientId] = useState('');
   const [clientSecret, setClientSecret] = useState('');
   const [configured, setConfigured] = useState(false);
+  const [connected, setConnected] = useState(false);
+  const [googleEmail, setGoogleEmail] = useState<string | undefined>(undefined);
   const [statusLoading, setStatusLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+
+  // Surface the outcome of the OAuth callback redirect (?connected=1 / ?error=...).
+  useEffect(() => {
+    if (searchParams.get('connected') === '1') setConnected(true);
+    const callbackError = searchParams.get('error');
+    if (callbackError) setError(`Gmail connection failed: ${callbackError}`);
+  }, [searchParams]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -30,7 +41,10 @@ export default function GoogleOAuthSettingsPage() {
     profileApi
       .getOAuthCredentialsStatus(user.id)
       .then((status) => {
-        if (!cancelled) setConfigured(status.configured);
+        if (cancelled) return;
+        setConfigured(status.configured);
+        setConnected((prev) => prev || status.connected);
+        setGoogleEmail(status.googleEmail);
       })
       .catch((err) => {
         if (!cancelled) setError(profileApi.parseError(err));
@@ -79,6 +93,24 @@ export default function GoogleOAuthSettingsPage() {
       setError(message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleConnectGmail = async (): Promise<void> => {
+    if (!user?.id) {
+      setError('You must be signed in to connect Gmail');
+      return;
+    }
+
+    setError(null);
+    setConnecting(true);
+
+    try {
+      const { url } = await profileApi.getGoogleAuthorizeUrl(user.id);
+      window.location.href = url;
+    } catch (err) {
+      setError(profileApi.parseError(err));
+      setConnecting(false);
     }
   };
 
@@ -144,6 +176,31 @@ export default function GoogleOAuthSettingsPage() {
                 {saving ? 'Saving…' : 'Save Credentials'}
               </Button>
             </form>
+
+            {/* Gmail connection — only meaningful once a client id/secret is stored */}
+            {!statusLoading && configured && (
+              <div className="px-6 py-6 border-t-4 border-black flex flex-col gap-4">
+                <div className="flex items-center gap-2">
+                  <Mail className="w-5 h-5 text-primary" />
+                  <h3 className="font-headline-sm text-primary uppercase tracking-wider">Gmail Connection</h3>
+                </div>
+
+                <p className="text-[12px] text-on-surface-variant">
+                  Grant read-only access to your Gmail so bank alert emails can be scanned for transactions. You will be redirected to Google to approve the {'gmail.readonly'} scope.
+                </p>
+
+                {connected ? (
+                  <p className="flex items-center gap-2 font-mono text-label-caps text-primary uppercase border-4 border-black bg-surface-container p-3">
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    {googleEmail ? `Connected as ${googleEmail}` : 'Gmail connected'}
+                  </p>
+                ) : null}
+
+                <Button type="button" onClick={handleConnectGmail} disabled={connecting} className="w-full py-3" variant="primary">
+                  {connecting ? 'Redirecting…' : connected ? 'Reconnect Gmail' : 'Connect Gmail'}
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </main>
