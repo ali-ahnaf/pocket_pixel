@@ -7,6 +7,7 @@ import { AnalyticsRepository } from './analytics.repository';
 import { RecurringRepository } from './recurring.repository';
 import { PreferencesRepository } from './preferences.repository';
 import { UserOAuthCredentialRepository } from './user-oauth-credential.repository';
+import { ProcessedGmailMessageRepository } from './processed-gmail-message.repository';
 
 export const transactionsRepository = new TransactionsRepository();
 export const usersRepository = new UsersRepository();
@@ -17,5 +18,17 @@ export const analyticsRepository = new AnalyticsRepository();
 export const recurringRepository = new RecurringRepository();
 export const preferencesRepository = new PreferencesRepository();
 export const userOAuthCredentialRepository = new UserOAuthCredentialRepository();
+export const processedGmailMessageRepository = new ProcessedGmailMessageRepository();
 
-export { TransactionsRepository, UsersRepository, TagsRepository, VaultsRepository, DebtsRepository, AnalyticsRepository, RecurringRepository, PreferencesRepository, UserOAuthCredentialRepository };
+export {
+  TransactionsRepository,
+  UsersRepository,
+  TagsRepository,
+  VaultsRepository,
+  DebtsRepository,
+  AnalyticsRepository,
+  RecurringRepository,
+  PreferencesRepository,
+  UserOAuthCredentialRepository,
+  ProcessedGmailMessageRepository,
+};

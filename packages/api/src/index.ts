@@ -24,6 +24,7 @@ import { authenticate, requireAuth } from './middleware/auth';
 import { errorHandler } from './middleware/error-handler';
 import { restoreAllRecurringJobs } from './scheduler/recurring-scheduler';
 import { startBackupScheduler } from './scheduler/backup-scheduler';
+import { startGmailWatchScheduler, renewExpiringGmailWatches } from './scheduler/gmail-watch-scheduler';
 import { logger } from './services/logger.service';
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -81,6 +82,12 @@ AppDataSource.initialize()
     } catch (err) {
       logger.error('Failed to restore recurring jobs:', err);
     }
+    try {
+      await renewExpiringGmailWatches();
+    } catch (err) {
+      logger.error('Failed to renew Gmail watches on boot:', err);
+    }
+    startGmailWatchScheduler();
     startBackupScheduler();
     app.listen(PORT, () => {
       logger.info(`Node env: ${process.env.NODE_ENV}`);
