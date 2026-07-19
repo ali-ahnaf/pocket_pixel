@@ -14,6 +14,7 @@ import type {
   UpdateUserPreferenceInput,
   OAuthCredentialsStatusDto,
   SetOAuthCredentialsInput,
+  AuthorizeUrlDto,
 } from '@expense-tracker/shared';
 import ApiClient from './ApiClient';
 
@@ -50,6 +51,10 @@ export default class ProfileApi extends ApiClient {
 
   setOAuthCredentials(userId: string, data: SetOAuthCredentialsInput): Promise<OAuthCredentialsStatusDto> {
     return this.put<OAuthCredentialsStatusDto>(`/users/${userId}/oauth-credentials`, data);
+  }
+
+  getGoogleAuthorizeUrl(userId: string): Promise<AuthorizeUrlDto> {
+    return this.get<AuthorizeUrlDto>(`/users/${userId}/oauth-credentials/authorize`);
   }
 
   // Vaults
