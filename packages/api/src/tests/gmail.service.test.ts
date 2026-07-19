@@ -7,6 +7,9 @@ import type { VaultGmailWatchersRepository } from '../repositories/vault-gmail-w
 import type { TagsRepository } from '../repositories/tags.repository';
 import type { GmailAiExtractorService } from '../services/gmail-ai-extractor.service';
 import type { VaultGmailWatcher } from '../entities/VaultGmailWatcher.entity';
+import type { VaultsRepository } from '../repositories/vaults.repository';
+import type { Vault } from '../entities/Vault.entity';
+import type { PushService } from '../services/push.service';
 import type { Tag } from '../entities/Tag.entity';
 import { AppError } from '../errors/app-error';
 import { GmailService, GMAIL_API_BASE, GmailMessage } from '../services/gmail.service';
@@ -20,6 +23,8 @@ jest.mock('../services', () => ({
 type CredentialsMock = jest.Mocked<Pick<UserOAuthCredentialRepository, 'findByUserId' | 'findByGoogleEmail' | 'save'>>;
 type OAuthMock = jest.Mocked<Pick<UserOAuthCredentialService, 'authorizedGoogleFetch'>>;
 type WatchersMock = jest.Mocked<Pick<VaultGmailWatchersRepository, 'findManyForUser'>>;
+type VaultsMock = jest.Mocked<Pick<VaultsRepository, 'findOneForUser'>>;
+type PushMock = jest.Mocked<Pick<PushService, 'notify'>>;
 
 const buildCredential = (overrides: Partial<UserOAuthCredential> = {}): UserOAuthCredential =>
   ({
@@ -44,6 +49,8 @@ describe('GmailService', () => {
   let credentials: CredentialsMock;
   let oauth: OAuthMock;
   let watchers: WatchersMock;
+  let vaults: VaultsMock;
+  let push: PushMock;
   let service: GmailService;
 
   const makeService = (
@@ -57,6 +64,8 @@ describe('GmailService', () => {
       watchers as unknown as VaultGmailWatchersRepository,
       (overrides.tags ?? {}) as TagsRepository,
       (overrides.aiExtractor ?? {}) as GmailAiExtractorService,
+      vaults as unknown as VaultsRepository,
+      push as unknown as PushService,
     );
 
   beforeEach(() => {
@@ -68,6 +77,8 @@ describe('GmailService', () => {
     };
     oauth = { authorizedGoogleFetch: jest.fn() };
     watchers = { findManyForUser: jest.fn().mockResolvedValue([buildWatcher()]) };
+    vaults = { findOneForUser: jest.fn().mockResolvedValue({ id: 'vault-9', name: 'MAIN STASH' } as Vault) };
+    push = { notify: jest.fn().mockResolvedValue(undefined) };
     service = makeService();
   });
 
@@ -418,6 +429,8 @@ describe('GmailService', () => {
         isCommitted: false,
       });
       expect(processed.record).toHaveBeenCalledWith('user-1', 'm1');
+      expect(vaults.findOneForUser).toHaveBeenCalledWith('user-1', 'vault-9');
+      expect(push.notify).toHaveBeenCalledWith('user-1', { title: 'New transaction', body: 'Expense of 1500 in MAIN STASH', url: '/transactions' });
     });
 
     it('routes a shared label to the watcher whose subject filter matches (specific beats catch-all)', async () => {
@@ -478,6 +491,7 @@ describe('GmailService', () => {
 
       expect(transactions.create).not.toHaveBeenCalled();
       expect(processed.record).toHaveBeenCalledWith('user-1', 'm1');
+      expect(push.notify).not.toHaveBeenCalled();
     });
 
     it('records but does not create when the extractor throws (AppError swallowed)', async () => {

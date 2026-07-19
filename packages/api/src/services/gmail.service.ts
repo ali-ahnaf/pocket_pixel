@@ -6,13 +6,15 @@ import { UserOAuthCredentialRepository } from '../repositories/user-oauth-creden
 import { ProcessedGmailMessageRepository } from '../repositories/processed-gmail-message.repository';
 import { VaultGmailWatchersRepository } from '../repositories/vault-gmail-watchers.repository';
 import { TagsRepository } from '../repositories/tags.repository';
-import { userOAuthCredentialRepository, processedGmailMessageRepository, vaultGmailWatchersRepository, tagsRepository } from '../repositories';
+import { VaultsRepository } from '../repositories/vaults.repository';
+import { userOAuthCredentialRepository, processedGmailMessageRepository, vaultGmailWatchersRepository, tagsRepository, vaultsRepository } from '../repositories';
 import { UserOAuthCredentialService } from './user-oauth-credential.service';
 import { TransactionsService } from './transactions.service';
 import { GmailAiExtractorService } from './gmail-ai-extractor.service';
+import { PushService } from './push.service';
 import { PubSubNotification } from '../utils/gmail-webhook.util';
 import { extractMessageContent } from '../utils/gmail-message.util';
-import { userOAuthCredentialService, transactionsService, gmailAiExtractorService, logger } from '.';
+import { userOAuthCredentialService, transactionsService, gmailAiExtractorService, pushService, logger } from '.';
 
 /** Base for all `users.me` Gmail REST calls; reused by the history-diff phase. */
 export const GMAIL_API_BASE = 'https://gmail.googleapis.com/gmail/v1/users/me';
@@ -70,6 +72,8 @@ export class GmailService {
     private readonly watchers: VaultGmailWatchersRepository = vaultGmailWatchersRepository,
     private readonly tags: TagsRepository = tagsRepository,
     private readonly aiExtractor: GmailAiExtractorService = gmailAiExtractorService,
+    private readonly vaults: VaultsRepository = vaultsRepository,
+    private readonly push: PushService = pushService,
   ) {}
 
   /** The user's watched-label set: the de-duplicated union of their watcher labels. */
@@ -334,6 +338,13 @@ export class GmailService {
           isCommitted: false,
         });
         logger.info('Created transaction from Gmail watcher', { userId, messageId: message.id, vaultId: watcher.vaultId, type: parsed.type });
+
+        const vault = await this.vaults.findOneForUser(userId, watcher.vaultId);
+        await this.push.notify(userId, {
+          title: 'New transaction',
+          body: `${parsed.type === 'income' ? 'Income' : 'Expense'} of ${parsed.amount} in ${vault?.name ?? 'your vault'}`,
+          url: '/transactions',
+        });
       }
     }
 

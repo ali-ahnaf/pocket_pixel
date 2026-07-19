@@ -14,8 +14,18 @@ Deploy is fully automated on **push to `main`** via `.github/workflows/ci-cd.yml
 | `HOSTINGER_VPS_APP_DIR` | App dir on VPS, e.g. `/var/www/pocket_pixel`                                                           |
 | `HOSTINGER_VPS_SSH_KEY` | Private SSH key (deploy job strips `\r`)                                                               |
 | `API_ENV`               | **Entire content** of the API `.env` — written verbatim to `packages/api/.env` on the VPS every deploy |
+| `VAPID_PUBLIC_KEY`      | Web Push VAPID public key — inlined into the UI build as `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (see the `Build UI` step). Not secret, but must match the API's private key. |
 
 Adding a new env var to the API means updating the `API_ENV` secret too, or prod silently runs without it.
+
+### Web Push (VAPID)
+
+Generated once with `npx web-push generate-vapid-keys`. The public key is not sensitive (it's exposed to every browser tab); the private key must never be committed or logged.
+
+- API `.env` (bundled into the `API_ENV` secret): `VAPID_SUBJECT` (a `mailto:` contact), `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`.
+- UI build: `VAPID_PUBLIC_KEY` GitHub secret → `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (inlined at build time in the `Build UI` step of `ci-cd.yml`, same value as the API's public key).
+
+Rotating the key pair requires updating all three at once — a stale public key on the UI silently fails every new subscription.
 
 ## Bundle contract (the fragile part)
 

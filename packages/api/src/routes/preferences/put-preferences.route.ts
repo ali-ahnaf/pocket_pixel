@@ -10,6 +10,7 @@ const router = Router({ mergeParams: true });
 const updatePreferencesSchema = Joi.object<UpdateUserPreferenceInput>({
   showIncome: Joi.boolean(),
   showExpense: Joi.boolean(),
+  pushEnabled: Joi.boolean(),
 }).min(1);
 
 router.put(
@@ -19,7 +20,7 @@ router.put(
     if (error) return utilService.replyError(res, error.message);
 
     const preference = await preferencesService.update(req.user!.userId, value as UpdateUserPreferenceInput);
-    const dto: UserPreferenceDto = { showIncome: preference.showIncome, showExpense: preference.showExpense };
+    const dto: UserPreferenceDto = { showIncome: preference.showIncome, showExpense: preference.showExpense, pushEnabled: preference.pushEnabled };
     return utilService.replyOk(res, dto);
   }),
 );

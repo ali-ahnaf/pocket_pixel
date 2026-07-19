@@ -16,6 +16,9 @@ export class UserPreference extends BaseEntity {
   @Column({ type: 'boolean', default: false })
   showExpense: boolean;
 
+  @Column({ type: 'boolean', default: false })
+  pushEnabled: boolean;
+
   @OneToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;

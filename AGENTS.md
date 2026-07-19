@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) or any other agentic
 
 ### Github secrets
 
-Required deploy secrets and their meanings live in `documentation/DEPLOY.md`. Adding a new API env var means updating the `API_ENV` secret too, or prod silently runs without it.
+Required deploy secrets and their meanings live in `documentation/deployment.md`. Adding a new API env var means updating the `API_ENV` secret too, or prod silently runs without it.
 
 ## Commands
 

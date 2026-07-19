@@ -21,6 +21,8 @@ import type {
   SetVaultGmailWatcherInput,
   AiExtractResultDto,
   TestExtractInput,
+  PushSubscriptionInput,
+  PushSubscriptionDto,
 } from '@expense-tracker/shared';
 import ApiClient from './ApiClient';
 
@@ -48,6 +50,15 @@ export default class ProfileApi extends ApiClient {
 
   updatePreferences(userId: string, data: UpdateUserPreferenceInput): Promise<UserPreferenceDto> {
     return this.put<UserPreferenceDto>(`/users/${userId}/preferences`, data);
+  }
+
+  // Web Push subscriptions
+  subscribePush(userId: string, input: PushSubscriptionInput): Promise<PushSubscriptionDto> {
+    return this.post<PushSubscriptionDto>(`/users/${userId}/push-subscriptions`, input);
+  }
+
+  unsubscribePush(userId: string, endpoint: string): Promise<void> {
+    return this.delete<void>(`/users/${userId}/push-subscriptions`, { data: { endpoint } });
   }
 
   // Google OAuth credentials (write-only from the client's perspective)

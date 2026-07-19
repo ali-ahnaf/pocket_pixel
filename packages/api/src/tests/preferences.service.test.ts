@@ -49,7 +49,7 @@ describe('PreferencesService', () => {
 
       const result = await service.getOrCreate('user-1');
 
-      expect(preferences.createEntity).toHaveBeenCalledWith({ userId: 'user-1', showIncome: false, showExpense: false });
+      expect(preferences.createEntity).toHaveBeenCalledWith({ userId: 'user-1', showIncome: false, showExpense: false, pushEnabled: false });
       expect(preferences.save).toHaveBeenCalledTimes(1);
       expect(result).toBe(saved);
     });

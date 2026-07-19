@@ -75,6 +75,7 @@ jobs:
         run: npm run build:client
         env:
           NEXT_TELEMETRY_DISABLED: 1
+          NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
 
       - name: Stage deploy bundle
         run: |

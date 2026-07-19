@@ -20,6 +20,7 @@ import preferencesRouter from './routes/preferences.routes';
 import BackupRouter from './routes/backup.routes';
 import oauthCredentialsRouter from './routes/oauth-credentials.routes';
 import vaultWatchersRouter from './routes/vault-watchers.routes';
+import pushSubscriptionsRouter from './routes/push-subscriptions.routes';
 import oauthRouter from './routes/oauth.routes';
 import { authenticate, requireAuth } from './middleware/auth';
 import { errorHandler } from './middleware/error-handler';
@@ -60,6 +61,7 @@ app.use('/api/users/:userId/preferences', requireAuth, preferencesRouter);
 app.use('/api/users/:userId/backup', requireAuth, BackupRouter);
 app.use('/api/users/:userId/oauth-credentials', requireAuth, oauthCredentialsRouter);
 app.use('/api/users/:userId/vault-watchers', requireAuth, vaultWatchersRouter);
+app.use('/api/users/:userId/push-subscriptions', requireAuth, pushSubscriptionsRouter);
 
 // Public Google OAuth callback — no requireAuth; the user id rides in a signed state.
 app.use('/api/oauth', oauthRouter);

@@ -448,6 +448,7 @@ export class BackupService {
         userId,
         showIncome: dto.data.preference.showIncome,
         showExpense: dto.data.preference.showExpense,
+        pushEnabled: dto.data.preference.pushEnabled,
         deletedAt: null,
       }),
     );
@@ -491,6 +492,7 @@ export class BackupService {
     return {
       showIncome: preference?.showIncome ?? false,
       showExpense: preference?.showExpense ?? false,
+      pushEnabled: preference?.pushEnabled ?? false,
     };
   }
 

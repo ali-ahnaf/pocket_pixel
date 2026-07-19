@@ -10,3 +10,4 @@ export * from './recurring';
 export * from './preferences';
 export * from './oauth-credentials';
 export * from './vault-watchers';
+export * from './push-subscriptions';

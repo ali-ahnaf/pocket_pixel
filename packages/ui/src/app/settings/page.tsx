@@ -2,9 +2,10 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Settings as SettingsIcon, TrendingUp, TrendingDown, KeyRound, ChevronRight, Rocket, Code, Bug, BookOpen, ShieldCheck, type LucideIcon } from 'lucide-react';
+import { Settings as SettingsIcon, TrendingUp, TrendingDown, KeyRound, Bell, ChevronRight, Rocket, Code, Bug, BookOpen, ShieldCheck, type LucideIcon } from 'lucide-react';
 import { AppBar, BottomNavBar, DesktopSidebar } from '@/components';
 import { useDisplaySettings } from '@/hooks/useDisplaySettings';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 interface SettingToggleProps {
   label: string;
@@ -73,6 +74,7 @@ function SettingLink({ label, description, icon: Icon, href }: SettingLinkProps)
 
 export default function SettingsPage() {
   const { showIncome, showExpense, setShowIncome, setShowExpense } = useDisplaySettings();
+  const { supported: pushSupported, subscribed: pushSubscribed, loading: pushLoading, enable: enablePush, disable: disablePush } = usePushNotifications();
 
   return (
     <div className="bg-background text-on-background font-body-lg min-h-screen flex flex-col md:flex-row overflow-x-hidden selection:bg-primary selection:text-on-primary">
@@ -97,6 +99,19 @@ export default function SettingsPage() {
 
           <section className="flex flex-col gap-stack-md bg-surface-container border-4 border-black p-4">
             <h2 className="font-label-caps text-outline uppercase border-b-4 border-black pb-2">Account</h2>
+
+            {pushSupported && (
+              <SettingToggle
+                label="Push Notifications"
+                description="Get notified when a Gmail watcher logs a transaction"
+                icon={Bell}
+                checked={pushSubscribed}
+                onChange={(value) => {
+                  if (pushLoading) return;
+                  (value ? enablePush() : disablePush()).catch(() => undefined);
+                }}
+              />
+            )}
 
             <Link
               href="/change-password"
