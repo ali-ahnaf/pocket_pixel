@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { authService, logger, utilService } from '../services';
-import type { TokenPayload } from '../services/auth.service';
+import type { TokenPayload } from '@expense-tracker/shared';
 
 declare global {
   namespace Express {
