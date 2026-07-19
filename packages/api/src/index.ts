@@ -19,6 +19,7 @@ import wizardRouter from './routes/wizard.routes';
 import preferencesRouter from './routes/preferences.routes';
 import BackupRouter from './routes/backup.routes';
 import oauthCredentialsRouter from './routes/oauth-credentials.routes';
+import oauthRouter from './routes/oauth.routes';
 import { authenticate, requireAuth } from './middleware/auth';
 import { errorHandler } from './middleware/error-handler';
 import { restoreAllRecurringJobs } from './scheduler/recurring-scheduler';
@@ -56,6 +57,9 @@ app.use('/api/users/:userId/debts', requireAuth, debtsRouter);
 app.use('/api/users/:userId/preferences', requireAuth, preferencesRouter);
 app.use('/api/users/:userId/backup', requireAuth, BackupRouter);
 app.use('/api/users/:userId/oauth-credentials', requireAuth, oauthCredentialsRouter);
+
+// Public Google OAuth callback — no requireAuth; the user id rides in a signed state.
+app.use('/api/oauth', oauthRouter);
 
 // Serve static files from the Next.js build
 const uiDir = path.join(__dirname, '../../ui/out');

@@ -19,6 +19,8 @@ Adding a new env var to the API means updating the `API_ENV` secret too, or prod
 
 Notably, `API_ENV` must include `OAUTH_CREDENTIALS_ENCRYPTION_KEY` — a 32-byte, base64-encoded key used to AES-256-GCM encrypt per-user Google OAuth client id/secret at rest (`packages/api/src/utils/oauth-credentials-encryption.util.ts`). That util validates the key eagerly as soon as it's imported and throws if it's missing or the wrong length, so once a consumer (service/route) imports it, a deploy without this var in `API_ENV` will fail to boot.
 
+`API_ENV` must also include `APP_BASE_URL` — the API's public origin. The fixed Google OAuth redirect URI is derived from it as `${APP_BASE_URL}/api/oauth/google/callback` (`packages/api/src/utils/google-oauth.util.ts`); every user registers that exact URI in their own Google OAuth client, so it must match production. `WEB_BASE_URL` (where the browser lands after the callback) is optional and defaults to `APP_BASE_URL` since the API also serves the UI in production.
+
 ## Bundle contract (the fragile part)
 
 The build job hand-assembles `bundle/` with **hardcoded paths**:
