@@ -13,6 +13,7 @@ import { WizardService } from './wizard.service';
 import { PreferencesService } from './preferences.service';
 import { BackupService } from './backup.service';
 import { UserOAuthCredentialService } from './user-oauth-credential.service';
+import { GmailService } from './gmail.service';
 
 export const utilService = new UtilService();
 export const logger = new Logger();
@@ -29,6 +30,7 @@ export const wizardService = new WizardService();
 export const preferencesService = new PreferencesService();
 export const backupService = new BackupService();
 export const userOAuthCredentialService = new UserOAuthCredentialService();
+export const gmailService = new GmailService();
 
 export {
   UtilService,
@@ -46,4 +48,5 @@ export {
   PreferencesService,
   BackupService,
   UserOAuthCredentialService,
+  GmailService,
 };

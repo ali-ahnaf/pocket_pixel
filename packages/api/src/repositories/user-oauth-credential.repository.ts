@@ -24,6 +24,11 @@ export class UserOAuthCredentialRepository {
     return this.repo.findOneBy({ userId });
   }
 
+  /** Resolves a credential by the connected Gmail address (used to route push notifications). */
+  findByGoogleEmail(googleEmail: string): Promise<UserOAuthCredential | null> {
+    return this.repo.findOneBy({ googleEmail });
+  }
+
   createEntity(data: Partial<UserOAuthCredential>): UserOAuthCredential {
     return this.repo.create(data);
   }

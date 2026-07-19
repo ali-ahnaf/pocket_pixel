@@ -15,6 +15,8 @@ import type {
   OAuthCredentialsStatusDto,
   SetOAuthCredentialsInput,
   AuthorizeUrlDto,
+  GmailLabelDto,
+  GmailWatchStatusDto,
 } from '@expense-tracker/shared';
 import ApiClient from './ApiClient';
 
@@ -55,6 +57,23 @@ export default class ProfileApi extends ApiClient {
 
   getGoogleAuthorizeUrl(userId: string): Promise<AuthorizeUrlDto> {
     return this.get<AuthorizeUrlDto>(`/users/${userId}/oauth-credentials/authorize`);
+  }
+
+  // Gmail bank-alert watch
+  getGmailLabels(userId: string): Promise<GmailLabelDto[]> {
+    return this.get<GmailLabelDto[]>(`/users/${userId}/oauth-credentials/gmail/labels`);
+  }
+
+  getGmailWatchStatus(userId: string): Promise<GmailWatchStatusDto> {
+    return this.get<GmailWatchStatusDto>(`/users/${userId}/oauth-credentials/gmail/watch`);
+  }
+
+  setGmailWatch(userId: string, labelIds: string[]): Promise<GmailWatchStatusDto> {
+    return this.put<GmailWatchStatusDto>(`/users/${userId}/oauth-credentials/gmail/watch`, { labelIds });
+  }
+
+  stopGmailWatch(userId: string): Promise<GmailWatchStatusDto> {
+    return this.delete<GmailWatchStatusDto>(`/users/${userId}/oauth-credentials/gmail/watch`);
   }
 
   // Vaults
