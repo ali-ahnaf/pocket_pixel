@@ -22,3 +22,25 @@ export interface OAuthCredentialsStatusDto {
 export interface AuthorizeUrlDto {
   url: string;
 }
+
+/** A single Gmail label the user can pick for the bank-alert watch. */
+export interface GmailLabelDto {
+  id: string;
+  name: string;
+}
+
+/** Sets which label(s) the Gmail push watch should track, then (re)starts it. */
+export interface SetGmailWatchInput {
+  labelIds: string[];
+}
+
+/**
+ * Current Gmail push-watch state for the settings UI. `watching` is true while an
+ * unexpired `users.watch` registration is held; `expiry` is its ISO deadline (the
+ * renewal cron keeps it fresh); `labelIds` are the labels currently watched.
+ */
+export interface GmailWatchStatusDto {
+  watching: boolean;
+  expiry: string | null;
+  labelIds: string[];
+}
