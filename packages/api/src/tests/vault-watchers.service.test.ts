@@ -17,7 +17,7 @@ type GmailMock = jest.Mocked<Pick<GmailService, 'resyncWatch'>>;
 
 const vault = (overrides: Partial<Vault> = {}): Vault => ({ id: 'v1', userId: 'user-1', name: 'MAIN STASH', ...overrides }) as Vault;
 const watcher = (overrides: Partial<VaultGmailWatcher> = {}): VaultGmailWatcher =>
-  ({ userId: 'user-1', vaultId: 'v1', gmailLabelId: 'L1', gmailLabelName: 'BANK/EBL', subjectFilter: null, parseScript: 'function parse(e){}', ...overrides }) as VaultGmailWatcher;
+  ({ userId: 'user-1', vaultId: 'v1', gmailLabelId: 'L1', gmailLabelName: 'BANK/EBL', subjectFilter: null, guidanceHint: null, ...overrides }) as VaultGmailWatcher;
 
 describe('VaultWatchersService', () => {
   let watchers: WatchersMock;
@@ -48,8 +48,8 @@ describe('VaultWatchersService', () => {
       const result = await service.listForUser('user-1');
 
       expect(result).toEqual([
-        { vaultId: 'v1', vaultName: 'MAIN STASH', gmailLabelId: 'L1', gmailLabelName: 'BANK/EBL', subjectFilter: null, parseScript: 'function parse(e){}', tagIds: [] },
-        { vaultId: 'v2', vaultName: 'SAVINGS', gmailLabelId: 'L2', gmailLabelName: 'BANK/EBL', subjectFilter: null, parseScript: 'function parse(e){}', tagIds: [] },
+        { vaultId: 'v1', vaultName: 'MAIN STASH', gmailLabelId: 'L1', gmailLabelName: 'BANK/EBL', subjectFilter: null, guidanceHint: null },
+        { vaultId: 'v2', vaultName: 'SAVINGS', gmailLabelId: 'L2', gmailLabelName: 'BANK/EBL', subjectFilter: null, guidanceHint: null },
       ]);
     });
   });
@@ -59,12 +59,10 @@ describe('VaultWatchersService', () => {
       vaults.findOneForUser.mockResolvedValue(vault());
       watchers.findByVault.mockResolvedValue(null);
 
-      const result = await service.upsert('user-1', 'v1', { gmailLabelId: 'L1', gmailLabelName: 'BANK/EBL', subjectFilter: 'Debit Alert', parseScript: 'function parse(e){ return null; }' });
+      const result = await service.upsert('user-1', 'v1', { gmailLabelId: 'L1', gmailLabelName: 'BANK/EBL', subjectFilter: 'Debit Alert', guidanceHint: 'these are always groceries' });
 
       expect(watchers.createEntity).toHaveBeenCalledWith({ userId: 'user-1', vaultId: 'v1' });
-      expect(watchers.save).toHaveBeenCalledWith(
-        expect.objectContaining({ gmailLabelId: 'L1', gmailLabelName: 'BANK/EBL', subjectFilter: 'Debit Alert', parseScript: 'function parse(e){ return null; }' }),
-      );
+      expect(watchers.save).toHaveBeenCalledWith(expect.objectContaining({ gmailLabelId: 'L1', gmailLabelName: 'BANK/EBL', subjectFilter: 'Debit Alert', guidanceHint: 'these are always groceries' }));
       expect(gmail.resyncWatch).toHaveBeenCalledWith('user-1');
       expect(result).toEqual({
         vaultId: 'v1',
@@ -72,49 +70,48 @@ describe('VaultWatchersService', () => {
         gmailLabelId: 'L1',
         gmailLabelName: 'BANK/EBL',
         subjectFilter: 'Debit Alert',
-        parseScript: 'function parse(e){ return null; }',
-        tagIds: [],
+        guidanceHint: 'these are always groceries',
       });
     });
 
-    it('persists and returns the selected tag ids', async () => {
+    it('defaults guidance hint to null when omitted', async () => {
       vaults.findOneForUser.mockResolvedValue(vault());
       watchers.findByVault.mockResolvedValue(null);
 
-      const result = await service.upsert('user-1', 'v1', { gmailLabelId: 'L1', parseScript: 's', tagIds: ['t1', 't2'] });
+      const result = await service.upsert('user-1', 'v1', { gmailLabelId: 'L1' });
 
-      expect(watchers.save).toHaveBeenCalledWith(expect.objectContaining({ tagIds: ['t1', 't2'] }));
-      expect(result.tagIds).toEqual(['t1', 't2']);
+      expect(watchers.save).toHaveBeenCalledWith(expect.objectContaining({ guidanceHint: null }));
+      expect(result.guidanceHint).toBeNull();
     });
 
-    it('defaults tag ids to an empty array when omitted', async () => {
+    it('normalizes a blank guidance hint to null', async () => {
       vaults.findOneForUser.mockResolvedValue(vault());
       watchers.findByVault.mockResolvedValue(null);
 
-      await service.upsert('user-1', 'v1', { gmailLabelId: 'L1', parseScript: 's' });
+      await service.upsert('user-1', 'v1', { gmailLabelId: 'L1', guidanceHint: '   ' });
 
-      expect(watchers.save).toHaveBeenCalledWith(expect.objectContaining({ tagIds: [] }));
+      expect(watchers.save).toHaveBeenCalledWith(expect.objectContaining({ guidanceHint: null }));
     });
 
     it('normalizes a blank or omitted subject filter to null', async () => {
       vaults.findOneForUser.mockResolvedValue(vault());
       watchers.findByVault.mockResolvedValue(null);
 
-      await service.upsert('user-1', 'v1', { gmailLabelId: 'L1', subjectFilter: '   ', parseScript: 's' });
+      await service.upsert('user-1', 'v1', { gmailLabelId: 'L1', subjectFilter: '   ' });
 
       expect(watchers.save).toHaveBeenCalledWith(expect.objectContaining({ subjectFilter: null }));
     });
 
     it('updates the existing watcher in place when one already exists for the vault', async () => {
       vaults.findOneForUser.mockResolvedValue(vault());
-      const existing = watcher({ gmailLabelId: 'OLD', parseScript: 'old' });
+      const existing = watcher({ gmailLabelId: 'OLD', guidanceHint: 'old hint' });
       watchers.findByVault.mockResolvedValue(existing);
 
-      await service.upsert('user-1', 'v1', { gmailLabelId: 'L1', parseScript: 'new' });
+      await service.upsert('user-1', 'v1', { gmailLabelId: 'L1', guidanceHint: 'new hint' });
 
       expect(watchers.createEntity).not.toHaveBeenCalled();
       expect(existing.gmailLabelId).toBe('L1');
-      expect(existing.parseScript).toBe('new');
+      expect(existing.guidanceHint).toBe('new hint');
       expect(existing.gmailLabelName).toBeNull();
       expect(watchers.save).toHaveBeenCalledWith(existing);
     });
@@ -122,7 +119,7 @@ describe('VaultWatchersService', () => {
     it('throws 404 when the vault does not belong to the user', async () => {
       vaults.findOneForUser.mockResolvedValue(null);
 
-      await expect(service.upsert('user-1', 'nope', { gmailLabelId: 'L1', parseScript: 's' })).rejects.toThrow(AppError);
+      await expect(service.upsert('user-1', 'nope', { gmailLabelId: 'L1' })).rejects.toThrow(AppError);
       expect(gmail.resyncWatch).not.toHaveBeenCalled();
     });
 
@@ -130,7 +127,7 @@ describe('VaultWatchersService', () => {
       vaults.findOneForUser.mockResolvedValue(vault({ id: 'v2' }));
       watchers.findByVault.mockResolvedValue(null);
 
-      await expect(service.upsert('user-1', 'v2', { gmailLabelId: 'L1', subjectFilter: 'Savings', parseScript: 's' })).resolves.toBeDefined();
+      await expect(service.upsert('user-1', 'v2', { gmailLabelId: 'L1', subjectFilter: 'Savings' })).resolves.toBeDefined();
       expect(watchers.save).toHaveBeenCalled();
     });
   });

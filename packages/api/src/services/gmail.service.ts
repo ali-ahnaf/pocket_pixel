@@ -5,13 +5,14 @@ import { UserOAuthCredential } from '../entities/UserOAuthCredential.entity';
 import { UserOAuthCredentialRepository } from '../repositories/user-oauth-credential.repository';
 import { ProcessedGmailMessageRepository } from '../repositories/processed-gmail-message.repository';
 import { VaultGmailWatchersRepository } from '../repositories/vault-gmail-watchers.repository';
-import { userOAuthCredentialRepository, processedGmailMessageRepository, vaultGmailWatchersRepository } from '../repositories';
+import { TagsRepository } from '../repositories/tags.repository';
+import { userOAuthCredentialRepository, processedGmailMessageRepository, vaultGmailWatchersRepository, tagsRepository } from '../repositories';
 import { UserOAuthCredentialService } from './user-oauth-credential.service';
 import { TransactionsService } from './transactions.service';
-import { GmailScriptRunnerService } from './gmail-script-runner.service';
+import { GmailAiExtractorService } from './gmail-ai-extractor.service';
 import { PubSubNotification } from '../utils/gmail-webhook.util';
 import { extractMessageContent } from '../utils/gmail-message.util';
-import { userOAuthCredentialService, transactionsService, gmailScriptRunnerService, logger } from '.';
+import { userOAuthCredentialService, transactionsService, gmailAiExtractorService, logger } from '.';
 
 /** Base for all `users.me` Gmail REST calls; reused by the history-diff phase. */
 export const GMAIL_API_BASE = 'https://gmail.googleapis.com/gmail/v1/users/me';
@@ -57,7 +58,8 @@ interface GmailWatchResponse {
  * touches the plaintext watch-bookkeeping columns (`gmailHistoryId`,
  * `gmailWatchExpiry`) via the repository. The watched-label set is derived from
  * the user's `VaultGmailWatcher` rows, and a matching message is turned into a
- * transaction by running that vault's user-supplied parse script.
+ * transaction by `GmailAiExtractorService`, given the user's tags for AI-driven
+ * categorisation.
  */
 export class GmailService {
   constructor(
@@ -66,7 +68,8 @@ export class GmailService {
     private readonly transactions: TransactionsService = transactionsService,
     private readonly processedMessages: ProcessedGmailMessageRepository = processedGmailMessageRepository,
     private readonly watchers: VaultGmailWatchersRepository = vaultGmailWatchersRepository,
-    private readonly scriptRunner: GmailScriptRunnerService = gmailScriptRunnerService,
+    private readonly tags: TagsRepository = tagsRepository,
+    private readonly aiExtractor: GmailAiExtractorService = gmailAiExtractorService,
   ) {}
 
   /** The user's watched-label set: the de-duplicated union of their watcher labels. */
@@ -296,13 +299,14 @@ export class GmailService {
 
   /**
    * Turns one fetched Gmail message into a transaction, idempotently: a message
-   * already in the ledger is skipped, so a Pub/Sub replay never double-inserts.
-   * The message is matched to a vault watcher by label **and subject**; that
-   * watcher's parse script runs and, on a valid result, a transaction is created
-   * **in that vault**. No matching watcher, a null result, or an invalid script
-   * output all fall through to `record` so the message isn't re-processed. The
-   * transaction is created only through `TransactionsService` — scripts never
-   * touch storage.
+   * already in the ledger is skipped **before any model call**, so a Pub/Sub
+   * replay never double-inserts nor pays for a second extraction. The message is
+   * matched to a vault watcher by label **and subject**; that watcher's email +
+   * the user's tag list are sent to the AI extractor and, on a valid result, a
+   * transaction is created **in that vault**. No matching watcher, a
+   * `matched: false` result, or an invalid extraction all fall through to
+   * `record` so the message isn't re-processed. The transaction is created only
+   * through `TransactionsService` — the extractor never touches storage.
    */
   private async handleMessage(userId: string, message: GmailMessage): Promise<void> {
     if (await this.processedMessages.exists(userId, message.id)) return;
@@ -310,12 +314,14 @@ export class GmailService {
     const content = extractMessageContent(message);
     const watcher = await this.matchWatcher(userId, message.labelIds ?? [], content.subject);
     if (watcher) {
+      const tags = (await this.tags.findManyForUser(userId)).map((tag) => ({ id: tag.id, name: tag.name }));
+
       let parsed = null;
       try {
-        parsed = this.scriptRunner.run(watcher.parseScript, content);
+        parsed = await this.aiExtractor.extract(content, tags, watcher.guidanceHint);
       } catch (err) {
-        // Invalid script output (AppError) — skip this message, don't retry.
-        logger.warn('Vault watcher script produced an invalid result, skipping', { userId, vaultId: watcher.vaultId, messageId: message.id, err });
+        // Invalid/unreachable model output (AppError) — skip this message, don't retry.
+        logger.warn('Gmail AI extractor produced an invalid result, skipping', { userId, vaultId: watcher.vaultId, messageId: message.id, err });
       }
       if (parsed) {
         await this.transactions.create(userId, {
@@ -324,7 +330,7 @@ export class GmailService {
           title: parsed.title.toLowerCase(),
           date: parsed.date,
           vaultId: watcher.vaultId,
-          tagIds: watcher.tagIds ?? undefined,
+          tagIds: parsed.tagIds.length ? parsed.tagIds : undefined,
           isCommitted: false,
         });
         logger.info('Created transaction from Gmail watcher', { userId, messageId: message.id, vaultId: watcher.vaultId, type: parsed.type });
@@ -343,7 +349,7 @@ export class GmailService {
    * catch-all, and within each group the earliest-created watcher wins
    * deterministically (rows come back in `createdAt` order).
    */
-  private async matchWatcher(userId: string, labelIds: string[], subject: string): Promise<{ vaultId: string; parseScript: string; tagIds: string[] | null } | null> {
+  private async matchWatcher(userId: string, labelIds: string[], subject: string): Promise<{ vaultId: string; guidanceHint: string | null } | null> {
     if (labelIds.length === 0) return null;
     const watchers = await this.watchers.findManyForUser(userId);
     const candidates = watchers.filter((watcher) => labelIds.includes(watcher.gmailLabelId));

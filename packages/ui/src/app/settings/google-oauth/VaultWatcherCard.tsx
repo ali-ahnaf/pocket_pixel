@@ -1,26 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle2, Trash2, Vault as VaultIcon } from 'lucide-react';
+import { CheckCircle2, FlaskConical, Trash2, Vault as VaultIcon } from 'lucide-react';
 import type { GmailLabelDto, TagDto, VaultDto, VaultGmailWatcherDto } from '@expense-tracker/shared';
 import { Button } from '@/components/Button';
 import { Dropdown } from '@/components/Dropdown';
 import { profileApi } from '@/lib/api';
-import { iconMapper } from '@/lib/iconMapper';
-
-/** Prefilled starting point for a new watcher's parse script. */
-const DEFAULT_SCRIPT = `// Return a transaction, or null to skip this email.
-// email = { from, subject, bodyText, emailDate }
-function parse(email) {
-  const match = email.bodyText.match(/BDT ([\\d,]+(?:\\.\\d+)?)/);
-  if (!match) return null;
-  return {
-    title: email.subject,
-    amount: Number(match[1].replace(/,/g, '')),
-    type: 'expense', // or 'income'
-    // date: '2026-07-20', // optional yyyy-mm-dd; defaults to today
-  };
-}`;
+import { TestExtractModal } from './TestExtractModal';
 
 interface VaultWatcherCardProps {
   userId: string;
@@ -33,29 +19,27 @@ interface VaultWatcherCardProps {
 }
 
 /**
- * One card per vault: shows its attached Gmail watcher (label + parse script) or
- * an "attach listener" editor. The editor offers a label dropdown and a script
- * textarea.
+ * One card per vault: shows its attached Gmail watcher (label + AI extraction
+ * guidance) or an "attach listener" editor. The editor offers a label dropdown,
+ * an optional subject filter, an optional free-text guidance hint for the AI
+ * extractor, and a dry-run preview against a pasted sample email.
  */
 export function VaultWatcherCard({ userId, vault, watcher, labels, tags, onChanged, onError }: VaultWatcherCardProps): JSX.Element {
   const [editing, setEditing] = useState(false);
   const [gmailLabelId, setGmailLabelId] = useState(watcher?.gmailLabelId ?? '');
   const [subjectFilter, setSubjectFilter] = useState(watcher?.subjectFilter ?? '');
-  const [tagIds, setTagIds] = useState<string[]>(watcher?.tagIds ?? []);
-  const [parseScript, setParseScript] = useState(watcher?.parseScript ?? DEFAULT_SCRIPT);
+  const [guidanceHint, setGuidanceHint] = useState(watcher?.guidanceHint ?? '');
   const [saving, setSaving] = useState(false);
+  const [testModalOpen, setTestModalOpen] = useState(false);
 
   const startEditing = (): void => {
     setGmailLabelId(watcher?.gmailLabelId ?? '');
     setSubjectFilter(watcher?.subjectFilter ?? '');
-    setTagIds(watcher?.tagIds ?? []);
-    setParseScript(watcher?.parseScript ?? DEFAULT_SCRIPT);
+    setGuidanceHint(watcher?.guidanceHint ?? '');
     setEditing(true);
   };
 
   const labelName = (id: string): string => labels.find((label) => label.id === id)?.name ?? watcher?.gmailLabelName ?? id;
-
-  const toggleTag = (id: string): void => setTagIds((prev) => (prev.includes(id) ? prev.filter((tagId) => tagId !== id) : [...prev, id]));
 
   const handleSave = async (): Promise<void> => {
     if (!gmailLabelId) {
@@ -68,8 +52,7 @@ export function VaultWatcherCard({ userId, vault, watcher, labels, tags, onChang
         gmailLabelId,
         gmailLabelName: labels.find((label) => label.id === gmailLabelId)?.name,
         subjectFilter: subjectFilter.trim() || undefined,
-        parseScript,
-        tagIds,
+        guidanceHint: guidanceHint.trim() || undefined,
       });
       setEditing(false);
       onChanged();
@@ -113,22 +96,10 @@ export function VaultWatcherCard({ userId, vault, watcher, labels, tags, onChang
           <div className="flex flex-col gap-3">
             <p className="text-[12px] text-on-surface-variant">
               {watcher
-                ? `Listening on label "${labelName(watcher.gmailLabelId)}"${watcher.subjectFilter ? ` where subject contains "${watcher.subjectFilter}"` : ''} — matching emails create transactions here.`
-                : 'No listener attached. Attach a Gmail label + parse script.'}
+                ? `Listening on label "${labelName(watcher.gmailLabelId)}"${watcher.subjectFilter ? ` where subject contains "${watcher.subjectFilter}"` : ''} — AI reads the email and fills in the transaction.`
+                : 'No listener attached. Attach a Gmail label and let AI fill in the transaction.'}
             </p>
-            {watcher && watcher.tagIds.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {watcher.tagIds.map((tagId) => {
-                  const tag = tags.find((t) => t.id === tagId);
-                  return (
-                    <span key={tagId} className="flex items-center gap-1 border-4 border-black bg-surface-container-high px-2 py-0.5 font-mono text-[11px] uppercase text-on-surface">
-                      {tag?.icon && <span>{tag.icon}</span>}
-                      {tag?.name ?? tagId}
-                    </span>
-                  );
-                })}
-              </div>
-            )}
+            {watcher?.guidanceHint && <p className="border-4 border-black bg-surface-container-high px-3 py-2 font-mono text-[11px] text-on-surface-variant">Guidance: {watcher.guidanceHint}</p>}
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button type="button" variant="primary" className="w-full py-2" onClick={startEditing}>
                 {watcher ? 'Edit Listener' : 'Attach Listener'}
@@ -161,45 +132,23 @@ export function VaultWatcherCard({ userId, vault, watcher, labels, tags, onChang
               <span className="text-[11px] text-on-surface-variant">Case-insensitive substring. Only emails whose subject contains this fire this vault.</span>
             </label>
 
-            <div className="flex flex-col gap-2">
-              <span className="pixel-input-label">Tags (optional)</span>
-              {tags.length === 0 ? (
-                <span className="text-[11px] text-on-surface-variant">No tags yet — create tags first to attach them here.</span>
-              ) : (
-                <>
-                  <div className="flex flex-wrap gap-2">
-                    {tags.map((tag) => {
-                      const selected = tagIds.includes(tag.id);
-                      const TagIcon = iconMapper(tag.icon || 'Hash');
-                      return (
-                        <button
-                          key={tag.id}
-                          type="button"
-                          onClick={() => toggleTag(tag.id)}
-                          aria-pressed={selected}
-                          className={`flex items-center gap-1 border-4 border-black px-2 py-1 font-mono text-[11px] uppercase transition-colors ${selected ? 'bg-primary text-on-primary' : 'bg-surface-container-lowest text-on-surface hover:bg-surface-container-low'}`}
-                        >
-                          <TagIcon size={12} strokeWidth={3} />
-                          {tag.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <span className="text-[11px] text-on-surface-variant">Selected tags are applied to every transaction this watcher creates.</span>
-                </>
-              )}
-            </div>
-
             <label className="flex flex-col gap-1">
-              <span className="pixel-input-label">Parse script</span>
+              <span className="pixel-input-label">Guidance for AI (optional)</span>
               <textarea
-                value={parseScript}
-                onChange={(e) => setParseScript(e.target.value)}
+                value={guidanceHint}
+                onChange={(e) => setGuidanceHint(e.target.value)}
+                placeholder="e.g. these are always groceries, ignore reward-point emails"
                 spellCheck={false}
-                rows={12}
-                className="pixel-input font-mono text-[12px] leading-relaxed whitespace-pre resize-y"
+                rows={4}
+                className="pixel-input font-mono text-[12px] leading-relaxed resize-y"
               />
+              <span className="text-[11px] text-on-surface-variant">AI reads the email and fills in the transaction (amount, title, type, tags). This nudge is appended to its prompt.</span>
             </label>
+
+            <Button type="button" variant="secondary" className="w-full py-2" onClick={() => setTestModalOpen(true)}>
+              <FlaskConical className="w-4 h-4" />
+              Test On A Pasted Email
+            </Button>
 
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button type="button" variant="primary" className="w-full py-2" disabled={saving} onClick={handleSave}>
@@ -212,6 +161,8 @@ export function VaultWatcherCard({ userId, vault, watcher, labels, tags, onChang
           </div>
         )}
       </div>
+
+      <TestExtractModal isOpen={testModalOpen} onClose={() => setTestModalOpen(false)} userId={userId} guidanceHint={guidanceHint} tags={tags} />
     </div>
   );
 }
