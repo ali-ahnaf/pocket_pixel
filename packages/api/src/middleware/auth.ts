@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { authService, logger, utilService } from '../services';
-import type { TokenPayload } from '../services/auth.service';
+import type { TokenPayload } from '@expense-tracker/shared';
 import { AUTH_COOKIE_NAME } from '../routes/auth/cookie-options';
 
 declare global {

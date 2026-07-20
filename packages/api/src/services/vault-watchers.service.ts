@@ -1,0 +1,97 @@
+import { SetVaultGmailWatcherInput, TestParseScriptInput, TestParseScriptResultDto, VaultGmailWatcherDto } from '@expense-tracker/shared';
+import { AppError } from '../errors/app-error';
+import { VaultGmailWatchersRepository } from '../repositories/vault-gmail-watchers.repository';
+import { VaultsRepository } from '../repositories/vaults.repository';
+import { vaultGmailWatchersRepository, vaultsRepository } from '../repositories';
+import { GmailScriptRunnerService } from './gmail-script-runner.service';
+import { GmailService } from './gmail.service';
+import { gmailScriptRunnerService, gmailService, logger } from '.';
+
+/**
+ * Business logic for per-vault Gmail watchers. Each vault owns at most one
+ * watcher (a Gmail label + optional subject filter + a parse script); a label may
+ * be shared across vaults and routed by subject at match time.
+ * Any create/update/delete re-syncs the user's single mailbox watch so the
+ * watched-label union stays in step with the watcher rows. Repositories and the
+ * collaborating services are injected (defaulting to the shared singletons) so
+ * the service is unit-testable with mocks.
+ */
+export class VaultWatchersService {
+  constructor(
+    private readonly watchers: VaultGmailWatchersRepository = vaultGmailWatchersRepository,
+    private readonly vaults: VaultsRepository = vaultsRepository,
+    private readonly scriptRunner: GmailScriptRunnerService = gmailScriptRunnerService,
+    private readonly gmail: GmailService = gmailService,
+  ) {}
+
+  /** Lists the user's watchers, joined to their vault names for the settings UI. */
+  async listForUser(userId: string): Promise<VaultGmailWatcherDto[]> {
+    const [watchers, vaults] = await Promise.all([this.watchers.findManyForUser(userId), this.vaults.findManyForUser(userId)]);
+    const vaultNameById = new Map(vaults.map((vault) => [vault.id, vault.name]));
+
+    return watchers.map((watcher) => ({
+      vaultId: watcher.vaultId,
+      vaultName: vaultNameById.get(watcher.vaultId) ?? '',
+      gmailLabelId: watcher.gmailLabelId,
+      gmailLabelName: watcher.gmailLabelName,
+      subjectFilter: watcher.subjectFilter,
+      parseScript: watcher.parseScript,
+      tagIds: watcher.tagIds ?? [],
+    }));
+  }
+
+  /**
+   * Creates or updates the watcher for a vault, then re-syncs the mailbox watch.
+   * Enforces that the vault belongs to the user. A label may be shared across
+   * vaults (routed by `subjectFilter` at match time), so no cross-vault label
+   * guard here.
+   */
+  async upsert(userId: string, vaultId: string, input: SetVaultGmailWatcherInput): Promise<VaultGmailWatcherDto> {
+    const vault = await this.vaults.findOneForUser(userId, vaultId);
+    if (!vault) throw new AppError('Vault not found', 404);
+
+    const existing = await this.watchers.findByVault(userId, vaultId);
+    const watcher = existing ?? this.watchers.createEntity({ userId, vaultId });
+    watcher.gmailLabelId = input.gmailLabelId;
+    watcher.gmailLabelName = input.gmailLabelName ?? null;
+    watcher.subjectFilter = input.subjectFilter?.trim() || null;
+    watcher.parseScript = input.parseScript;
+    watcher.tagIds = input.tagIds ?? [];
+
+    await this.watchers.save(watcher);
+    await this.gmail.resyncWatch(userId);
+    logger.info('Saved vault Gmail watcher', { userId, vaultId, gmailLabelId: input.gmailLabelId });
+
+    return {
+      vaultId,
+      vaultName: vault.name,
+      gmailLabelId: watcher.gmailLabelId,
+      gmailLabelName: watcher.gmailLabelName,
+      subjectFilter: watcher.subjectFilter,
+      parseScript: watcher.parseScript,
+      tagIds: watcher.tagIds ?? [],
+    };
+  }
+
+  /** Soft-deletes a vault's watcher, then re-syncs the mailbox watch. */
+  async remove(userId: string, vaultId: string): Promise<void> {
+    await this.watchers.softDelete(userId, vaultId);
+    await this.gmail.resyncWatch(userId);
+    logger.info('Removed vault Gmail watcher', { userId, vaultId });
+  }
+
+  /**
+   * Dry-runs a parse script against a pasted sample email for the in-page tester.
+   * A thrown `AppError` (invalid returned shape) becomes `{ ok: false, error }`;
+   * a null return (skip / runtime error / timeout) reports the same way.
+   */
+  testScript(input: TestParseScriptInput): TestParseScriptResultDto {
+    try {
+      const result = this.scriptRunner.run(input.script, { ...input.sample, emailDate: null });
+      if (!result) return { ok: false, error: 'Script did not return a transaction (returned null, threw, or timed out)' };
+      return { ok: true, result };
+    } catch (err) {
+      return { ok: false, error: err instanceof AppError ? err.message : 'Script failed to run' };
+    }
+  }
+}

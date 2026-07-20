@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Mail, Lock, LogIn, Coins } from 'lucide-react';
-import GoogleSignInButton from '@/components/GoogleSignInButton';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { authApi } from '@/lib/api';
@@ -124,17 +123,6 @@ export default function SignInPage() {
                 <LogIn className="w-5 h-5 group-active:scale-90 transition-transform" />
                 <span className="font-headline-sm uppercase tracking-wider">Enter the World</span>
               </Button>
-            </div>
-
-            {/* Pixel OR divider */}
-            <div className="flex items-center gap-3 py-1">
-              <div className="flex-1 h-0 border-t-4 border-dashed border-outline-variant" />
-              <span className="font-label-caps text-[10px] tracking-widest text-outline uppercase">Or</span>
-              <div className="flex-1 h-0 border-t-4 border-dashed border-outline-variant" />
-            </div>
-
-            <div>
-              <GoogleSignInButton />
             </div>
           </form>
 

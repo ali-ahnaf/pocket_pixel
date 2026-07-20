@@ -46,8 +46,16 @@ export function Dropdown<T>({ options, value, onChange, renderValue, renderOptio
 
       {isOpen && (
         <>
-          {/* Global click-away overlay overlaying on top of inputs but kept accessible */}
-          <div className="fixed inset-0 z-[115]" onClick={() => setIsOpen(false)} />
+          {/* Global click-away overlay overlaying on top of inputs but kept accessible.
+              preventDefault stops a wrapping <label> from re-dispatching the click to the
+              trigger button, which would immediately reopen the dropdown. */}
+          <div
+            className="fixed inset-0 z-[115]"
+            onClick={(e) => {
+              e.preventDefault();
+              setIsOpen(false);
+            }}
+          />
           <div
             className={`absolute ${directionClasses.position} left-0 right-0 z-[120] bg-surface-container-high border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] transition-all duration-200 ${directionClasses.transition}`}
           >

@@ -12,6 +12,15 @@ import type {
   ChangePasswordPayload,
   UserPreferenceDto,
   UpdateUserPreferenceInput,
+  OAuthCredentialsStatusDto,
+  SetOAuthCredentialsInput,
+  AuthorizeUrlDto,
+  GmailLabelDto,
+  GmailWatchStatusDto,
+  VaultGmailWatcherDto,
+  SetVaultGmailWatcherInput,
+  TestParseScriptInput,
+  TestParseScriptResultDto,
 } from '@expense-tracker/shared';
 import ApiClient from './ApiClient';
 
@@ -39,6 +48,45 @@ export default class ProfileApi extends ApiClient {
 
   updatePreferences(userId: string, data: UpdateUserPreferenceInput): Promise<UserPreferenceDto> {
     return this.put<UserPreferenceDto>(`/users/${userId}/preferences`, data);
+  }
+
+  // Google OAuth credentials (write-only from the client's perspective)
+  getOAuthCredentialsStatus(userId: string): Promise<OAuthCredentialsStatusDto> {
+    return this.get<OAuthCredentialsStatusDto>(`/users/${userId}/oauth-credentials`);
+  }
+
+  setOAuthCredentials(userId: string, data: SetOAuthCredentialsInput): Promise<OAuthCredentialsStatusDto> {
+    return this.put<OAuthCredentialsStatusDto>(`/users/${userId}/oauth-credentials`, data);
+  }
+
+  getGoogleAuthorizeUrl(userId: string): Promise<AuthorizeUrlDto> {
+    return this.get<AuthorizeUrlDto>(`/users/${userId}/oauth-credentials/authorize`);
+  }
+
+  // Gmail bank-alert watch
+  getGmailLabels(userId: string): Promise<GmailLabelDto[]> {
+    return this.get<GmailLabelDto[]>(`/users/${userId}/oauth-credentials/gmail/labels`);
+  }
+
+  getGmailWatchStatus(userId: string): Promise<GmailWatchStatusDto> {
+    return this.get<GmailWatchStatusDto>(`/users/${userId}/oauth-credentials/gmail/watch`);
+  }
+
+  // Per-vault Gmail watchers (label + parse script)
+  getVaultWatchers(userId: string): Promise<VaultGmailWatcherDto[]> {
+    return this.get<VaultGmailWatcherDto[]>(`/users/${userId}/vault-watchers`);
+  }
+
+  setVaultWatcher(userId: string, vaultId: string, input: SetVaultGmailWatcherInput): Promise<VaultGmailWatcherDto> {
+    return this.put<VaultGmailWatcherDto>(`/users/${userId}/vault-watchers/${vaultId}`, input);
+  }
+
+  deleteVaultWatcher(userId: string, vaultId: string): Promise<void> {
+    return this.delete<void>(`/users/${userId}/vault-watchers/${vaultId}`);
+  }
+
+  testParseScript(userId: string, input: TestParseScriptInput): Promise<TestParseScriptResultDto> {
+    return this.post<TestParseScriptResultDto>(`/users/${userId}/vault-watchers/test`, input);
   }
 
   // Vaults

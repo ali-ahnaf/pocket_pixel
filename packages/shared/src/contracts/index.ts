@@ -8,3 +8,5 @@ export * from './tags';
 export * from './vaults';
 export * from './recurring';
 export * from './preferences';
+export * from './oauth-credentials';
+export * from './vault-watchers';
