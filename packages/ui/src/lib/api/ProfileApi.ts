@@ -17,6 +17,10 @@ import type {
   AuthorizeUrlDto,
   GmailLabelDto,
   GmailWatchStatusDto,
+  VaultGmailWatcherDto,
+  SetVaultGmailWatcherInput,
+  TestParseScriptInput,
+  TestParseScriptResultDto,
 } from '@expense-tracker/shared';
 import ApiClient from './ApiClient';
 
@@ -68,12 +72,21 @@ export default class ProfileApi extends ApiClient {
     return this.get<GmailWatchStatusDto>(`/users/${userId}/oauth-credentials/gmail/watch`);
   }
 
-  setGmailWatch(userId: string, labelIds: string[]): Promise<GmailWatchStatusDto> {
-    return this.put<GmailWatchStatusDto>(`/users/${userId}/oauth-credentials/gmail/watch`, { labelIds });
+  // Per-vault Gmail watchers (label + parse script)
+  getVaultWatchers(userId: string): Promise<VaultGmailWatcherDto[]> {
+    return this.get<VaultGmailWatcherDto[]>(`/users/${userId}/vault-watchers`);
   }
 
-  stopGmailWatch(userId: string): Promise<GmailWatchStatusDto> {
-    return this.delete<GmailWatchStatusDto>(`/users/${userId}/oauth-credentials/gmail/watch`);
+  setVaultWatcher(userId: string, vaultId: string, input: SetVaultGmailWatcherInput): Promise<VaultGmailWatcherDto> {
+    return this.put<VaultGmailWatcherDto>(`/users/${userId}/vault-watchers/${vaultId}`, input);
+  }
+
+  deleteVaultWatcher(userId: string, vaultId: string): Promise<void> {
+    return this.delete<void>(`/users/${userId}/vault-watchers/${vaultId}`);
+  }
+
+  testParseScript(userId: string, input: TestParseScriptInput): Promise<TestParseScriptResultDto> {
+    return this.post<TestParseScriptResultDto>(`/users/${userId}/vault-watchers/test`, input);
   }
 
   // Vaults

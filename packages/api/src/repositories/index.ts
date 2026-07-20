@@ -8,6 +8,7 @@ import { RecurringRepository } from './recurring.repository';
 import { PreferencesRepository } from './preferences.repository';
 import { UserOAuthCredentialRepository } from './user-oauth-credential.repository';
 import { ProcessedGmailMessageRepository } from './processed-gmail-message.repository';
+import { VaultGmailWatchersRepository } from './vault-gmail-watchers.repository';
 
 export const transactionsRepository = new TransactionsRepository();
 export const usersRepository = new UsersRepository();
@@ -19,6 +20,7 @@ export const recurringRepository = new RecurringRepository();
 export const preferencesRepository = new PreferencesRepository();
 export const userOAuthCredentialRepository = new UserOAuthCredentialRepository();
 export const processedGmailMessageRepository = new ProcessedGmailMessageRepository();
+export const vaultGmailWatchersRepository = new VaultGmailWatchersRepository();
 
 export {
   TransactionsRepository,
@@ -31,4 +33,5 @@ export {
   PreferencesRepository,
   UserOAuthCredentialRepository,
   ProcessedGmailMessageRepository,
+  VaultGmailWatchersRepository,
 };

@@ -124,13 +124,13 @@ describe('UserOAuthCredentialService', () => {
   });
 
   describe('getAuthorizeUrl', () => {
-    it('builds a consent URL with the gmail.readonly scope and a verifiable state', async () => {
+    it('builds a consent URL with the openid/email/gmail.readonly scopes and a verifiable state', async () => {
       credentials.findByUserId.mockResolvedValue(buildCredential());
 
       const { url } = await service.getAuthorizeUrl('user-1');
       const parsed = new URL(url);
 
-      expect(parsed.searchParams.get('scope')).toBe('https://www.googleapis.com/auth/gmail.readonly');
+      expect(parsed.searchParams.get('scope')).toBe('openid email https://www.googleapis.com/auth/gmail.readonly');
       expect(parsed.searchParams.get('client_id')).toBe('old-id');
       expect(parsed.searchParams.get('access_type')).toBe('offline');
       // The user id is recoverable from the signed state.

@@ -3,6 +3,7 @@ import { LessThan } from 'typeorm';
 import { AppDataSource } from '../data-source';
 import { UserOAuthCredential } from '../entities/UserOAuthCredential.entity';
 import { gmailService } from '../services';
+import { vaultGmailWatchersRepository } from '../repositories';
 import { logger } from '../services/logger.service';
 
 /**
@@ -32,7 +33,9 @@ export async function renewExpiringGmailWatches(): Promise<void> {
 
   let renewed = 0;
   for (const credential of due) {
-    if (!credential.gmailLabelIds || credential.gmailLabelIds.length === 0) continue;
+    // Skip credentials with no attached watchers — nothing to watch.
+    const watchers = await vaultGmailWatchersRepository.findManyForUser(credential.userId);
+    if (watchers.length === 0) continue;
     try {
       await gmailService.startWatch(credential.userId);
       renewed++;
