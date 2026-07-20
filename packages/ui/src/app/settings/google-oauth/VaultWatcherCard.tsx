@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle2, FlaskConical, Trash2, Vault as VaultIcon } from 'lucide-react';
-import type { GmailLabelDto, TestParseScriptResultDto, VaultDto, VaultGmailWatcherDto } from '@expense-tracker/shared';
+import { CheckCircle2, ChevronDown, FlaskConical, Trash2, Vault as VaultIcon } from 'lucide-react';
+import type { GmailLabelDto, TagDto, TestParseScriptResultDto, VaultDto, VaultGmailWatcherDto } from '@expense-tracker/shared';
 import { Button } from '@/components/Button';
+import { Dropdown } from '@/components/Dropdown';
 import { profileApi } from '@/lib/api';
 
 /** Prefilled starting point for a new watcher's parse script. */
@@ -25,6 +26,7 @@ interface VaultWatcherCardProps {
   vault: VaultDto;
   watcher?: VaultGmailWatcherDto;
   labels: GmailLabelDto[];
+  tags: TagDto[];
   onChanged: () => void;
   onError: (message: string) => void;
 }
@@ -34,27 +36,32 @@ interface VaultWatcherCardProps {
  * an "attach listener" editor. The editor offers a label dropdown, a script
  * textarea, and a sample-email tester that dry-runs the script server-side.
  */
-export function VaultWatcherCard({ userId, vault, watcher, labels, onChanged, onError }: VaultWatcherCardProps): JSX.Element {
+export function VaultWatcherCard({ userId, vault, watcher, labels, tags, onChanged, onError }: VaultWatcherCardProps): JSX.Element {
   const [editing, setEditing] = useState(false);
   const [gmailLabelId, setGmailLabelId] = useState(watcher?.gmailLabelId ?? '');
   const [subjectFilter, setSubjectFilter] = useState(watcher?.subjectFilter ?? '');
+  const [tagIds, setTagIds] = useState<string[]>(watcher?.tagIds ?? []);
   const [parseScript, setParseScript] = useState(watcher?.parseScript ?? DEFAULT_SCRIPT);
   const [sampleFrom, setSampleFrom] = useState('');
   const [sampleSubject, setSampleSubject] = useState('');
   const [sampleBody, setSampleBody] = useState('');
   const [testResult, setTestResult] = useState<TestParseScriptResultDto | null>(null);
   const [testing, setTesting] = useState(false);
+  const [testOpen, setTestOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const startEditing = (): void => {
     setGmailLabelId(watcher?.gmailLabelId ?? '');
     setSubjectFilter(watcher?.subjectFilter ?? '');
+    setTagIds(watcher?.tagIds ?? []);
     setParseScript(watcher?.parseScript ?? DEFAULT_SCRIPT);
     setTestResult(null);
     setEditing(true);
   };
 
   const labelName = (id: string): string => labels.find((label) => label.id === id)?.name ?? watcher?.gmailLabelName ?? id;
+
+  const toggleTag = (id: string): void => setTagIds((prev) => (prev.includes(id) ? prev.filter((tagId) => tagId !== id) : [...prev, id]));
 
   const handleTest = async (): Promise<void> => {
     setTesting(true);
@@ -84,6 +91,7 @@ export function VaultWatcherCard({ userId, vault, watcher, labels, onChanged, on
         gmailLabelName: labels.find((label) => label.id === gmailLabelId)?.name,
         subjectFilter: subjectFilter.trim() || undefined,
         parseScript,
+        tagIds,
       });
       setEditing(false);
       onChanged();
@@ -130,6 +138,19 @@ export function VaultWatcherCard({ userId, vault, watcher, labels, onChanged, on
                 ? `Listening on label "${labelName(watcher.gmailLabelId)}"${watcher.subjectFilter ? ` where subject contains "${watcher.subjectFilter}"` : ''} — matching emails create transactions here.`
                 : 'No listener attached. Attach a Gmail label + parse script.'}
             </p>
+            {watcher && watcher.tagIds.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {watcher.tagIds.map((tagId) => {
+                  const tag = tags.find((t) => t.id === tagId);
+                  return (
+                    <span key={tagId} className="flex items-center gap-1 border-4 border-black bg-surface-container-high px-2 py-0.5 font-mono text-[11px] uppercase text-on-surface">
+                      {tag?.icon && <span>{tag.icon}</span>}
+                      {tag?.name ?? tagId}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button type="button" variant="primary" className="w-full py-2" onClick={startEditing}>
                 {watcher ? 'Edit Listener' : 'Attach Listener'}
@@ -146,14 +167,14 @@ export function VaultWatcherCard({ userId, vault, watcher, labels, onChanged, on
           <div className="flex flex-col gap-4">
             <label className="flex flex-col gap-1">
               <span className="pixel-input-label">Gmail label</span>
-              <select value={gmailLabelId} onChange={(e) => setGmailLabelId(e.target.value)} className="pixel-input">
-                <option value="">Select a label…</option>
-                {labels.map((label) => (
-                  <option key={label.id} value={label.id}>
-                    {label.name}
-                  </option>
-                ))}
-              </select>
+              <Dropdown
+                options={labels}
+                value={labels.find((label) => label.id === gmailLabelId) ?? null}
+                onChange={(label) => setGmailLabelId(label?.id ?? '')}
+                keyExtractor={(label) => label?.id ?? ''}
+                renderValue={(label) => <span className={`text-sm ${label ? 'text-on-surface' : 'text-on-surface-variant'}`}>{label ? label.name : 'Select a label…'}</span>}
+                renderOption={(label) => <span className="text-sm">{label?.name}</span>}
+              />
             </label>
 
             <label className="flex flex-col gap-1">
@@ -161,6 +182,34 @@ export function VaultWatcherCard({ userId, vault, watcher, labels, onChanged, on
               <input value={subjectFilter} onChange={(e) => setSubjectFilter(e.target.value)} placeholder="e.g. Debit Alert — leave blank to match any subject" className="pixel-input" />
               <span className="text-[11px] text-on-surface-variant">Case-insensitive substring. Only emails whose subject contains this fire this vault.</span>
             </label>
+
+            <div className="flex flex-col gap-2">
+              <span className="pixel-input-label">Tags (optional)</span>
+              {tags.length === 0 ? (
+                <span className="text-[11px] text-on-surface-variant">No tags yet — create tags first to attach them here.</span>
+              ) : (
+                <>
+                  <div className="flex flex-wrap gap-2">
+                    {tags.map((tag) => {
+                      const selected = tagIds.includes(tag.id);
+                      return (
+                        <button
+                          key={tag.id}
+                          type="button"
+                          onClick={() => toggleTag(tag.id)}
+                          aria-pressed={selected}
+                          className={`flex items-center gap-1 border-4 border-black px-2 py-1 font-mono text-[11px] uppercase transition-colors ${selected ? 'bg-primary text-on-primary' : 'bg-surface-container-lowest text-on-surface hover:bg-surface-container-low'}`}
+                        >
+                          {tag.icon && <span>{tag.icon}</span>}
+                          {tag.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <span className="text-[11px] text-on-surface-variant">Selected tags are applied to every transaction this watcher creates.</span>
+                </>
+              )}
+            </div>
 
             <label className="flex flex-col gap-1">
               <span className="pixel-input-label">Parse script</span>
@@ -173,28 +222,36 @@ export function VaultWatcherCard({ userId, vault, watcher, labels, onChanged, on
               />
             </label>
 
-            <div className="border-4 border-black bg-surface-container-high p-3 flex flex-col gap-2">
-              <span className="pixel-input-label">Test against a sample email</span>
-              <input value={sampleFrom} onChange={(e) => setSampleFrom(e.target.value)} placeholder="From" className="pixel-input" />
-              <input value={sampleSubject} onChange={(e) => setSampleSubject(e.target.value)} placeholder="Subject" className="pixel-input" />
-              <textarea value={sampleBody} onChange={(e) => setSampleBody(e.target.value)} placeholder="Body text" rows={4} className="pixel-input text-[12px] resize-y" />
-              <Button type="button" variant="secondary" className="w-full py-2" disabled={testing} onClick={handleTest}>
-                <FlaskConical className="w-4 h-4" />
-                {testing ? 'Testing…' : 'Test Script'}
-              </Button>
+            <div className="border-4 border-black bg-surface-container-high">
+              <button type="button" onClick={() => setTestOpen((prev) => !prev)} aria-expanded={testOpen} className="flex w-full items-center justify-between gap-2 p-3 text-left">
+                <span className="pixel-input-label">Test against a sample email</span>
+                <ChevronDown className={`w-4 h-4 shrink-0 text-on-surface transition-transform ${testOpen ? 'rotate-180' : ''}`} />
+              </button>
 
-              {testResult &&
-                (testResult.ok && testResult.result ? (
-                  <div className="font-mono text-[12px] text-primary border-4 border-black bg-surface-container p-2">
-                    <p className="uppercase mb-1">Parsed ✓</p>
-                    <p>title: {testResult.result.title}</p>
-                    <p>amount: {testResult.result.amount}</p>
-                    <p>type: {testResult.result.type}</p>
-                    <p>date: {testResult.result.date}</p>
-                  </div>
-                ) : (
-                  <p className="font-mono text-[12px] text-error border-4 border-black bg-surface-container p-2">{testResult.error ?? 'No transaction parsed'}</p>
-                ))}
+              {testOpen && (
+                <div className="flex flex-col gap-2 border-t-4 border-black p-3">
+                  <input value={sampleFrom} onChange={(e) => setSampleFrom(e.target.value)} placeholder="From" className="pixel-input" />
+                  <input value={sampleSubject} onChange={(e) => setSampleSubject(e.target.value)} placeholder="Subject" className="pixel-input" />
+                  <textarea value={sampleBody} onChange={(e) => setSampleBody(e.target.value)} placeholder="Body text" rows={4} className="pixel-input text-[12px] resize-y" />
+                  <Button type="button" variant="secondary" className="w-full py-2" disabled={testing} onClick={handleTest}>
+                    <FlaskConical className="w-4 h-4" />
+                    {testing ? 'Testing…' : 'Test Script'}
+                  </Button>
+
+                  {testResult &&
+                    (testResult.ok && testResult.result ? (
+                      <div className="font-mono text-[12px] text-primary border-4 border-black bg-surface-container p-2">
+                        <p className="uppercase mb-1">Parsed ✓</p>
+                        <p>title: {testResult.result.title}</p>
+                        <p>amount: {testResult.result.amount}</p>
+                        <p>type: {testResult.result.type}</p>
+                        <p>date: {testResult.result.date}</p>
+                      </div>
+                    ) : (
+                      <p className="font-mono text-[12px] text-error border-4 border-black bg-surface-container p-2">{testResult.error ?? 'No transaction parsed'}</p>
+                    ))}
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col gap-2 sm:flex-row">

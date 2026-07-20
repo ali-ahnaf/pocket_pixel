@@ -41,6 +41,10 @@ export class VaultGmailWatcher extends BaseEntity {
   @Column({ type: 'text' })
   parseScript: string;
 
+  /** Tag ids applied to every transaction this watcher creates. */
+  @Column({ type: 'simple-json', nullable: true })
+  tagIds: string[] | null;
+
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;

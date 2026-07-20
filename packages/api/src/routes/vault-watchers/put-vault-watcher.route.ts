@@ -11,6 +11,7 @@ const setVaultWatcherSchema = Joi.object<SetVaultGmailWatcherInput>({
   gmailLabelName: Joi.string().max(200).optional(),
   subjectFilter: Joi.string().max(500).allow('').optional(),
   parseScript: Joi.string().min(1).max(20000).required(),
+  tagIds: Joi.array().items(Joi.string().min(1).max(200)).optional(),
 });
 
 router.put(
