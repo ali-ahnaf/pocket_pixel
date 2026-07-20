@@ -225,6 +225,7 @@ export default function GoogleOAuthSettingsPage() {
                 label="Client ID"
                 type="text"
                 value={clientId}
+                placeholder={configured ? '••••••••••••••••' : undefined}
                 onChange={(e) => {
                   setClientId(e.target.value);
                   setError(null);
@@ -236,6 +237,7 @@ export default function GoogleOAuthSettingsPage() {
                 label="Client Secret"
                 type="password"
                 value={clientSecret}
+                placeholder={configured ? '••••••••••••••••' : undefined}
                 onChange={(e) => {
                   setClientSecret(e.target.value);
                   setError(null);

@@ -124,13 +124,6 @@ export default function SignInPage() {
                 <span className="font-headline-sm uppercase tracking-wider">Enter the World</span>
               </Button>
             </div>
-
-            {/* Pixel OR divider */}
-            <div className="flex items-center gap-3 py-1">
-              <div className="flex-1 h-0 border-t-4 border-dashed border-outline-variant" />
-              <span className="font-label-caps text-[10px] tracking-widest text-outline uppercase">Or</span>
-              <div className="flex-1 h-0 border-t-4 border-dashed border-outline-variant" />
-            </div>
           </form>
 
           {/* Footer decor */}
