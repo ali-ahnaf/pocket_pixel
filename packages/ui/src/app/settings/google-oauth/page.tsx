@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ShieldCheck, ArrowLeft, CheckCircle2, Mail, Bell } from 'lucide-react';
-import type { GmailLabelDto, GmailWatchStatusDto, VaultDto, VaultGmailWatcherDto } from '@expense-tracker/shared';
+import type { GmailLabelDto, GmailWatchStatusDto, TagDto, VaultDto, VaultGmailWatcherDto } from '@expense-tracker/shared';
 import { AppBar, BottomNavBar, DesktopSidebar } from '@/components';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
@@ -29,6 +29,7 @@ export default function GoogleOAuthSettingsPage() {
 
   // Gmail bank-alert watch (per-vault watchers)
   const [labels, setLabels] = useState<GmailLabelDto[]>([]);
+  const [tags, setTags] = useState<TagDto[]>([]);
   const [vaults, setVaults] = useState<VaultDto[]>([]);
   const [watchers, setWatchers] = useState<VaultGmailWatcherDto[]>([]);
   const [watchStatus, setWatchStatus] = useState<GmailWatchStatusDto | null>(null);
@@ -130,16 +131,18 @@ export default function GoogleOAuthSettingsPage() {
 
     setWatchLoading(true);
     try {
-      const [status, labelList, vaultList, watcherList] = await Promise.all([
+      const [status, labelList, vaultList, watcherList, tagList] = await Promise.all([
         profileApi.getGmailWatchStatus(user.id),
         profileApi.getGmailLabels(user.id),
         profileApi.getVaults(user.id),
         profileApi.getVaultWatchers(user.id),
+        profileApi.getTags(user.id),
       ]);
       setWatchStatus(status);
       setLabels(labelList);
       setVaults(vaultList);
       setWatchers(watcherList);
+      setTags(tagList);
     } catch (err) {
       setError(profileApi.parseError(err));
     } finally {
@@ -277,6 +280,7 @@ export default function GoogleOAuthSettingsPage() {
                         vault={vault}
                         watcher={watchers.find((w) => w.vaultId === vault.id)}
                         labels={labels}
+                        tags={tags}
                         onChanged={loadWatchData}
                         onError={setError}
                       />
