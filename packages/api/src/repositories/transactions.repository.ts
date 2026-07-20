@@ -59,6 +59,16 @@ export class TransactionsRepository {
   }
 
   /**
+   * Permanently remove a transaction and its tag links. Used to discard an
+   * uncommitted (e.g. Gmail-imported) expense the user rejects — unlike
+   * `softDelete`, no tombstone is kept.
+   */
+  async hardRemove(id: string): Promise<void> {
+    await this.tagLinkRepo.delete({ transactionId: id });
+    await this.repo.delete(id);
+  }
+
+  /**
    * Replace the tag links for a transaction. The join rows are hard-deleted
    * (not soft-deleted) so the composite primary key can be reinserted without
    * colliding with tombstoned rows.

@@ -1,6 +1,5 @@
 import type { VaultGmailWatchersRepository } from '../repositories/vault-gmail-watchers.repository';
 import type { VaultsRepository } from '../repositories/vaults.repository';
-import type { GmailScriptRunnerService } from '../services/gmail-script-runner.service';
 import type { GmailService } from '../services/gmail.service';
 import type { VaultGmailWatcher } from '../entities/VaultGmailWatcher.entity';
 import type { Vault } from '../entities/Vault.entity';
@@ -9,13 +8,11 @@ import { AppError } from '../errors/app-error';
 
 jest.mock('../services', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
-  gmailScriptRunnerService: {},
   gmailService: {},
 }));
 
 type WatchersMock = jest.Mocked<Pick<VaultGmailWatchersRepository, 'findManyForUser' | 'findByVault' | 'createEntity' | 'save' | 'softDelete'>>;
 type VaultsMock = jest.Mocked<Pick<VaultsRepository, 'findManyForUser' | 'findOneForUser'>>;
-type RunnerMock = jest.Mocked<Pick<GmailScriptRunnerService, 'run'>>;
 type GmailMock = jest.Mocked<Pick<GmailService, 'resyncWatch'>>;
 
 const vault = (overrides: Partial<Vault> = {}): Vault => ({ id: 'v1', userId: 'user-1', name: 'MAIN STASH', ...overrides }) as Vault;
@@ -25,7 +22,6 @@ const watcher = (overrides: Partial<VaultGmailWatcher> = {}): VaultGmailWatcher 
 describe('VaultWatchersService', () => {
   let watchers: WatchersMock;
   let vaults: VaultsMock;
-  let runner: RunnerMock;
   let gmail: GmailMock;
   let service: VaultWatchersService;
 
@@ -38,14 +34,8 @@ describe('VaultWatchersService', () => {
       softDelete: jest.fn().mockResolvedValue(undefined),
     };
     vaults = { findManyForUser: jest.fn(), findOneForUser: jest.fn() };
-    runner = { run: jest.fn() };
     gmail = { resyncWatch: jest.fn().mockResolvedValue(undefined) };
-    service = new VaultWatchersService(
-      watchers as unknown as VaultGmailWatchersRepository,
-      vaults as unknown as VaultsRepository,
-      runner as unknown as GmailScriptRunnerService,
-      gmail as unknown as GmailService,
-    );
+    service = new VaultWatchersService(watchers as unknown as VaultGmailWatchersRepository, vaults as unknown as VaultsRepository, gmail as unknown as GmailService);
   });
 
   afterEach(() => jest.clearAllMocks());
@@ -151,30 +141,6 @@ describe('VaultWatchersService', () => {
 
       expect(watchers.softDelete).toHaveBeenCalledWith('user-1', 'v1');
       expect(gmail.resyncWatch).toHaveBeenCalledWith('user-1');
-    });
-  });
-
-  describe('testScript', () => {
-    const input = { script: 's', sample: { from: 'a', subject: 'b', bodyText: 'c' } };
-
-    it('reports ok with the parsed result', () => {
-      runner.run.mockReturnValue({ title: 't', amount: 5, type: 'expense', date: '2026-07-12' });
-
-      expect(service.testScript(input)).toEqual({ ok: true, result: { title: 't', amount: 5, type: 'expense', date: '2026-07-12' } });
-    });
-
-    it('reports not-ok when the script returns null (skip/throw/timeout)', () => {
-      runner.run.mockReturnValue(null);
-
-      expect(service.testScript(input)).toEqual({ ok: false, error: expect.stringContaining('did not return a transaction') });
-    });
-
-    it('reports not-ok with the AppError message on an invalid returned shape', () => {
-      runner.run.mockImplementation(() => {
-        throw new AppError('Parsed "amount" must be a number greater than 0', 400);
-      });
-
-      expect(service.testScript(input)).toEqual({ ok: false, error: 'Parsed "amount" must be a number greater than 0' });
     });
   });
 });

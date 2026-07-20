@@ -390,7 +390,15 @@ describe('GmailService', () => {
       await svc.handlePushNotification({ emailAddress: 'me@example.com', historyId: '250' });
 
       expect(scriptRunner.run).toHaveBeenCalledWith('SCRIPT', expect.objectContaining({ from: 'alerts@bank.com', subject: 'Debit Alert' }));
-      expect(transactions.create).toHaveBeenCalledWith('user-1', { amount: 1500, type: 'expense', title: 'DARAZ', date: '2026-07-12', vaultId: 'vault-9', tagIds: ['tag-1', 'tag-2'] });
+      expect(transactions.create).toHaveBeenCalledWith('user-1', {
+        amount: 1500,
+        type: 'expense',
+        title: 'daraz',
+        date: '2026-07-12',
+        vaultId: 'vault-9',
+        tagIds: ['tag-1', 'tag-2'],
+        isCommitted: false,
+      });
       expect(processed.record).toHaveBeenCalledWith('user-1', 'm1');
     });
 

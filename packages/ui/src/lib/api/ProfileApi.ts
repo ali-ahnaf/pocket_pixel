@@ -19,8 +19,6 @@ import type {
   GmailWatchStatusDto,
   VaultGmailWatcherDto,
   SetVaultGmailWatcherInput,
-  TestParseScriptInput,
-  TestParseScriptResultDto,
 } from '@expense-tracker/shared';
 import ApiClient from './ApiClient';
 
@@ -83,10 +81,6 @@ export default class ProfileApi extends ApiClient {
 
   deleteVaultWatcher(userId: string, vaultId: string): Promise<void> {
     return this.delete<void>(`/users/${userId}/vault-watchers/${vaultId}`);
-  }
-
-  testParseScript(userId: string, input: TestParseScriptInput): Promise<TestParseScriptResultDto> {
-    return this.post<TestParseScriptResultDto>(`/users/${userId}/vault-watchers/test`, input);
   }
 
   // Vaults
@@ -159,6 +153,14 @@ export default class ProfileApi extends ApiClient {
 
   deleteTransaction(userId: string, transactionId: string): Promise<void> {
     return this.delete<void>(`/users/${userId}/transactions/${transactionId}`);
+  }
+
+  commitTransaction(userId: string, transactionId: string): Promise<TransactionDto> {
+    return this.post<TransactionDto>(`/users/${userId}/transactions/${transactionId}/commit`, {});
+  }
+
+  discardTransaction(userId: string, transactionId: string): Promise<void> {
+    return this.post<void>(`/users/${userId}/transactions/${transactionId}/discard`, {});
   }
 
   // Recurring quests

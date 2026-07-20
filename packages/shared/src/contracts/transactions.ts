@@ -15,6 +15,7 @@ export interface CreateTransactionInput {
   title?: string | null;
   vaultId?: string | null;
   date?: string;
+  isCommitted?: boolean;
 }
 
 export interface CreateTransferInput extends CreateTransactionInput {
@@ -40,6 +41,7 @@ export interface TransactionDto {
   vaultId: string | null;
   vault: { id: string; name: string; icon: string | null } | null;
   tags: TagDto[];
+  isCommitted: boolean;
   createdAt: string;
   updatedAt: string;
 }
