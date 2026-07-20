@@ -29,6 +29,7 @@ export { DeleteTagModal } from './DeleteTagModal';
 export { DiscardDebtModal } from './DiscardDebtModal';
 export { ApplyDebtModal } from './ApplyDebtModal';
 export { EditTransactionModal } from './EditTransactionModal';
+export { AdjustBalanceModal } from './AdjustBalanceModal';
 export { PixelDatePicker } from './PixelDatePicker';
 export { QueryParamsProvider, useQueryParams } from './QueryParamsProvider';
 export { WizardFab } from './wizard/WizardFab';
