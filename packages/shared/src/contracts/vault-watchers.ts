@@ -40,24 +40,3 @@ export interface ParsedEmailDto {
   date: string;
   type: 'income' | 'expense';
 }
-
-/** Request to dry-run a parse script against a pasted sample email in the UI. */
-export interface TestParseScriptInput {
-  script: string;
-  sample: {
-    from: string;
-    subject: string;
-    bodyText: string;
-  };
-}
-
-/**
- * Result of a dry-run. `ok` is true when the script ran and returned a valid
- * transaction; `error` carries the validation/runtime message otherwise. A
- * script that returns null (not a transaction) is `ok: false` with no result.
- */
-export interface TestParseScriptResultDto {
-  ok: boolean;
-  result?: ParsedEmailDto;
-  error?: string;
-}

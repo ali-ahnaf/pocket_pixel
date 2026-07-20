@@ -318,7 +318,15 @@ export class GmailService {
         logger.warn('Vault watcher script produced an invalid result, skipping', { userId, vaultId: watcher.vaultId, messageId: message.id, err });
       }
       if (parsed) {
-        await this.transactions.create(userId, { amount: parsed.amount, type: parsed.type, title: parsed.title, date: parsed.date, vaultId: watcher.vaultId, tagIds: watcher.tagIds ?? undefined });
+        await this.transactions.create(userId, {
+          amount: parsed.amount,
+          type: parsed.type,
+          title: parsed.title.toLowerCase(),
+          date: parsed.date,
+          vaultId: watcher.vaultId,
+          tagIds: watcher.tagIds ?? undefined,
+          isCommitted: false,
+        });
         logger.info('Created transaction from Gmail watcher', { userId, messageId: message.id, vaultId: watcher.vaultId, type: parsed.type });
       }
     }

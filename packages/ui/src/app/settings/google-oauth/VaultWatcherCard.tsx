@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle2, ChevronDown, FlaskConical, Trash2, Vault as VaultIcon } from 'lucide-react';
-import type { GmailLabelDto, TagDto, TestParseScriptResultDto, VaultDto, VaultGmailWatcherDto } from '@expense-tracker/shared';
+import { CheckCircle2, Trash2, Vault as VaultIcon } from 'lucide-react';
+import type { GmailLabelDto, TagDto, VaultDto, VaultGmailWatcherDto } from '@expense-tracker/shared';
 import { Button } from '@/components/Button';
 import { Dropdown } from '@/components/Dropdown';
 import { profileApi } from '@/lib/api';
+import { iconMapper } from '@/lib/iconMapper';
 
 /** Prefilled starting point for a new watcher's parse script. */
 const DEFAULT_SCRIPT = `// Return a transaction, or null to skip this email.
@@ -33,8 +34,8 @@ interface VaultWatcherCardProps {
 
 /**
  * One card per vault: shows its attached Gmail watcher (label + parse script) or
- * an "attach listener" editor. The editor offers a label dropdown, a script
- * textarea, and a sample-email tester that dry-runs the script server-side.
+ * an "attach listener" editor. The editor offers a label dropdown and a script
+ * textarea.
  */
 export function VaultWatcherCard({ userId, vault, watcher, labels, tags, onChanged, onError }: VaultWatcherCardProps): JSX.Element {
   const [editing, setEditing] = useState(false);
@@ -42,12 +43,6 @@ export function VaultWatcherCard({ userId, vault, watcher, labels, tags, onChang
   const [subjectFilter, setSubjectFilter] = useState(watcher?.subjectFilter ?? '');
   const [tagIds, setTagIds] = useState<string[]>(watcher?.tagIds ?? []);
   const [parseScript, setParseScript] = useState(watcher?.parseScript ?? DEFAULT_SCRIPT);
-  const [sampleFrom, setSampleFrom] = useState('');
-  const [sampleSubject, setSampleSubject] = useState('');
-  const [sampleBody, setSampleBody] = useState('');
-  const [testResult, setTestResult] = useState<TestParseScriptResultDto | null>(null);
-  const [testing, setTesting] = useState(false);
-  const [testOpen, setTestOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const startEditing = (): void => {
@@ -55,29 +50,12 @@ export function VaultWatcherCard({ userId, vault, watcher, labels, tags, onChang
     setSubjectFilter(watcher?.subjectFilter ?? '');
     setTagIds(watcher?.tagIds ?? []);
     setParseScript(watcher?.parseScript ?? DEFAULT_SCRIPT);
-    setTestResult(null);
     setEditing(true);
   };
 
   const labelName = (id: string): string => labels.find((label) => label.id === id)?.name ?? watcher?.gmailLabelName ?? id;
 
   const toggleTag = (id: string): void => setTagIds((prev) => (prev.includes(id) ? prev.filter((tagId) => tagId !== id) : [...prev, id]));
-
-  const handleTest = async (): Promise<void> => {
-    setTesting(true);
-    setTestResult(null);
-    try {
-      const result = await profileApi.testParseScript(userId, {
-        script: parseScript,
-        sample: { from: sampleFrom, subject: sampleSubject, bodyText: sampleBody },
-      });
-      setTestResult(result);
-    } catch (err) {
-      onError(profileApi.parseError(err));
-    } finally {
-      setTesting(false);
-    }
-  };
 
   const handleSave = async (): Promise<void> => {
     if (!gmailLabelId) {
@@ -192,6 +170,7 @@ export function VaultWatcherCard({ userId, vault, watcher, labels, tags, onChang
                   <div className="flex flex-wrap gap-2">
                     {tags.map((tag) => {
                       const selected = tagIds.includes(tag.id);
+                      const TagIcon = iconMapper(tag.icon || 'Hash');
                       return (
                         <button
                           key={tag.id}
@@ -200,7 +179,7 @@ export function VaultWatcherCard({ userId, vault, watcher, labels, tags, onChang
                           aria-pressed={selected}
                           className={`flex items-center gap-1 border-4 border-black px-2 py-1 font-mono text-[11px] uppercase transition-colors ${selected ? 'bg-primary text-on-primary' : 'bg-surface-container-lowest text-on-surface hover:bg-surface-container-low'}`}
                         >
-                          {tag.icon && <span>{tag.icon}</span>}
+                          <TagIcon size={12} strokeWidth={3} />
                           {tag.name}
                         </button>
                       );
@@ -221,38 +200,6 @@ export function VaultWatcherCard({ userId, vault, watcher, labels, tags, onChang
                 className="pixel-input font-mono text-[12px] leading-relaxed whitespace-pre resize-y"
               />
             </label>
-
-            <div className="border-4 border-black bg-surface-container-high">
-              <button type="button" onClick={() => setTestOpen((prev) => !prev)} aria-expanded={testOpen} className="flex w-full items-center justify-between gap-2 p-3 text-left">
-                <span className="pixel-input-label">Test against a sample email</span>
-                <ChevronDown className={`w-4 h-4 shrink-0 text-on-surface transition-transform ${testOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {testOpen && (
-                <div className="flex flex-col gap-2 border-t-4 border-black p-3">
-                  <input value={sampleFrom} onChange={(e) => setSampleFrom(e.target.value)} placeholder="From" className="pixel-input" />
-                  <input value={sampleSubject} onChange={(e) => setSampleSubject(e.target.value)} placeholder="Subject" className="pixel-input" />
-                  <textarea value={sampleBody} onChange={(e) => setSampleBody(e.target.value)} placeholder="Body text" rows={4} className="pixel-input text-[12px] resize-y" />
-                  <Button type="button" variant="secondary" className="w-full py-2" disabled={testing} onClick={handleTest}>
-                    <FlaskConical className="w-4 h-4" />
-                    {testing ? 'Testing…' : 'Test Script'}
-                  </Button>
-
-                  {testResult &&
-                    (testResult.ok && testResult.result ? (
-                      <div className="font-mono text-[12px] text-primary border-4 border-black bg-surface-container p-2">
-                        <p className="uppercase mb-1">Parsed ✓</p>
-                        <p>title: {testResult.result.title}</p>
-                        <p>amount: {testResult.result.amount}</p>
-                        <p>type: {testResult.result.type}</p>
-                        <p>date: {testResult.result.date}</p>
-                      </div>
-                    ) : (
-                      <p className="font-mono text-[12px] text-error border-4 border-black bg-surface-container p-2">{testResult.error ?? 'No transaction parsed'}</p>
-                    ))}
-                </div>
-              )}
-            </div>
 
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button type="button" variant="primary" className="w-full py-2" disabled={saving} onClick={handleSave}>

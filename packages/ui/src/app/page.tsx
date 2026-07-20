@@ -9,10 +9,9 @@ import { iconMapper } from '@/lib/iconMapper';
 import { profileApi } from '@/lib/api';
 import { formatCurrency, formatDate, formatTime } from '@/lib/helpers/formatters';
 import type { User, VaultDto, TagDto, TransactionDto, OccurrenceDto } from '@expense-tracker/shared';
-import { Package, ChevronLeft, ChevronRight, ChevronDown, Plus, X, Repeat, Eye, EyeOff, ArrowUpDown } from 'lucide-react';
+import { Package, ChevronLeft, ChevronRight, ChevronDown, Plus, X, Check, Repeat, Eye, EyeOff, ArrowUpDown } from 'lucide-react';
 
 const MONTH_NAMES = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
-
 
 function getTransactionIconName(tx: TransactionDto): string {
   if (tx.type === 'expense') {
@@ -141,6 +140,7 @@ export default function DashboardPage() {
   const [transactions, setTransactions] = useState<TransactionDto[]>([]);
   const [occurrences, setOccurrences] = useState<OccurrenceDto[]>([]);
   const [applyingOccurrence, setApplyingOccurrence] = useState<string | null>(null);
+  const [pendingTx, setPendingTx] = useState<string | null>(null);
   const [vaults, setVaults] = useState<VaultDto[]>([]);
   const [selectedVaultFilter, setSelectedVaultFilter] = useState<string[]>([]);
   const [vaultDropdownOpen, setVaultDropdownOpen] = useState(false);
@@ -218,11 +218,7 @@ export default function DashboardPage() {
   const filteredDrops = transactions
     .filter((t) => matchesVault(t.vaultId) && matchesTag(t.tags))
     .slice()
-    .sort((a, b) =>
-      dateSortOrder === 'desc'
-        ? b.date.localeCompare(a.date) || b.updatedAt.localeCompare(a.updatedAt)
-        : a.date.localeCompare(b.date) || a.updatedAt.localeCompare(b.updatedAt)
-    );
+    .sort((a, b) => (dateSortOrder === 'desc' ? b.date.localeCompare(a.date) || b.updatedAt.localeCompare(a.updatedAt) : a.date.localeCompare(b.date) || a.updatedAt.localeCompare(b.updatedAt)));
   const filteredOccurrences = occurrences.filter((o) => matchesVault(o.vaultId) && matchesTag(o.tags));
 
   const handleApplyOccurrence = async (occ: OccurrenceDto) => {
@@ -250,6 +246,33 @@ export default function DashboardPage() {
       setRefetchKey((k) => k + 1);
     }
   };
+  const handleCommitTransaction = async (tx: TransactionDto) => {
+    if (!userId) return;
+    setPendingTx(tx.id);
+    try {
+      await profileApi.commitTransaction(userId, tx.id);
+      setTransactions((prev) => prev.map((t) => (t.id === tx.id ? { ...t, isCommitted: true } : t)));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setPendingTx(null);
+    }
+  };
+
+  const handleDiscardTransaction = async (tx: TransactionDto) => {
+    if (!userId) return;
+    setPendingTx(tx.id);
+    setTransactions((prev) => prev.filter((t) => t.id !== tx.id));
+    try {
+      await profileApi.discardTransaction(userId, tx.id);
+    } catch (err) {
+      console.error(err);
+      setRefetchKey((k) => k + 1);
+    } finally {
+      setPendingTx(null);
+    }
+  };
+
   const totalIncome = filteredDrops.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const totalExpenses = filteredDrops.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
   const netYield = totalIncome - totalExpenses;
@@ -479,17 +502,22 @@ export default function DashboardPage() {
                       return (
                         <div
                           key={tx.id}
-                          className="flex items-center gap-4 bg-surface p-3 border-4 border-black hover:bg-surface-container-highest transition-colors cursor-pointer shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)]"
+                          className={`flex items-center gap-4 p-3 border-4 transition-colors cursor-pointer shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)] ${
+                            tx.isCommitted ? 'bg-surface border-black hover:bg-surface-container-highest' : 'bg-secondary-container/20 border-dashed border-secondary hover:bg-secondary-container/30'
+                          }`}
                           onClick={() => setEditingTransaction(tx)}
                         >
                           <div
-                            className={`h-10 w-10 border-2 border-black flex items-center justify-center shrink-0 ${!tagBg ? (tx.type === 'income' ? 'bg-primary-container' : 'bg-error-container') : ''}`}
+                            className={`h-10 w-10 flex items-center justify-center shrink-0 ${tx.isCommitted ? 'border-2 border-black' : 'border-2 border-dashed border-secondary'} ${!tagBg ? (tx.type === 'income' ? 'bg-primary-container' : 'bg-error-container') : ''}`}
                             style={tagBg ? { backgroundColor: tagBg } : undefined}
                           >
                             <TxIcon />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-body-sm font-bold text-on-surface truncate">{getTransactionTitle(tx)}</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="font-body-sm font-bold text-on-surface truncate">{getTransactionTitle(tx)}</p>
+                              {!tx.isCommitted && <span className="font-label-caps text-[8px] uppercase px-1 py-0.5 bg-secondary text-on-secondary leading-none shrink-0">Pending</span>}
+                            </div>
                             {tx.tags?.length ? <TagChips tags={tx.tags} /> : <p className="text-[14px] text-on-surface-variant truncate">{getTransactionCategory(tx)}</p>}
                             {tx.vault?.name && (
                               <span className="font-label-caps text-[9px] uppercase px-1 py-0.5 border border-black bg-surface-container text-outline leading-none inline-block mt-0.5">
@@ -497,13 +525,36 @@ export default function DashboardPage() {
                               </span>
                             )}
                           </div>
-                          <div className="text-right shrink-0">
+                          <div className="flex flex-col items-end gap-1 shrink-0">
                             <p className={`font-label-caps ${tx.type === 'income' ? 'text-primary' : 'text-error'}`}>
                               {tx.type === 'income' ? '+' : '-'}
                               {formatCurrency(tx.amount)}
                             </p>
                             <p className="font-body-sm text-outline text-[10px]">{formatDate(tx.date)}</p>
-                            <p className="font-body-sm text-outline text-[10px]">{formatTime(tx.updatedAt)}</p>
+                            {tx.isCommitted ? (
+                              <p className="font-body-sm text-outline text-[10px]">{formatTime(tx.updatedAt)}</p>
+                            ) : (
+                              <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  onClick={() => handleCommitTransaction(tx)}
+                                  disabled={pendingTx === tx.id}
+                                  aria-label="Commit transaction"
+                                  title="Commit"
+                                  className="flex items-center justify-center bg-primary text-on-primary border-2 border-black h-[26px] w-[26px] hover:bg-primary/90 active:translate-y-px transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  <Check size={12} />
+                                </button>
+                                <button
+                                  onClick={() => handleDiscardTransaction(tx)}
+                                  disabled={pendingTx === tx.id}
+                                  aria-label="Discard transaction"
+                                  title="Discard"
+                                  className="flex items-center justify-center bg-surface text-on-surface border-2 border-black h-[26px] w-[26px] hover:bg-error hover:text-on-error active:translate-y-px transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       );

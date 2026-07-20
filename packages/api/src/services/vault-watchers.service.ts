@@ -1,11 +1,10 @@
-import { SetVaultGmailWatcherInput, TestParseScriptInput, TestParseScriptResultDto, VaultGmailWatcherDto } from '@expense-tracker/shared';
+import { SetVaultGmailWatcherInput, VaultGmailWatcherDto } from '@expense-tracker/shared';
 import { AppError } from '../errors/app-error';
 import { VaultGmailWatchersRepository } from '../repositories/vault-gmail-watchers.repository';
 import { VaultsRepository } from '../repositories/vaults.repository';
 import { vaultGmailWatchersRepository, vaultsRepository } from '../repositories';
-import { GmailScriptRunnerService } from './gmail-script-runner.service';
 import { GmailService } from './gmail.service';
-import { gmailScriptRunnerService, gmailService, logger } from '.';
+import { gmailService, logger } from '.';
 
 /**
  * Business logic for per-vault Gmail watchers. Each vault owns at most one
@@ -20,7 +19,6 @@ export class VaultWatchersService {
   constructor(
     private readonly watchers: VaultGmailWatchersRepository = vaultGmailWatchersRepository,
     private readonly vaults: VaultsRepository = vaultsRepository,
-    private readonly scriptRunner: GmailScriptRunnerService = gmailScriptRunnerService,
     private readonly gmail: GmailService = gmailService,
   ) {}
 
@@ -78,20 +76,5 @@ export class VaultWatchersService {
     await this.watchers.softDelete(userId, vaultId);
     await this.gmail.resyncWatch(userId);
     logger.info('Removed vault Gmail watcher', { userId, vaultId });
-  }
-
-  /**
-   * Dry-runs a parse script against a pasted sample email for the in-page tester.
-   * A thrown `AppError` (invalid returned shape) becomes `{ ok: false, error }`;
-   * a null return (skip / runtime error / timeout) reports the same way.
-   */
-  testScript(input: TestParseScriptInput): TestParseScriptResultDto {
-    try {
-      const result = this.scriptRunner.run(input.script, { ...input.sample, emailDate: null });
-      if (!result) return { ok: false, error: 'Script did not return a transaction (returned null, threw, or timed out)' };
-      return { ok: true, result };
-    } catch (err) {
-      return { ok: false, error: err instanceof AppError ? err.message : 'Script failed to run' };
-    }
   }
 }

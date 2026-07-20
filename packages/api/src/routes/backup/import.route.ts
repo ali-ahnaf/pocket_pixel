@@ -98,6 +98,7 @@ const importDataSchema = Joi.object<BackupPayload>({
             .allow(null)
             .required(),
           tags: Joi.array().items(tagValidateSchema).min(0).required(),
+          isCommitted: Joi.boolean().default(true),
           createdAt: Joi.string().isoDate().required(),
           updatedAt: Joi.string().isoDate().required(),
           sourceRecurringId: Joi.string().uuid().allow(null).required(),
