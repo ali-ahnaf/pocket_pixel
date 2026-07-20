@@ -20,8 +20,13 @@ export class VaultGmailWatchersRepository {
     return this.repo.find({ where: { userId }, order: { createdAt: 'ASC' } });
   }
 
+  /**
+   * Looks up a vault's watcher including soft-deleted rows. The `(userId, vaultId)`
+   * unique index still counts soft-deleted rows, so callers must find and revive an
+   * existing (possibly deleted) row on upsert rather than inserting a duplicate.
+   */
   findByVault(userId: string, vaultId: string): Promise<VaultGmailWatcher | null> {
-    return this.repo.findOneBy({ userId, vaultId });
+    return this.repo.findOne({ where: { userId, vaultId }, withDeleted: true });
   }
 
   createEntity(data: Partial<VaultGmailWatcher>): VaultGmailWatcher {

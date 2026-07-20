@@ -49,6 +49,10 @@ export class VaultWatchersService {
 
     const existing = await this.watchers.findByVault(userId, vaultId);
     const watcher = existing ?? this.watchers.createEntity({ userId, vaultId });
+    // Revive a previously soft-deleted watcher: the (userId, vaultId) unique index
+    // still counts deleted rows, so re-adding a removed watcher must reuse and
+    // un-delete the existing row instead of inserting a duplicate.
+    watcher.deletedAt = null as unknown as Date;
     watcher.gmailLabelId = input.gmailLabelId;
     watcher.gmailLabelName = input.gmailLabelName ?? null;
     watcher.subjectFilter = input.subjectFilter?.trim() || null;

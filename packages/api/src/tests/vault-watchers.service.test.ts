@@ -116,6 +116,19 @@ describe('VaultWatchersService', () => {
       expect(watchers.save).toHaveBeenCalledWith(existing);
     });
 
+    it('revives a soft-deleted watcher instead of inserting a duplicate', async () => {
+      vaults.findOneForUser.mockResolvedValue(vault());
+      const softDeleted = watcher({ gmailLabelId: 'OLD', deletedAt: new Date() });
+      watchers.findByVault.mockResolvedValue(softDeleted);
+
+      await service.upsert('user-1', 'v1', { gmailLabelId: 'L1' });
+
+      expect(watchers.createEntity).not.toHaveBeenCalled();
+      expect(softDeleted.deletedAt).toBeNull();
+      expect(softDeleted.gmailLabelId).toBe('L1');
+      expect(watchers.save).toHaveBeenCalledWith(softDeleted);
+    });
+
     it('throws 404 when the vault does not belong to the user', async () => {
       vaults.findOneForUser.mockResolvedValue(null);
 
