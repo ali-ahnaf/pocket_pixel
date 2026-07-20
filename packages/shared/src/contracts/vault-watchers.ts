@@ -17,6 +17,8 @@ export interface VaultGmailWatcherDto {
   subjectFilter: string | null;
   /** User JS: `function parse(email) { ... }` returning a transaction or null. */
   parseScript: string;
+  /** Tag ids applied to every transaction this watcher creates. */
+  tagIds: string[];
 }
 
 /** Upsert payload for a vault's watcher. The vault id rides in the route path. */
@@ -26,6 +28,8 @@ export interface SetVaultGmailWatcherInput {
   /** Optional case-insensitive subject substring; omit/empty for a catch-all. */
   subjectFilter?: string;
   parseScript: string;
+  /** Tag ids to apply to every transaction this watcher creates; omit for none. */
+  tagIds?: string[];
 }
 
 /** The shape a watcher's `parse(email)` must return for a matching email. */

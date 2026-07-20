@@ -318,7 +318,7 @@ export class GmailService {
         logger.warn('Vault watcher script produced an invalid result, skipping', { userId, vaultId: watcher.vaultId, messageId: message.id, err });
       }
       if (parsed) {
-        await this.transactions.create(userId, { amount: parsed.amount, type: parsed.type, title: parsed.title, date: parsed.date, vaultId: watcher.vaultId });
+        await this.transactions.create(userId, { amount: parsed.amount, type: parsed.type, title: parsed.title, date: parsed.date, vaultId: watcher.vaultId, tagIds: watcher.tagIds ?? undefined });
         logger.info('Created transaction from Gmail watcher', { userId, messageId: message.id, vaultId: watcher.vaultId, type: parsed.type });
       }
     }
@@ -335,7 +335,7 @@ export class GmailService {
    * catch-all, and within each group the earliest-created watcher wins
    * deterministically (rows come back in `createdAt` order).
    */
-  private async matchWatcher(userId: string, labelIds: string[], subject: string): Promise<{ vaultId: string; parseScript: string } | null> {
+  private async matchWatcher(userId: string, labelIds: string[], subject: string): Promise<{ vaultId: string; parseScript: string; tagIds: string[] | null } | null> {
     if (labelIds.length === 0) return null;
     const watchers = await this.watchers.findManyForUser(userId);
     const candidates = watchers.filter((watcher) => labelIds.includes(watcher.gmailLabelId));

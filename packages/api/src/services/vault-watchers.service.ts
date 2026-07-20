@@ -36,6 +36,7 @@ export class VaultWatchersService {
       gmailLabelName: watcher.gmailLabelName,
       subjectFilter: watcher.subjectFilter,
       parseScript: watcher.parseScript,
+      tagIds: watcher.tagIds ?? [],
     }));
   }
 
@@ -55,6 +56,7 @@ export class VaultWatchersService {
     watcher.gmailLabelName = input.gmailLabelName ?? null;
     watcher.subjectFilter = input.subjectFilter?.trim() || null;
     watcher.parseScript = input.parseScript;
+    watcher.tagIds = input.tagIds ?? [];
 
     await this.watchers.save(watcher);
     await this.gmail.resyncWatch(userId);
@@ -67,6 +69,7 @@ export class VaultWatchersService {
       gmailLabelName: watcher.gmailLabelName,
       subjectFilter: watcher.subjectFilter,
       parseScript: watcher.parseScript,
+      tagIds: watcher.tagIds ?? [],
     };
   }
 

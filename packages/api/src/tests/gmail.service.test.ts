@@ -375,7 +375,7 @@ describe('GmailService', () => {
       });
 
       credentials.findByGoogleEmail.mockResolvedValue(buildCredential({ googleEmail: 'me@example.com', gmailHistoryId: '200' }));
-      watchers.findManyForUser.mockResolvedValue([buildWatcher({ vaultId: 'vault-9', gmailLabelId: 'L1', parseScript: 'SCRIPT' })]);
+      watchers.findManyForUser.mockResolvedValue([buildWatcher({ vaultId: 'vault-9', gmailLabelId: 'L1', parseScript: 'SCRIPT', tagIds: ['tag-1', 'tag-2'] })]);
       oauth.authorizedGoogleFetch.mockImplementation((_userId, url) => {
         if (/\/history\?/.test(url as string)) return Promise.resolve(jsonResponse(200, { history: [{ messagesAdded: [{ message: { id: 'm1' } }] }] }));
         if (/\/messages\/m1\?/.test(url as string)) return Promise.resolve(jsonResponse(200, fetchedMessage));
@@ -390,7 +390,7 @@ describe('GmailService', () => {
       await svc.handlePushNotification({ emailAddress: 'me@example.com', historyId: '250' });
 
       expect(scriptRunner.run).toHaveBeenCalledWith('SCRIPT', expect.objectContaining({ from: 'alerts@bank.com', subject: 'Debit Alert' }));
-      expect(transactions.create).toHaveBeenCalledWith('user-1', { amount: 1500, type: 'expense', title: 'DARAZ', date: '2026-07-12', vaultId: 'vault-9' });
+      expect(transactions.create).toHaveBeenCalledWith('user-1', { amount: 1500, type: 'expense', title: 'DARAZ', date: '2026-07-12', vaultId: 'vault-9', tagIds: ['tag-1', 'tag-2'] });
       expect(processed.record).toHaveBeenCalledWith('user-1', 'm1');
     });
 
