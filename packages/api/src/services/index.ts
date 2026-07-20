@@ -13,7 +13,9 @@ import { WizardService } from './wizard.service';
 import { PreferencesService } from './preferences.service';
 import { BackupService } from './backup.service';
 import { UserOAuthCredentialService } from './user-oauth-credential.service';
+import { GmailScriptRunnerService } from './gmail-script-runner.service';
 import { GmailService } from './gmail.service';
+import { VaultWatchersService } from './vault-watchers.service';
 
 export const utilService = new UtilService();
 export const logger = new Logger();
@@ -30,7 +32,9 @@ export const wizardService = new WizardService();
 export const preferencesService = new PreferencesService();
 export const backupService = new BackupService();
 export const userOAuthCredentialService = new UserOAuthCredentialService();
+export const gmailScriptRunnerService = new GmailScriptRunnerService();
 export const gmailService = new GmailService();
+export const vaultWatchersService = new VaultWatchersService();
 
 export {
   UtilService,
@@ -48,5 +52,7 @@ export {
   PreferencesService,
   BackupService,
   UserOAuthCredentialService,
+  GmailScriptRunnerService,
   GmailService,
+  VaultWatchersService,
 };

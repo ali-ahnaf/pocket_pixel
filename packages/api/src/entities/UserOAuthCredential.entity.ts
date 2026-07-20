@@ -45,17 +45,15 @@ export class UserOAuthCredential extends BaseEntity {
    *    History API diff runs `startHistoryId` from.
    *  - `gmailWatchExpiry`: when the current `users.watch` registration lapses
    *    (~7 days); drives the daily renewal cron.
-   *  - `gmailLabelIds`: the user-chosen Gmail label(s) whose new messages we watch
-   *    and diff (stored as a JSON array of Gmail label ids).
+   *
+   * The watched-label set is no longer stored here — it is derived as the union
+   * of `gmailLabelId` across the user's `VaultGmailWatcher` rows.
    */
   @Column({ type: 'varchar', nullable: true })
   gmailHistoryId: string | null;
 
   @Column({ type: 'datetime', nullable: true })
   gmailWatchExpiry: Date | null;
-
-  @Column({ type: 'simple-json', nullable: true })
-  gmailLabelIds: string[] | null;
 
   @OneToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })

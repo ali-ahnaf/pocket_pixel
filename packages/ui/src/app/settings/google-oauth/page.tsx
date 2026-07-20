@@ -1,14 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ShieldCheck, ArrowLeft, CheckCircle2, Mail, Bell } from 'lucide-react';
-import type { GmailLabelDto, GmailWatchStatusDto } from '@expense-tracker/shared';
+import type { GmailLabelDto, GmailWatchStatusDto, VaultDto, VaultGmailWatcherDto } from '@expense-tracker/shared';
 import { AppBar, BottomNavBar, DesktopSidebar } from '@/components';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { useAuth } from '@/hooks/useAuth';
 import { profileApi } from '@/lib/api';
+import { VaultWatcherCard } from './VaultWatcherCard';
 
 export default function GoogleOAuthSettingsPage() {
   const router = useRouter();
@@ -26,12 +27,12 @@ export default function GoogleOAuthSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [connecting, setConnecting] = useState(false);
 
-  // Gmail bank-alert watch
+  // Gmail bank-alert watch (per-vault watchers)
   const [labels, setLabels] = useState<GmailLabelDto[]>([]);
-  const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
+  const [vaults, setVaults] = useState<VaultDto[]>([]);
+  const [watchers, setWatchers] = useState<VaultGmailWatcherDto[]>([]);
   const [watchStatus, setWatchStatus] = useState<GmailWatchStatusDto | null>(null);
   const [watchLoading, setWatchLoading] = useState(false);
-  const [watchSaving, setWatchSaving] = useState(false);
 
   // Surface the outcome of the OAuth callback redirect (?connected=1 / ?error=...).
   useEffect(() => {
@@ -122,71 +123,34 @@ export default function GoogleOAuthSettingsPage() {
     }
   };
 
-  // Load the current watch state + available labels once Gmail is connected.
-  useEffect(() => {
-    if (!user?.id || !connected) return;
+  // Load the watch state, labels, vaults and per-vault watchers once Gmail is
+  // connected. Reused as the refresh callback after a watcher is saved/removed.
+  const loadWatchData = useCallback(async (): Promise<void> => {
+    if (!user?.id) return;
 
-    let cancelled = false;
     setWatchLoading(true);
-
-    Promise.all([profileApi.getGmailWatchStatus(user.id), profileApi.getGmailLabels(user.id)])
-      .then(([status, labelList]) => {
-        if (cancelled) return;
-        setWatchStatus(status);
-        setSelectedLabelIds(status.labelIds);
-        setLabels(labelList);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(profileApi.parseError(err));
-      })
-      .finally(() => {
-        if (!cancelled) setWatchLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.id, connected]);
-
-  const toggleLabel = (labelId: string): void => {
-    setSelectedLabelIds((prev) => (prev.includes(labelId) ? prev.filter((id) => id !== labelId) : [...prev, labelId]));
-  };
-
-  const handleSaveWatch = async (): Promise<void> => {
-    if (!user?.id) return;
-    if (selectedLabelIds.length === 0) {
-      setError('Select at least one Gmail label to watch');
-      return;
-    }
-
-    setError(null);
-    setWatchSaving(true);
-
     try {
-      const status = await profileApi.setGmailWatch(user.id, selectedLabelIds);
+      const [status, labelList, vaultList, watcherList] = await Promise.all([
+        profileApi.getGmailWatchStatus(user.id),
+        profileApi.getGmailLabels(user.id),
+        profileApi.getVaults(user.id),
+        profileApi.getVaultWatchers(user.id),
+      ]);
       setWatchStatus(status);
+      setLabels(labelList);
+      setVaults(vaultList);
+      setWatchers(watcherList);
     } catch (err) {
       setError(profileApi.parseError(err));
     } finally {
-      setWatchSaving(false);
+      setWatchLoading(false);
     }
-  };
+  }, [user?.id]);
 
-  const handleStopWatch = async (): Promise<void> => {
-    if (!user?.id) return;
-
-    setError(null);
-    setWatchSaving(true);
-
-    try {
-      const status = await profileApi.stopGmailWatch(user.id);
-      setWatchStatus(status);
-    } catch (err) {
-      setError(profileApi.parseError(err));
-    } finally {
-      setWatchSaving(false);
-    }
-  };
+  useEffect(() => {
+    if (!connected) return;
+    void loadWatchData();
+  }, [connected, loadWatchData]);
 
   return (
     <div className="bg-background text-on-background font-body-lg min-h-screen flex flex-col md:flex-row overflow-x-hidden selection:bg-primary selection:text-on-primary">
@@ -278,7 +242,7 @@ export default function GoogleOAuthSettingsPage() {
               </div>
             )}
 
-            {/* Bank-alert watch — pick the Gmail label(s) to scan for transactions */}
+            {/* Bank-alert watch — attach a Gmail label + parse script per vault */}
             {!statusLoading && connected && (
               <div className="px-6 py-6 border-t-4 border-black flex flex-col gap-4">
                 <div className="flex items-center gap-2">
@@ -287,8 +251,8 @@ export default function GoogleOAuthSettingsPage() {
                 </div>
 
                 <p className="text-[12px] text-on-surface-variant">
-                  Pick the Gmail label your bank alert emails land in (create a Gmail filter that labels them). New emails under the selected label are scanned and turned into transactions
-                  automatically.
+                  Attach a Gmail label to a vault and write a small script that turns a matching email into a transaction. New emails under an attached label run that vault&apos;s script and land as
+                  transactions in that vault automatically.
                 </p>
 
                 {watchStatus?.watching ? (
@@ -301,30 +265,24 @@ export default function GoogleOAuthSettingsPage() {
                 )}
 
                 {watchLoading ? (
-                  <p className="text-[12px] text-on-surface-variant">Loading labels…</p>
-                ) : labels.length === 0 ? (
-                  <p className="text-[12px] text-on-surface-variant">No Gmail labels found.</p>
+                  <p className="text-[12px] text-on-surface-variant">Loading vaults…</p>
+                ) : vaults.length === 0 ? (
+                  <p className="text-[12px] text-on-surface-variant">No vaults yet — create a vault first.</p>
                 ) : (
-                  <div className="flex flex-col gap-2 max-h-64 overflow-y-auto border-4 border-black bg-surface-container p-3">
-                    {labels.map((label) => (
-                      <label key={label.id} className="flex items-center gap-3 cursor-pointer text-[13px] text-on-surface">
-                        <input type="checkbox" checked={selectedLabelIds.includes(label.id)} onChange={() => toggleLabel(label.id)} className="w-4 h-4 accent-primary" />
-                        {label.name}
-                      </label>
+                  <div className="flex flex-col gap-4">
+                    {vaults.map((vault) => (
+                      <VaultWatcherCard
+                        key={vault.id}
+                        userId={user!.id}
+                        vault={vault}
+                        watcher={watchers.find((w) => w.vaultId === vault.id)}
+                        labels={labels}
+                        onChanged={loadWatchData}
+                        onError={setError}
+                      />
                     ))}
                   </div>
                 )}
-
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <Button type="button" onClick={handleSaveWatch} disabled={watchSaving || watchLoading} className="w-full py-3" variant="primary">
-                    {watchSaving ? 'Saving…' : watchStatus?.watching ? 'Update Watch' : 'Start Watching'}
-                  </Button>
-                  {watchStatus?.watching && (
-                    <Button type="button" onClick={handleStopWatch} disabled={watchSaving} className="w-full py-3" variant="secondary">
-                      Stop Watching
-                    </Button>
-                  )}
-                </div>
               </div>
             )}
           </div>

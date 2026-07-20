@@ -29,15 +29,11 @@ export interface GmailLabelDto {
   name: string;
 }
 
-/** Sets which label(s) the Gmail push watch should track, then (re)starts it. */
-export interface SetGmailWatchInput {
-  labelIds: string[];
-}
-
 /**
  * Current Gmail push-watch state for the settings UI. `watching` is true while an
  * unexpired `users.watch` registration is held; `expiry` is its ISO deadline (the
- * renewal cron keeps it fresh); `labelIds` are the labels currently watched.
+ * renewal cron keeps it fresh); `labelIds` are the labels currently watched
+ * (derived from the union of the user's per-vault watchers).
  */
 export interface GmailWatchStatusDto {
   watching: boolean;
