@@ -94,7 +94,10 @@ gcloud iam service-accounts add-iam-policy-binding \
   --role="roles/iam.serviceAccountTokenCreator"
 ```
 
-To obtain project number run: `gcloud projects describe mytradex-480805 --format="value(projectNumber)"`
+To obtain project number run:
+```bash
+gcloud projects describe <PROJECT_ID> --format="value(projectNumber)"
+```
 
 ## 5. Create the push subscription
 
@@ -139,3 +142,13 @@ That calls `users.watch` on the chosen label, stores the baseline `historyId`, a
 - API logs show `Started Gmail watch`, then on delivery `Created transaction from Gmail bank alert`.
 - If nothing arrives: check the subscription's endpoint + audience match `GMAIL_PUBSUB_AUDIENCE` exactly, the topic has the Gmail publisher binding (step 3), and the endpoint is publicly reachable.
 - Gmail watches lapse after ~7 days; the app re-`watch`es daily and on boot, so no manual renewal is needed.
+
+
+# Plugging in watchers for Vaults
+
+From the settings page, in the bank alert watch section, i want to redesign the page.
+- show the list of user's existing vaults
+- user selects a vault and attaches label listeners per vault (1 label per vault). for example, for vault MAIN STASH, i want to listen for the following label BANK/EBL. 
+- Show an input field to enter a custom js script to parse the mail.  the script should export title, amount, date, expense type (income or expense).
+- a test button should be available for the user to run the script themselves by entering a sample email in a text area
+- remove existing parsers /Users/aliahnaf/Projects/expense_tracker/packages/api/src/parsers/gmail

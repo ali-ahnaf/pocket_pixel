@@ -119,6 +119,14 @@ export class GmailService {
     const topicName = process.env.GMAIL_PUBSUB_TOPIC;
     if (!topicName) throw new AppError('Gmail Pub/Sub topic is not configured', 500);
 
+    // Backfill the connected mailbox address so push notifications can route back
+    // to this user by `emailAddress`. Sourced from the Gmail profile (not the
+    // id_token) so it stays correct even when the OAuth scopes omit `openid email`.
+    const profileResponse = await this.oauth.authorizedGoogleFetch(userId, `${GMAIL_API_BASE}/profile`);
+    if (!profileResponse.ok) throw new AppError(`Gmail profile request failed: HTTP ${profileResponse.status}`, 502);
+    const profile = (await profileResponse.json()) as { emailAddress?: string };
+    if (profile.emailAddress) credential.googleEmail = profile.emailAddress;
+
     const response = await this.oauth.authorizedGoogleFetch(userId, `${GMAIL_API_BASE}/watch`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -1,5 +1,5 @@
 import { Request, Response, Router } from 'express';
-import { gmailService, utilService } from '../../services';
+import { gmailService, logger, utilService } from '../../services';
 import { asyncHandler } from '../../middleware/error-handler';
 import { verifyPubSubOidcToken, extractBearerToken, decodePubSubMessage } from '../../utils/gmail-webhook.util';
 
@@ -17,6 +17,8 @@ const router = Router();
 router.post(
   '/gmail/webhook',
   asyncHandler(async (req: Request, res: Response) => {
+    logger.info('Gmail webhook received', JSON.stringify(req.body));
+
     const token = extractBearerToken(req.headers.authorization);
     await verifyPubSubOidcToken(token, process.env.GMAIL_PUBSUB_AUDIENCE);
 

@@ -53,16 +53,20 @@ describe('GmailService', () => {
 
   describe('startWatch', () => {
     it('posts watch with the topic + chosen labels and persists the returned historyId and expiry', async () => {
-      const credential = buildCredential({ gmailLabelIds: ['Label_1', 'Label_2'] });
+      const credential = buildCredential({ gmailLabelIds: ['Label_1', 'Label_2'], googleEmail: null });
       credentials.findByUserId.mockResolvedValue(credential);
       const expiration = '1893456000000'; // epoch millis
-      oauth.authorizedGoogleFetch.mockResolvedValue(jsonResponse(200, { historyId: '424242', expiration }));
+      oauth.authorizedGoogleFetch.mockImplementation((_userId, url) =>
+        Promise.resolve(url.endsWith('/profile') ? jsonResponse(200, { emailAddress: 'me@example.com' }) : jsonResponse(200, { historyId: '424242', expiration })),
+      );
 
       const result = await service.startWatch('user-1');
 
       expect(oauth.authorizedGoogleFetch).toHaveBeenCalledWith('user-1', `${GMAIL_API_BASE}/watch`, expect.objectContaining({ method: 'POST' }));
-      const body = JSON.parse((oauth.authorizedGoogleFetch.mock.calls[0][2] as RequestInit).body as string);
+      const watchCall = oauth.authorizedGoogleFetch.mock.calls.find(([, url]) => url.endsWith('/watch'));
+      const body = JSON.parse((watchCall![2] as RequestInit).body as string);
       expect(body).toEqual({ topicName: 'projects/app/topics/pp-gmail-incoming', labelIds: ['Label_1', 'Label_2'], labelFilterBehavior: 'INCLUDE' });
+      expect(credential.googleEmail).toBe('me@example.com');
       expect(credential.gmailHistoryId).toBe('424242');
       expect(credential.gmailWatchExpiry).toEqual(new Date(Number(expiration)));
       expect(credentials.save).toHaveBeenCalledWith(credential);
@@ -93,7 +97,9 @@ describe('GmailService', () => {
     it('throws and does not persist when Gmail rejects the watch', async () => {
       const credential = buildCredential();
       credentials.findByUserId.mockResolvedValue(credential);
-      oauth.authorizedGoogleFetch.mockResolvedValue(jsonResponse(403, { error: 'forbidden' }));
+      oauth.authorizedGoogleFetch.mockImplementation((_userId, url) =>
+        Promise.resolve(url.endsWith('/profile') ? jsonResponse(200, { emailAddress: 'me@example.com' }) : jsonResponse(403, { error: 'forbidden' })),
+      );
 
       await expect(service.startWatch('user-1')).rejects.toThrow('Gmail watch request failed: HTTP 403');
       expect(credentials.save).not.toHaveBeenCalled();
@@ -132,12 +138,15 @@ describe('GmailService', () => {
     it('persists the chosen labels, starts the watch and returns the resulting status', async () => {
       const credential = buildCredential({ gmailLabelIds: null });
       credentials.findByUserId.mockResolvedValue(credential);
-      oauth.authorizedGoogleFetch.mockResolvedValue(jsonResponse(200, { historyId: '900', expiration: '1893456000000' }));
+      oauth.authorizedGoogleFetch.mockImplementation((_userId, url) =>
+        Promise.resolve(url.endsWith('/profile') ? jsonResponse(200, { emailAddress: 'me@example.com' }) : jsonResponse(200, { historyId: '900', expiration: '1893456000000' })),
+      );
 
       const status = await service.setWatchedLabels('user-1', ['L1', 'L2']);
 
       expect(credential.gmailLabelIds).toEqual(['L1', 'L2']);
-      const watchBody = JSON.parse((oauth.authorizedGoogleFetch.mock.calls[0][2] as RequestInit).body as string);
+      const watchCall = oauth.authorizedGoogleFetch.mock.calls.find(([, url]) => url.endsWith('/watch'));
+      const watchBody = JSON.parse((watchCall![2] as RequestInit).body as string);
       expect(watchBody.labelIds).toEqual(['L1', 'L2']);
       expect(status).toEqual({ watching: true, expiry: new Date(1893456000000).toISOString(), labelIds: ['L1', 'L2'] });
     });
