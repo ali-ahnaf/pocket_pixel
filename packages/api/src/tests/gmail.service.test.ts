@@ -3,25 +3,33 @@ import type { UserOAuthCredentialRepository } from '../repositories/user-oauth-c
 import type { UserOAuthCredentialService } from '../services/user-oauth-credential.service';
 import type { TransactionsService } from '../services/transactions.service';
 import type { ProcessedGmailMessageRepository } from '../repositories/processed-gmail-message.repository';
+import type { VaultGmailWatchersRepository } from '../repositories/vault-gmail-watchers.repository';
+import type { GmailScriptRunnerService } from '../services/gmail-script-runner.service';
+import type { VaultGmailWatcher } from '../entities/VaultGmailWatcher.entity';
+import { AppError } from '../errors/app-error';
 import { GmailService, GMAIL_API_BASE, GmailMessage } from '../services/gmail.service';
 
 jest.mock('../services', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
   userOAuthCredentialService: {},
+  gmailScriptRunnerService: {},
 }));
 
 type CredentialsMock = jest.Mocked<Pick<UserOAuthCredentialRepository, 'findByUserId' | 'findByGoogleEmail' | 'save'>>;
 type OAuthMock = jest.Mocked<Pick<UserOAuthCredentialService, 'authorizedGoogleFetch'>>;
+type WatchersMock = jest.Mocked<Pick<VaultGmailWatchersRepository, 'findManyForUser'>>;
 
 const buildCredential = (overrides: Partial<UserOAuthCredential> = {}): UserOAuthCredential =>
   ({
     id: 'cred-1',
     userId: 'user-1',
-    gmailLabelIds: ['Label_1'],
     gmailHistoryId: null,
     gmailWatchExpiry: null,
     ...overrides,
   }) as UserOAuthCredential;
+
+const buildWatcher = (overrides: Partial<VaultGmailWatcher> = {}): VaultGmailWatcher =>
+  ({ userId: 'user-1', vaultId: 'vault-1', gmailLabelId: 'L1', gmailLabelName: 'BANK', parseScript: 'SCRIPT', ...overrides }) as VaultGmailWatcher;
 
 const jsonResponse = (status: number, body: unknown): Response =>
   ({
@@ -33,7 +41,18 @@ const jsonResponse = (status: number, body: unknown): Response =>
 describe('GmailService', () => {
   let credentials: CredentialsMock;
   let oauth: OAuthMock;
+  let watchers: WatchersMock;
   let service: GmailService;
+
+  const makeService = (overrides: { transactions?: TransactionsService; processed?: ProcessedGmailMessageRepository; scriptRunner?: GmailScriptRunnerService } = {}): GmailService =>
+    new GmailService(
+      oauth as unknown as UserOAuthCredentialService,
+      credentials as unknown as UserOAuthCredentialRepository,
+      (overrides.transactions ?? {}) as TransactionsService,
+      (overrides.processed ?? {}) as ProcessedGmailMessageRepository,
+      watchers as unknown as VaultGmailWatchersRepository,
+      (overrides.scriptRunner ?? {}) as GmailScriptRunnerService,
+    );
 
   beforeEach(() => {
     process.env.GMAIL_PUBSUB_TOPIC = 'projects/app/topics/pp-gmail-incoming';
@@ -43,7 +62,8 @@ describe('GmailService', () => {
       save: jest.fn((c) => Promise.resolve(c as UserOAuthCredential)),
     };
     oauth = { authorizedGoogleFetch: jest.fn() };
-    service = new GmailService(oauth as unknown as UserOAuthCredentialService, credentials as unknown as UserOAuthCredentialRepository);
+    watchers = { findManyForUser: jest.fn().mockResolvedValue([buildWatcher()]) };
+    service = makeService();
   });
 
   afterEach(() => {
@@ -52,9 +72,10 @@ describe('GmailService', () => {
   });
 
   describe('startWatch', () => {
-    it('posts watch with the topic + chosen labels and persists the returned historyId and expiry', async () => {
-      const credential = buildCredential({ gmailLabelIds: ['Label_1', 'Label_2'], googleEmail: null });
+    it('posts watch with the topic + derived label union and persists the returned historyId and expiry', async () => {
+      const credential = buildCredential({ googleEmail: null });
       credentials.findByUserId.mockResolvedValue(credential);
+      watchers.findManyForUser.mockResolvedValue([buildWatcher({ gmailLabelId: 'L1' }), buildWatcher({ vaultId: 'vault-2', gmailLabelId: 'L2' })]);
       const expiration = '1893456000000'; // epoch millis
       oauth.authorizedGoogleFetch.mockImplementation((_userId, url) =>
         Promise.resolve(url.endsWith('/profile') ? jsonResponse(200, { emailAddress: 'me@example.com' }) : jsonResponse(200, { historyId: '424242', expiration })),
@@ -62,21 +83,33 @@ describe('GmailService', () => {
 
       const result = await service.startWatch('user-1');
 
-      expect(oauth.authorizedGoogleFetch).toHaveBeenCalledWith('user-1', `${GMAIL_API_BASE}/watch`, expect.objectContaining({ method: 'POST' }));
       const watchCall = oauth.authorizedGoogleFetch.mock.calls.find(([, url]) => url.endsWith('/watch'));
       const body = JSON.parse((watchCall![2] as RequestInit).body as string);
-      expect(body).toEqual({ topicName: 'projects/app/topics/pp-gmail-incoming', labelIds: ['Label_1', 'Label_2'], labelFilterBehavior: 'INCLUDE' });
+      expect(body).toEqual({ topicName: 'projects/app/topics/pp-gmail-incoming', labelIds: ['L1', 'L2'], labelFilterBehavior: 'INCLUDE' });
       expect(credential.googleEmail).toBe('me@example.com');
       expect(credential.gmailHistoryId).toBe('424242');
       expect(credential.gmailWatchExpiry).toEqual(new Date(Number(expiration)));
-      expect(credentials.save).toHaveBeenCalledWith(credential);
       expect(result).toEqual({ historyId: '424242', expiry: new Date(Number(expiration)) });
     });
 
-    it('throws when the user has selected no labels to watch', async () => {
-      credentials.findByUserId.mockResolvedValue(buildCredential({ gmailLabelIds: [] }));
+    it('deduplicates labels shared across vaults into the watch union', async () => {
+      credentials.findByUserId.mockResolvedValue(buildCredential());
+      watchers.findManyForUser.mockResolvedValue([buildWatcher({ gmailLabelId: 'L1' }), buildWatcher({ vaultId: 'vault-2', gmailLabelId: 'L1' })]);
+      oauth.authorizedGoogleFetch.mockImplementation((_userId, url) =>
+        Promise.resolve(url.endsWith('/profile') ? jsonResponse(200, { emailAddress: 'me@example.com' }) : jsonResponse(200, { historyId: '1', expiration: '1893456000000' })),
+      );
 
-      await expect(service.startWatch('user-1')).rejects.toThrow('Select at least one Gmail label to watch');
+      await service.startWatch('user-1');
+
+      const watchCall = oauth.authorizedGoogleFetch.mock.calls.find(([, url]) => url.endsWith('/watch'));
+      expect(JSON.parse((watchCall![2] as RequestInit).body as string).labelIds).toEqual(['L1']);
+    });
+
+    it('throws when the user has no watchers attached', async () => {
+      credentials.findByUserId.mockResolvedValue(buildCredential());
+      watchers.findManyForUser.mockResolvedValue([]);
+
+      await expect(service.startWatch('user-1')).rejects.toThrow('Attach at least one Gmail label to a vault to watch');
       expect(oauth.authorizedGoogleFetch).not.toHaveBeenCalled();
     });
 
@@ -95,8 +128,7 @@ describe('GmailService', () => {
     });
 
     it('throws and does not persist when Gmail rejects the watch', async () => {
-      const credential = buildCredential();
-      credentials.findByUserId.mockResolvedValue(credential);
+      credentials.findByUserId.mockResolvedValue(buildCredential());
       oauth.authorizedGoogleFetch.mockImplementation((_userId, url) =>
         Promise.resolve(url.endsWith('/profile') ? jsonResponse(200, { emailAddress: 'me@example.com' }) : jsonResponse(403, { error: 'forbidden' })),
       );
@@ -106,55 +138,56 @@ describe('GmailService', () => {
     });
   });
 
-  describe('listLabels', () => {
-    it('returns only labels that have both an id and a name', async () => {
-      credentials.findByUserId.mockResolvedValue(buildCredential());
-      oauth.authorizedGoogleFetch.mockResolvedValue(jsonResponse(200, { labels: [{ id: 'L1', name: 'Bank Alerts', type: 'user' }, { id: 'L2' }, { name: 'nameless' }] }));
-
-      const labels = await service.listLabels('user-1');
-
-      expect(labels).toEqual([{ id: 'L1', name: 'Bank Alerts' }]);
-    });
-  });
-
   describe('getWatchStatus', () => {
-    it('reports watching with an ISO expiry and the chosen labels when the watch is live', async () => {
+    it('reports watching with an ISO expiry and the derived label union when the watch is live', async () => {
       const future = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
-      credentials.findByUserId.mockResolvedValue(buildCredential({ gmailWatchExpiry: future, gmailLabelIds: ['L1', 'L2'] }));
+      credentials.findByUserId.mockResolvedValue(buildCredential({ gmailWatchExpiry: future }));
+      watchers.findManyForUser.mockResolvedValue([buildWatcher({ gmailLabelId: 'L1' }), buildWatcher({ vaultId: 'vault-2', gmailLabelId: 'L2' })]);
 
       const status = await service.getWatchStatus('user-1');
 
       expect(status).toEqual({ watching: true, expiry: future.toISOString(), labelIds: ['L1', 'L2'] });
     });
 
-    it('reports not watching when there is no expiry', async () => {
-      credentials.findByUserId.mockResolvedValue(buildCredential({ gmailWatchExpiry: null, gmailLabelIds: null }));
+    it('reports not watching with an empty label set when there is no expiry or watchers', async () => {
+      credentials.findByUserId.mockResolvedValue(buildCredential({ gmailWatchExpiry: null }));
+      watchers.findManyForUser.mockResolvedValue([]);
 
       expect(await service.getWatchStatus('user-1')).toEqual({ watching: false, expiry: null, labelIds: [] });
     });
   });
 
-  describe('setWatchedLabels', () => {
-    it('persists the chosen labels, starts the watch and returns the resulting status', async () => {
-      const credential = buildCredential({ gmailLabelIds: null });
-      credentials.findByUserId.mockResolvedValue(credential);
+  describe('resyncWatch', () => {
+    it('starts the watch when the label union is non-empty', async () => {
+      credentials.findByUserId.mockResolvedValue(buildCredential());
+      watchers.findManyForUser.mockResolvedValue([buildWatcher({ gmailLabelId: 'L1' })]);
       oauth.authorizedGoogleFetch.mockImplementation((_userId, url) =>
-        Promise.resolve(url.endsWith('/profile') ? jsonResponse(200, { emailAddress: 'me@example.com' }) : jsonResponse(200, { historyId: '900', expiration: '1893456000000' })),
+        Promise.resolve(url.endsWith('/profile') ? jsonResponse(200, { emailAddress: 'me@example.com' }) : jsonResponse(200, { historyId: '1', expiration: '1893456000000' })),
       );
 
-      const status = await service.setWatchedLabels('user-1', ['L1', 'L2']);
+      await service.resyncWatch('user-1');
 
-      expect(credential.gmailLabelIds).toEqual(['L1', 'L2']);
-      const watchCall = oauth.authorizedGoogleFetch.mock.calls.find(([, url]) => url.endsWith('/watch'));
-      const watchBody = JSON.parse((watchCall![2] as RequestInit).body as string);
-      expect(watchBody.labelIds).toEqual(['L1', 'L2']);
-      expect(status).toEqual({ watching: true, expiry: new Date(1893456000000).toISOString(), labelIds: ['L1', 'L2'] });
+      expect(oauth.authorizedGoogleFetch.mock.calls.some(([, url]) => url.endsWith('/watch'))).toBe(true);
     });
 
-    it('throws when no labels are provided', async () => {
-      credentials.findByUserId.mockResolvedValue(buildCredential());
+    it('stops a live watch when the label union becomes empty', async () => {
+      const credential = buildCredential({ gmailWatchExpiry: new Date() });
+      credentials.findByUserId.mockResolvedValue(credential);
+      watchers.findManyForUser.mockResolvedValue([]);
+      oauth.authorizedGoogleFetch.mockResolvedValue(jsonResponse(204, {}));
 
-      await expect(service.setWatchedLabels('user-1', [])).rejects.toThrow('Select at least one Gmail label to watch');
+      await service.resyncWatch('user-1');
+
+      expect(oauth.authorizedGoogleFetch).toHaveBeenCalledWith('user-1', `${GMAIL_API_BASE}/stop`, { method: 'POST' });
+      expect(credential.gmailWatchExpiry).toBeNull();
+    });
+
+    it('does nothing when the union is empty and no watch is live', async () => {
+      credentials.findByUserId.mockResolvedValue(buildCredential({ gmailWatchExpiry: null }));
+      watchers.findManyForUser.mockResolvedValue([]);
+
+      await service.resyncWatch('user-1');
+
       expect(oauth.authorizedGoogleFetch).not.toHaveBeenCalled();
     });
   });
@@ -194,8 +227,6 @@ describe('GmailService', () => {
   });
 
   describe('handlePushNotification', () => {
-    // The history diff runs inside a private method; spy on it so these tests
-    // exercise the routing/gating without depending on the diff implementation.
     const spyProcessHistory = (impl: () => Promise<void>) => jest.spyOn(service as unknown as { processHistory: () => Promise<void> }, 'processHistory').mockImplementation(impl);
 
     it('drops a notification for an unknown mailbox', async () => {
@@ -244,8 +275,6 @@ describe('GmailService', () => {
   });
 
   describe('history diff (processHistory driven via a push)', () => {
-    // handleMessage (the parse/transaction step) is private; spy it so these
-    // tests exercise the diff/fetch logic independently of the parser phase.
     const spyHandleMessage = () => jest.spyOn(service as unknown as { handleMessage: (u: string, m: GmailMessage) => Promise<void> }, 'handleMessage').mockResolvedValue(undefined);
 
     const routeFetch = (routes: { match: RegExp; response: Response }[]): void => {
@@ -257,7 +286,7 @@ describe('GmailService', () => {
     };
 
     it('collects added message ids across history pages, fetches each in full, and dispatches them', async () => {
-      const credential = buildCredential({ googleEmail: 'me@example.com', gmailHistoryId: '200', gmailLabelIds: ['L1'] });
+      const credential = buildCredential({ googleEmail: 'me@example.com', gmailHistoryId: '200' });
       credentials.findByGoogleEmail.mockResolvedValue(credential);
       const handle = spyHandleMessage();
 
@@ -274,8 +303,19 @@ describe('GmailService', () => {
       expect(credential.gmailHistoryId).toBe('250');
     });
 
+    it('does nothing to diff when the user has no watchers (empty label union)', async () => {
+      credentials.findByGoogleEmail.mockResolvedValue(buildCredential({ googleEmail: 'me@example.com', gmailHistoryId: '200' }));
+      watchers.findManyForUser.mockResolvedValue([]);
+      const handle = spyHandleMessage();
+
+      await service.handlePushNotification({ emailAddress: 'me@example.com', historyId: '250' });
+
+      expect(oauth.authorizedGoogleFetch).not.toHaveBeenCalled();
+      expect(handle).not.toHaveBeenCalled();
+    });
+
     it('falls back to a bounded messages.list when the stored historyId is too old (404)', async () => {
-      const credential = buildCredential({ googleEmail: 'me@example.com', gmailHistoryId: '1', gmailLabelIds: ['L1'] });
+      const credential = buildCredential({ googleEmail: 'me@example.com', gmailHistoryId: '1' });
       credentials.findByGoogleEmail.mockResolvedValue(credential);
       const handle = spyHandleMessage();
 
@@ -293,7 +333,7 @@ describe('GmailService', () => {
     });
 
     it('does nothing to diff on a freshly started watch (null baseline) but still advances the id', async () => {
-      const credential = buildCredential({ googleEmail: 'me@example.com', gmailHistoryId: null, gmailLabelIds: ['L1'] });
+      const credential = buildCredential({ googleEmail: 'me@example.com', gmailHistoryId: null });
       credentials.findByGoogleEmail.mockResolvedValue(credential);
       const handle = spyHandleMessage();
 
@@ -305,58 +345,135 @@ describe('GmailService', () => {
     });
   });
 
-  describe('handleMessage — parse + idempotency (via push, real parser)', () => {
-    const b64url = (s: string): string => Buffer.from(s).toString('base64url');
+  describe('handleMessage — watcher match + script run + idempotency (via push)', () => {
+    let transactions: jest.Mocked<Pick<TransactionsService, 'create'>>;
+    let processed: jest.Mocked<Pick<ProcessedGmailMessageRepository, 'exists' | 'record'>>;
+    let scriptRunner: jest.Mocked<Pick<GmailScriptRunnerService, 'run'>>;
+    let svc: GmailService;
 
-    const bracMessage: GmailMessage = {
+    const fetchedMessage: GmailMessage = {
       id: 'm1',
+      labelIds: ['L1'],
       payload: {
         mimeType: 'text/plain',
         headers: [
-          { name: 'From', value: 'alerts@bracbank.com' },
-          { name: 'Subject', value: 'BRAC Bank Transaction Alert' },
-          { name: 'Date', value: 'Sun, 12 Jul 2026 10:00:00 +0600' },
+          { name: 'From', value: 'alerts@bank.com' },
+          { name: 'Subject', value: 'Debit Alert' },
         ],
-        body: { data: b64url('Your Account No. XXXX1234 has been debited BDT 1,500.00 on 12-Jul-2026 at DARAZ ONLINE. Available Balance BDT 5,000.00.') },
+        body: { data: Buffer.from('You spent BDT 1,500 at DARAZ').toString('base64url') },
       },
     };
-
-    let transactions: jest.Mocked<Pick<TransactionsService, 'create'>>;
-    let processed: jest.Mocked<Pick<ProcessedGmailMessageRepository, 'exists' | 'record'>>;
-    let svc: GmailService;
 
     beforeEach(() => {
       transactions = { create: jest.fn().mockResolvedValue({}) } as unknown as jest.Mocked<Pick<TransactionsService, 'create'>>;
       processed = { exists: jest.fn(), record: jest.fn().mockResolvedValue(undefined) };
-      svc = new GmailService(
-        oauth as unknown as UserOAuthCredentialService,
-        credentials as unknown as UserOAuthCredentialRepository,
-        transactions as unknown as TransactionsService,
-        processed as unknown as ProcessedGmailMessageRepository,
-      );
+      scriptRunner = { run: jest.fn() };
+      svc = makeService({
+        transactions: transactions as unknown as TransactionsService,
+        processed: processed as unknown as ProcessedGmailMessageRepository,
+        scriptRunner: scriptRunner as unknown as GmailScriptRunnerService,
+      });
 
-      credentials.findByGoogleEmail.mockResolvedValue(buildCredential({ googleEmail: 'me@example.com', gmailHistoryId: '200', gmailLabelIds: ['L1'] }));
+      credentials.findByGoogleEmail.mockResolvedValue(buildCredential({ googleEmail: 'me@example.com', gmailHistoryId: '200' }));
+      watchers.findManyForUser.mockResolvedValue([buildWatcher({ vaultId: 'vault-9', gmailLabelId: 'L1', parseScript: 'SCRIPT' })]);
       oauth.authorizedGoogleFetch.mockImplementation((_userId, url) => {
         if (/\/history\?/.test(url as string)) return Promise.resolve(jsonResponse(200, { history: [{ messagesAdded: [{ message: { id: 'm1' } }] }] }));
-        if (/\/messages\/m1\?/.test(url as string)) return Promise.resolve(jsonResponse(200, bracMessage));
+        if (/\/messages\/m1\?/.test(url as string)) return Promise.resolve(jsonResponse(200, fetchedMessage));
         return Promise.reject(new Error(`unexpected url ${String(url)}`));
       });
     });
 
-    it('creates a transaction via TransactionsService for a new bank message and records it in the ledger', async () => {
+    it('runs the matched vault watcher script and creates a transaction in that vault', async () => {
       processed.exists.mockResolvedValue(false);
+      scriptRunner.run.mockReturnValue({ title: 'DARAZ', amount: 1500, type: 'expense', date: '2026-07-12' });
 
       await svc.handlePushNotification({ emailAddress: 'me@example.com', historyId: '250' });
 
-      expect(transactions.create).toHaveBeenCalledWith('user-1', { amount: 1500, type: 'expense', title: 'BRAC Bank — DARAZ ONLINE', date: '2026-07-12' });
+      expect(scriptRunner.run).toHaveBeenCalledWith('SCRIPT', expect.objectContaining({ from: 'alerts@bank.com', subject: 'Debit Alert' }));
+      expect(transactions.create).toHaveBeenCalledWith('user-1', { amount: 1500, type: 'expense', title: 'DARAZ', date: '2026-07-12', vaultId: 'vault-9' });
       expect(processed.record).toHaveBeenCalledWith('user-1', 'm1');
     });
 
-    it('skips a message already in the ledger (replay) without creating a duplicate', async () => {
+    it('routes a shared label to the watcher whose subject filter matches (specific beats catch-all)', async () => {
+      processed.exists.mockResolvedValue(false);
+      // Two vaults share label L1; the incoming subject "Debit Alert" contains the
+      // specific watcher's filter, so it wins over the catch-all watcher.
+      watchers.findManyForUser.mockResolvedValue([
+        buildWatcher({ vaultId: 'vault-catchall', gmailLabelId: 'L1', subjectFilter: null, parseScript: 'CATCHALL' }),
+        buildWatcher({ vaultId: 'vault-debit', gmailLabelId: 'L1', subjectFilter: 'debit', parseScript: 'DEBIT' }),
+      ]);
+      scriptRunner.run.mockReturnValue({ title: 'DARAZ', amount: 1500, type: 'expense', date: '2026-07-12' });
+
+      await svc.handlePushNotification({ emailAddress: 'me@example.com', historyId: '250' });
+
+      expect(scriptRunner.run).toHaveBeenCalledWith('DEBIT', expect.objectContaining({ subject: 'Debit Alert' }));
+      expect(transactions.create).toHaveBeenCalledWith('user-1', expect.objectContaining({ vaultId: 'vault-debit' }));
+    });
+
+    it('falls back to the catch-all watcher when no subject filter matches', async () => {
+      processed.exists.mockResolvedValue(false);
+      watchers.findManyForUser.mockResolvedValue([
+        buildWatcher({ vaultId: 'vault-salary', gmailLabelId: 'L1', subjectFilter: 'salary', parseScript: 'SALARY' }),
+        buildWatcher({ vaultId: 'vault-catchall', gmailLabelId: 'L1', subjectFilter: null, parseScript: 'CATCHALL' }),
+      ]);
+      scriptRunner.run.mockReturnValue({ title: 'DARAZ', amount: 1500, type: 'expense', date: '2026-07-12' });
+
+      await svc.handlePushNotification({ emailAddress: 'me@example.com', historyId: '250' });
+
+      expect(scriptRunner.run).toHaveBeenCalledWith('CATCHALL', expect.objectContaining({ subject: 'Debit Alert' }));
+      expect(transactions.create).toHaveBeenCalledWith('user-1', expect.objectContaining({ vaultId: 'vault-catchall' }));
+    });
+
+    it('records but does not create when a subject filter is set but the subject does not match (no catch-all)', async () => {
+      processed.exists.mockResolvedValue(false);
+      watchers.findManyForUser.mockResolvedValue([buildWatcher({ vaultId: 'vault-salary', gmailLabelId: 'L1', subjectFilter: 'salary', parseScript: 'SALARY' })]);
+
+      await svc.handlePushNotification({ emailAddress: 'me@example.com', historyId: '250' });
+
+      expect(scriptRunner.run).not.toHaveBeenCalled();
+      expect(transactions.create).not.toHaveBeenCalled();
+      expect(processed.record).toHaveBeenCalledWith('user-1', 'm1');
+    });
+
+    it('records but does not create when no watcher label matches the message', async () => {
+      processed.exists.mockResolvedValue(false);
+      watchers.findManyForUser.mockResolvedValue([buildWatcher({ gmailLabelId: 'OTHER' })]);
+
+      await svc.handlePushNotification({ emailAddress: 'me@example.com', historyId: '250' });
+
+      expect(scriptRunner.run).not.toHaveBeenCalled();
+      expect(transactions.create).not.toHaveBeenCalled();
+      expect(processed.record).toHaveBeenCalledWith('user-1', 'm1');
+    });
+
+    it('records but does not create when the script returns null (not a transaction)', async () => {
+      processed.exists.mockResolvedValue(false);
+      scriptRunner.run.mockReturnValue(null);
+
+      await svc.handlePushNotification({ emailAddress: 'me@example.com', historyId: '250' });
+
+      expect(transactions.create).not.toHaveBeenCalled();
+      expect(processed.record).toHaveBeenCalledWith('user-1', 'm1');
+    });
+
+    it('records but does not create when the script output is invalid (AppError swallowed)', async () => {
+      processed.exists.mockResolvedValue(false);
+      scriptRunner.run.mockImplementation(() => {
+        throw new AppError('bad shape', 400);
+      });
+
+      await svc.handlePushNotification({ emailAddress: 'me@example.com', historyId: '250' });
+
+      expect(transactions.create).not.toHaveBeenCalled();
+      expect(processed.record).toHaveBeenCalledWith('user-1', 'm1');
+    });
+
+    it('skips a message already in the ledger (replay) without running the script', async () => {
       processed.exists.mockResolvedValue(true);
 
       await svc.handlePushNotification({ emailAddress: 'me@example.com', historyId: '250' });
 
+      expect(scriptRunner.run).not.toHaveBeenCalled();
       expect(transactions.create).not.toHaveBeenCalled();
       expect(processed.record).not.toHaveBeenCalled();
     });

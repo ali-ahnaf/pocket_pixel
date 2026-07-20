@@ -1,5 +1,13 @@
 import type { GmailMessage, GmailMessagePart } from '../services/gmail.service';
-import { BankMessageContent } from '../parsers/gmail';
+
+/** Normalised, decoded view of a Gmail message a watcher's parse script reads from. */
+export interface GmailMessageContent {
+  from: string;
+  subject: string;
+  bodyText: string;
+  /** The message `Date` header (or internalDate ISO), used as a date fallback. */
+  emailDate: string | null;
+}
 
 /** Case-insensitive header lookup on a Gmail payload part. */
 const readHeader = (part: GmailMessagePart | undefined, name: string): string | undefined => part?.headers?.find((h) => h.name.toLowerCase() === name.toLowerCase())?.value;
@@ -42,7 +50,7 @@ const collectText = (part: GmailMessagePart | undefined): string => {
 };
 
 /** Extracts the sender, subject, decoded body and a date from a full Gmail message. */
-export const extractMessageContent = (message: GmailMessage): BankMessageContent => {
+export const extractMessageContent = (message: GmailMessage): GmailMessageContent => {
   const payload = message.payload;
   const emailDate = readHeader(payload, 'Date') ?? (message.internalDate ? new Date(Number(message.internalDate)).toISOString() : null);
 

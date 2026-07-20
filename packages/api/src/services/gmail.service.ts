@@ -4,13 +4,14 @@ import { AppError } from '../errors/app-error';
 import { UserOAuthCredential } from '../entities/UserOAuthCredential.entity';
 import { UserOAuthCredentialRepository } from '../repositories/user-oauth-credential.repository';
 import { ProcessedGmailMessageRepository } from '../repositories/processed-gmail-message.repository';
-import { userOAuthCredentialRepository, processedGmailMessageRepository } from '../repositories';
+import { VaultGmailWatchersRepository } from '../repositories/vault-gmail-watchers.repository';
+import { userOAuthCredentialRepository, processedGmailMessageRepository, vaultGmailWatchersRepository } from '../repositories';
 import { UserOAuthCredentialService } from './user-oauth-credential.service';
 import { TransactionsService } from './transactions.service';
+import { GmailScriptRunnerService } from './gmail-script-runner.service';
 import { PubSubNotification } from '../utils/gmail-webhook.util';
 import { extractMessageContent } from '../utils/gmail-message.util';
-import { parseBankMessage } from '../parsers/gmail';
-import { userOAuthCredentialService, transactionsService, logger } from '.';
+import { userOAuthCredentialService, transactionsService, gmailScriptRunnerService, logger } from '.';
 
 /** Base for all `users.me` Gmail REST calls; reused by the history-diff phase. */
 export const GMAIL_API_BASE = 'https://gmail.googleapis.com/gmail/v1/users/me';
@@ -54,7 +55,9 @@ interface GmailWatchResponse {
  * `authorizedGoogleFetch` (bearer + refresh-on-401), and all token
  * encrypt/decrypt stays inside `UserOAuthCredentialService` — this service only
  * touches the plaintext watch-bookkeeping columns (`gmailHistoryId`,
- * `gmailWatchExpiry`, `gmailLabelIds`) via the repository.
+ * `gmailWatchExpiry`) via the repository. The watched-label set is derived from
+ * the user's `VaultGmailWatcher` rows, and a matching message is turned into a
+ * transaction by running that vault's user-supplied parse script.
  */
 export class GmailService {
   constructor(
@@ -62,7 +65,15 @@ export class GmailService {
     private readonly credentials: UserOAuthCredentialRepository = userOAuthCredentialRepository,
     private readonly transactions: TransactionsService = transactionsService,
     private readonly processedMessages: ProcessedGmailMessageRepository = processedGmailMessageRepository,
+    private readonly watchers: VaultGmailWatchersRepository = vaultGmailWatchersRepository,
+    private readonly scriptRunner: GmailScriptRunnerService = gmailScriptRunnerService,
   ) {}
+
+  /** The user's watched-label set: the de-duplicated union of their watcher labels. */
+  private async getWatchedLabelIds(userId: string): Promise<string[]> {
+    const watchers = await this.watchers.findManyForUser(userId);
+    return [...new Set(watchers.map((watcher) => watcher.gmailLabelId))];
+  }
 
   /** Lists the user's Gmail labels so the settings UI can offer a picker. */
   async listLabels(userId: string): Promise<GmailLabelDto[]> {
@@ -75,37 +86,35 @@ export class GmailService {
       .map((label) => ({ id: label.id, name: label.name }));
   }
 
-  /** Current watch state for the settings UI (watching + expiry + chosen labels). */
+  /** Current watch state for the settings UI (watching + expiry + watched labels). */
   async getWatchStatus(userId: string): Promise<GmailWatchStatusDto> {
     const credential = await this.credentials.findByUserId(userId);
     const expiry = credential?.gmailWatchExpiry ?? null;
     return {
       watching: !!expiry && expiry.getTime() > Date.now(),
       expiry: expiry ? expiry.toISOString() : null,
-      labelIds: credential?.gmailLabelIds ?? [],
+      labelIds: await this.getWatchedLabelIds(userId),
     };
   }
 
   /**
-   * Persists the user's chosen label(s) and (re)starts the watch on them. Only
-   * the label id list is saved — never the raw request — and `startWatch` reads
-   * it straight back to register with Gmail.
+   * Re-syncs the single mailbox watch with the derived label union after a
+   * watcher is created, updated or removed. A non-empty union (re)starts the
+   * watch; an empty union stops any live watch. Called by `VaultWatchersService`.
    */
-  async setWatchedLabels(userId: string, labelIds: string[]): Promise<GmailWatchStatusDto> {
-    const credential = await this.credentials.findByUserId(userId);
-    if (!credential) throw new AppError('Google OAuth client not configured', 400);
-    if (labelIds.length === 0) throw new AppError('Select at least one Gmail label to watch', 400);
-
-    credential.gmailLabelIds = labelIds;
-    await this.credentials.save(credential);
-
+  async resyncWatch(userId: string): Promise<void> {
+    const labelIds = await this.getWatchedLabelIds(userId);
+    if (labelIds.length === 0) {
+      const credential = await this.credentials.findByUserId(userId);
+      if (credential?.gmailWatchExpiry) await this.stopWatch(userId);
+      return;
+    }
     await this.startWatch(userId);
-    return this.getWatchStatus(userId);
   }
 
   /**
-   * Registers a Gmail `users.watch` on the user's chosen label(s), pointing at
-   * the app-owned Pub/Sub topic. Persists the returned `historyId` (diff
+   * Registers a Gmail `users.watch` on the user's watched label union, pointing
+   * at the app-owned Pub/Sub topic. Persists the returned `historyId` (diff
    * baseline) and `expiration` (renewal deadline) so the webhook and the daily
    * renewal cron can pick them up.
    */
@@ -113,8 +122,8 @@ export class GmailService {
     const credential = await this.credentials.findByUserId(userId);
     if (!credential) throw new AppError('Google OAuth client not configured', 400);
 
-    const labelIds = credential.gmailLabelIds ?? [];
-    if (labelIds.length === 0) throw new AppError('Select at least one Gmail label to watch', 400);
+    const labelIds = await this.getWatchedLabelIds(userId);
+    if (labelIds.length === 0) throw new AppError('Attach at least one Gmail label to a vault to watch', 400);
 
     const topicName = process.env.GMAIL_PUBSUB_TOPIC;
     if (!topicName) throw new AppError('Gmail Pub/Sub topic is not configured', 500);
@@ -206,7 +215,7 @@ export class GmailService {
   private async processHistory(credential: UserOAuthCredential, startHistoryId: string | null): Promise<void> {
     if (!startHistoryId) return;
 
-    const labelIds = credential.gmailLabelIds ?? [];
+    const labelIds = await this.getWatchedLabelIds(credential.userId);
     if (labelIds.length === 0) return;
 
     const messageIds = await this.collectAddedMessageIds(credential.userId, startHistoryId, labelIds);
@@ -281,25 +290,59 @@ export class GmailService {
     const response = await this.oauth.authorizedGoogleFetch(userId, `${GMAIL_API_BASE}/messages/${id}?format=full`);
     if (response.status === 404) return null;
     if (!response.ok) throw new AppError(`Gmail messages.get failed: HTTP ${response.status}`, 502);
-    return (await response.json()) as GmailMessage;
+    const result = (await response.json()) as GmailMessage;
+    return result;
   }
 
   /**
    * Turns one fetched Gmail message into a transaction, idempotently: a message
    * already in the ledger is skipped, so a Pub/Sub replay never double-inserts.
-   * Non-bank (unparseable) messages are still recorded so they aren't re-parsed.
-   * The transaction is created only through `TransactionsService` — the parsers
-   * never touch persistence.
+   * The message is matched to a vault watcher by label **and subject**; that
+   * watcher's parse script runs and, on a valid result, a transaction is created
+   * **in that vault**. No matching watcher, a null result, or an invalid script
+   * output all fall through to `record` so the message isn't re-processed. The
+   * transaction is created only through `TransactionsService` — scripts never
+   * touch storage.
    */
   private async handleMessage(userId: string, message: GmailMessage): Promise<void> {
     if (await this.processedMessages.exists(userId, message.id)) return;
 
-    const parsed = parseBankMessage(extractMessageContent(message));
-    if (parsed) {
-      await this.transactions.create(userId, { amount: parsed.amount, type: parsed.type, title: parsed.title, date: parsed.date });
-      logger.info('Created transaction from Gmail bank alert', { userId, messageId: message.id, bankType: parsed.type });
+    const content = extractMessageContent(message);
+    const watcher = await this.matchWatcher(userId, message.labelIds ?? [], content.subject);
+    if (watcher) {
+      let parsed = null;
+      try {
+        parsed = this.scriptRunner.run(watcher.parseScript, content);
+      } catch (err) {
+        // Invalid script output (AppError) — skip this message, don't retry.
+        logger.warn('Vault watcher script produced an invalid result, skipping', { userId, vaultId: watcher.vaultId, messageId: message.id, err });
+      }
+      if (parsed) {
+        await this.transactions.create(userId, { amount: parsed.amount, type: parsed.type, title: parsed.title, date: parsed.date, vaultId: watcher.vaultId });
+        logger.info('Created transaction from Gmail watcher', { userId, messageId: message.id, vaultId: watcher.vaultId, type: parsed.type });
+      }
     }
 
     await this.processedMessages.record(userId, message.id);
+  }
+
+  /**
+   * The vault watcher to fire for a message, matched by label + subject. A label
+   * may be shared across vaults, so among the watchers whose `gmailLabelId` is on
+   * the message the subject disambiguates: a watcher with a `subjectFilter`
+   * matches only when the subject contains it (case-insensitive); a watcher
+   * without one is a catch-all for its label. A specific subject match wins over a
+   * catch-all, and within each group the earliest-created watcher wins
+   * deterministically (rows come back in `createdAt` order).
+   */
+  private async matchWatcher(userId: string, labelIds: string[], subject: string): Promise<{ vaultId: string; parseScript: string } | null> {
+    if (labelIds.length === 0) return null;
+    const watchers = await this.watchers.findManyForUser(userId);
+    const candidates = watchers.filter((watcher) => labelIds.includes(watcher.gmailLabelId));
+    if (candidates.length === 0) return null;
+
+    const subjectLower = subject.toLowerCase();
+    const specific = candidates.find((watcher) => watcher.subjectFilter && subjectLower.includes(watcher.subjectFilter.toLowerCase()));
+    return specific ?? candidates.find((watcher) => !watcher.subjectFilter) ?? null;
   }
 }
