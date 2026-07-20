@@ -4,6 +4,7 @@
 **/coverage
 **/.next
 .env
+.env.production
 .env.local
 **/*.sqlite
 **/tsconfig.tsbuildinfo
