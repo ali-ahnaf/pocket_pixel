@@ -62,7 +62,7 @@ export const buildAuthorizeUrl = ({ clientId, state }: { clientId: string; state
     client_id: clientId,
     redirect_uri: GOOGLE_REDIRECT_URI,
     response_type: 'code',
-    scope: GMAIL_READONLY_SCOPE,
+    scope: `openid email ${GMAIL_READONLY_SCOPE}`,
     access_type: 'offline', // ask for a refresh token
     prompt: 'consent', // force a refresh token on every authorization
     include_granted_scopes: 'true',
