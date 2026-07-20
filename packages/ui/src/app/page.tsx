@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useDisplaySettings } from '@/hooks/useDisplaySettings';
-import { Button, Card, ProgressBar, LogResourceModal, AppBar, BottomNavBar, DesktopSidebar, EditTransactionModal } from '@/components';
+import { Button, Card, ProgressBar, LogResourceModal, AppBar, BottomNavBar, DesktopSidebar, EditTransactionModal, AdjustBalanceModal } from '@/components';
 import { iconMapper } from '@/lib/iconMapper';
 import { profileApi } from '@/lib/api';
 import { formatCurrency, formatDate, formatTime } from '@/lib/helpers/formatters';
@@ -136,7 +136,18 @@ export default function DashboardPage() {
   const { showIncome, showExpense } = useDisplaySettings();
   const userId = user?.id ?? null;
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAdjustBalanceOpen, setIsAdjustBalanceOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [editingTransaction, setEditingTransaction] = useState<TransactionDto | null>(null);
+
+  const handleNetYieldClick = () => {
+    if (selectedVaultFilter.length !== 1) {
+      setToastMessage('Please select a single vault to adjust balance.');
+      setTimeout(() => setToastMessage(null), 3500);
+      return;
+    }
+    setIsAdjustBalanceOpen(true);
+  };
   const [profile, setProfile] = useState<User | null>(null);
   const [transactions, setTransactions] = useState<TransactionDto[]>([]);
   const [occurrences, setOccurrences] = useState<OccurrenceDto[]>([]);
@@ -333,10 +344,20 @@ export default function DashboardPage() {
                   {isLoading ? (
                     <div className="h-7 bg-surface-container-highest rounded w-24 animate-pulse" />
                   ) : (
-                    <span className={`font-headline-md ${netYield >= 0 ? 'text-primary' : 'text-error'}`}>
-                      {netYield >= 0 ? '+' : '-'}
-                      {formatCurrency(Math.abs(netYield))}
-                    </span>
+                    <button
+                      type="button"
+                      onClick={handleNetYieldClick}
+                      className={`group cursor-pointer font-headline-md text-right focus:outline-none focus:ring-2 focus:ring-primary px-2 py-1 -mr-2 rounded transition-all hover:bg-surface-container-highest border border-transparent hover:border-primary/40 flex items-center gap-1.5 ${
+                        netYield >= 0 ? 'text-primary' : 'text-error'
+                      }`}
+                      aria-label="Adjust balance"
+                      title="Click to adjust balance"
+                    >
+                      <span className="group-hover:underline">
+                        {netYield >= 0 ? '+' : '-'}
+                        {formatCurrency(Math.abs(netYield))}
+                      </span>
+                    </button>
                   )}
                 </div>
                 <div className="mt-4">
@@ -535,6 +556,25 @@ export default function DashboardPage() {
 
       <LogResourceModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={handleTransactionSuccess} userId={userId} selectedMonth={selectedMonth} selectedYear={selectedYear} />
       <EditTransactionModal isOpen={!!editingTransaction} onClose={() => setEditingTransaction(null)} onSuccess={handleTransactionSuccess} userId={userId} transaction={editingTransaction} />
+      <AdjustBalanceModal
+        isOpen={isAdjustBalanceOpen}
+        onClose={() => setIsAdjustBalanceOpen(false)}
+        onSuccess={handleTransactionSuccess}
+        userId={userId}
+        currentNetYield={netYield}
+        selectedMonth={selectedMonth}
+        selectedYear={selectedYear}
+        vaultId={selectedVaultFilter.length === 1 ? selectedVaultFilter[0] : null}
+      />
+
+      {toastMessage && (
+        <div className="fixed bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 z-[100] bg-surface-container border-4 border-black p-4 shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5),8px_8px_0_rgba(0,0,0,0.4)] flex items-center gap-3 animate-bounce">
+          <span className="font-label-caps text-xs text-error font-bold">{toastMessage}</span>
+          <button onClick={() => setToastMessage(null)} className="text-on-surface hover:text-primary">
+            <X size={16} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
