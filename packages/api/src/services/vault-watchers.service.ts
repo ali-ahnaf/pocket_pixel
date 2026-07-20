@@ -8,8 +8,8 @@ import { gmailService, logger } from '.';
 
 /**
  * Business logic for per-vault Gmail watchers. Each vault owns at most one
- * watcher (a Gmail label + optional subject filter + a parse script); a label may
- * be shared across vaults and routed by subject at match time.
+ * watcher (a Gmail label + optional subject filter + optional AI guidance hint);
+ * a label may be shared across vaults and routed by subject at match time.
  * Any create/update/delete re-syncs the user's single mailbox watch so the
  * watched-label union stays in step with the watcher rows. Repositories and the
  * collaborating services are injected (defaulting to the shared singletons) so
@@ -33,8 +33,7 @@ export class VaultWatchersService {
       gmailLabelId: watcher.gmailLabelId,
       gmailLabelName: watcher.gmailLabelName,
       subjectFilter: watcher.subjectFilter,
-      parseScript: watcher.parseScript,
-      tagIds: watcher.tagIds ?? [],
+      guidanceHint: watcher.guidanceHint,
     }));
   }
 
@@ -53,8 +52,7 @@ export class VaultWatchersService {
     watcher.gmailLabelId = input.gmailLabelId;
     watcher.gmailLabelName = input.gmailLabelName ?? null;
     watcher.subjectFilter = input.subjectFilter?.trim() || null;
-    watcher.parseScript = input.parseScript;
-    watcher.tagIds = input.tagIds ?? [];
+    watcher.guidanceHint = input.guidanceHint?.trim() || null;
 
     await this.watchers.save(watcher);
     await this.gmail.resyncWatch(userId);
@@ -66,8 +64,7 @@ export class VaultWatchersService {
       gmailLabelId: watcher.gmailLabelId,
       gmailLabelName: watcher.gmailLabelName,
       subjectFilter: watcher.subjectFilter,
-      parseScript: watcher.parseScript,
-      tagIds: watcher.tagIds ?? [],
+      guidanceHint: watcher.guidanceHint,
     };
   }
 

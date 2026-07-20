@@ -4,15 +4,17 @@ import type { UserOAuthCredentialService } from '../services/user-oauth-credenti
 import type { TransactionsService } from '../services/transactions.service';
 import type { ProcessedGmailMessageRepository } from '../repositories/processed-gmail-message.repository';
 import type { VaultGmailWatchersRepository } from '../repositories/vault-gmail-watchers.repository';
-import type { GmailScriptRunnerService } from '../services/gmail-script-runner.service';
+import type { TagsRepository } from '../repositories/tags.repository';
+import type { GmailAiExtractorService } from '../services/gmail-ai-extractor.service';
 import type { VaultGmailWatcher } from '../entities/VaultGmailWatcher.entity';
+import type { Tag } from '../entities/Tag.entity';
 import { AppError } from '../errors/app-error';
 import { GmailService, GMAIL_API_BASE, GmailMessage } from '../services/gmail.service';
 
 jest.mock('../services', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
   userOAuthCredentialService: {},
-  gmailScriptRunnerService: {},
+  gmailAiExtractorService: {},
 }));
 
 type CredentialsMock = jest.Mocked<Pick<UserOAuthCredentialRepository, 'findByUserId' | 'findByGoogleEmail' | 'save'>>;
@@ -29,7 +31,7 @@ const buildCredential = (overrides: Partial<UserOAuthCredential> = {}): UserOAut
   }) as UserOAuthCredential;
 
 const buildWatcher = (overrides: Partial<VaultGmailWatcher> = {}): VaultGmailWatcher =>
-  ({ userId: 'user-1', vaultId: 'vault-1', gmailLabelId: 'L1', gmailLabelName: 'BANK', parseScript: 'SCRIPT', ...overrides }) as VaultGmailWatcher;
+  ({ userId: 'user-1', vaultId: 'vault-1', gmailLabelId: 'L1', gmailLabelName: 'BANK', guidanceHint: null, ...overrides }) as VaultGmailWatcher;
 
 const jsonResponse = (status: number, body: unknown): Response =>
   ({
@@ -44,14 +46,17 @@ describe('GmailService', () => {
   let watchers: WatchersMock;
   let service: GmailService;
 
-  const makeService = (overrides: { transactions?: TransactionsService; processed?: ProcessedGmailMessageRepository; scriptRunner?: GmailScriptRunnerService } = {}): GmailService =>
+  const makeService = (
+    overrides: { transactions?: TransactionsService; processed?: ProcessedGmailMessageRepository; tags?: TagsRepository; aiExtractor?: GmailAiExtractorService } = {},
+  ): GmailService =>
     new GmailService(
       oauth as unknown as UserOAuthCredentialService,
       credentials as unknown as UserOAuthCredentialRepository,
       (overrides.transactions ?? {}) as TransactionsService,
       (overrides.processed ?? {}) as ProcessedGmailMessageRepository,
       watchers as unknown as VaultGmailWatchersRepository,
-      (overrides.scriptRunner ?? {}) as GmailScriptRunnerService,
+      (overrides.tags ?? {}) as TagsRepository,
+      (overrides.aiExtractor ?? {}) as GmailAiExtractorService,
     );
 
   beforeEach(() => {
@@ -345,10 +350,11 @@ describe('GmailService', () => {
     });
   });
 
-  describe('handleMessage — watcher match + script run + idempotency (via push)', () => {
+  describe('handleMessage — watcher match + AI extraction + idempotency (via push)', () => {
     let transactions: jest.Mocked<Pick<TransactionsService, 'create'>>;
     let processed: jest.Mocked<Pick<ProcessedGmailMessageRepository, 'exists' | 'record'>>;
-    let scriptRunner: jest.Mocked<Pick<GmailScriptRunnerService, 'run'>>;
+    let tags: jest.Mocked<Pick<TagsRepository, 'findManyForUser'>>;
+    let aiExtractor: jest.Mocked<Pick<GmailAiExtractorService, 'extract'>>;
     let svc: GmailService;
 
     const fetchedMessage: GmailMessage = {
@@ -364,18 +370,22 @@ describe('GmailService', () => {
       },
     };
 
+    const buildTag = (id: string, name: string): Tag => ({ id, name }) as Tag;
+
     beforeEach(() => {
       transactions = { create: jest.fn().mockResolvedValue({}) } as unknown as jest.Mocked<Pick<TransactionsService, 'create'>>;
       processed = { exists: jest.fn(), record: jest.fn().mockResolvedValue(undefined) };
-      scriptRunner = { run: jest.fn() };
+      tags = { findManyForUser: jest.fn().mockResolvedValue([buildTag('tag-1', 'Shopping'), buildTag('tag-2', 'Food')]) };
+      aiExtractor = { extract: jest.fn() };
       svc = makeService({
         transactions: transactions as unknown as TransactionsService,
         processed: processed as unknown as ProcessedGmailMessageRepository,
-        scriptRunner: scriptRunner as unknown as GmailScriptRunnerService,
+        tags: tags as unknown as TagsRepository,
+        aiExtractor: aiExtractor as unknown as GmailAiExtractorService,
       });
 
       credentials.findByGoogleEmail.mockResolvedValue(buildCredential({ googleEmail: 'me@example.com', gmailHistoryId: '200' }));
-      watchers.findManyForUser.mockResolvedValue([buildWatcher({ vaultId: 'vault-9', gmailLabelId: 'L1', parseScript: 'SCRIPT', tagIds: ['tag-1', 'tag-2'] })]);
+      watchers.findManyForUser.mockResolvedValue([buildWatcher({ vaultId: 'vault-9', gmailLabelId: 'L1', guidanceHint: 'always groceries' })]);
       oauth.authorizedGoogleFetch.mockImplementation((_userId, url) => {
         if (/\/history\?/.test(url as string)) return Promise.resolve(jsonResponse(200, { history: [{ messagesAdded: [{ message: { id: 'm1' } }] }] }));
         if (/\/messages\/m1\?/.test(url as string)) return Promise.resolve(jsonResponse(200, fetchedMessage));
@@ -383,20 +393,28 @@ describe('GmailService', () => {
       });
     });
 
-    it('runs the matched vault watcher script and creates a transaction in that vault', async () => {
+    it('extracts via the AI extractor with the email + tag list, and creates a transaction in that vault', async () => {
       processed.exists.mockResolvedValue(false);
-      scriptRunner.run.mockReturnValue({ title: 'DARAZ', amount: 1500, type: 'expense', date: '2026-07-12' });
+      aiExtractor.extract.mockResolvedValue({ title: 'DARAZ', amount: 1500, type: 'expense', date: '2026-07-12', tagIds: ['tag-1'] });
 
       await svc.handlePushNotification({ emailAddress: 'me@example.com', historyId: '250' });
 
-      expect(scriptRunner.run).toHaveBeenCalledWith('SCRIPT', expect.objectContaining({ from: 'alerts@bank.com', subject: 'Debit Alert' }));
+      expect(tags.findManyForUser).toHaveBeenCalledWith('user-1');
+      expect(aiExtractor.extract).toHaveBeenCalledWith(
+        expect.objectContaining({ from: 'alerts@bank.com', subject: 'Debit Alert' }),
+        [
+          { id: 'tag-1', name: 'Shopping' },
+          { id: 'tag-2', name: 'Food' },
+        ],
+        'always groceries',
+      );
       expect(transactions.create).toHaveBeenCalledWith('user-1', {
         amount: 1500,
         type: 'expense',
         title: 'daraz',
         date: '2026-07-12',
         vaultId: 'vault-9',
-        tagIds: ['tag-1', 'tag-2'],
+        tagIds: ['tag-1'],
         isCommitted: false,
       });
       expect(processed.record).toHaveBeenCalledWith('user-1', 'm1');
@@ -407,38 +425,36 @@ describe('GmailService', () => {
       // Two vaults share label L1; the incoming subject "Debit Alert" contains the
       // specific watcher's filter, so it wins over the catch-all watcher.
       watchers.findManyForUser.mockResolvedValue([
-        buildWatcher({ vaultId: 'vault-catchall', gmailLabelId: 'L1', subjectFilter: null, parseScript: 'CATCHALL' }),
-        buildWatcher({ vaultId: 'vault-debit', gmailLabelId: 'L1', subjectFilter: 'debit', parseScript: 'DEBIT' }),
+        buildWatcher({ vaultId: 'vault-catchall', gmailLabelId: 'L1', subjectFilter: null }),
+        buildWatcher({ vaultId: 'vault-debit', gmailLabelId: 'L1', subjectFilter: 'debit' }),
       ]);
-      scriptRunner.run.mockReturnValue({ title: 'DARAZ', amount: 1500, type: 'expense', date: '2026-07-12' });
+      aiExtractor.extract.mockResolvedValue({ title: 'DARAZ', amount: 1500, type: 'expense', date: '2026-07-12', tagIds: [] });
 
       await svc.handlePushNotification({ emailAddress: 'me@example.com', historyId: '250' });
 
-      expect(scriptRunner.run).toHaveBeenCalledWith('DEBIT', expect.objectContaining({ subject: 'Debit Alert' }));
       expect(transactions.create).toHaveBeenCalledWith('user-1', expect.objectContaining({ vaultId: 'vault-debit' }));
     });
 
     it('falls back to the catch-all watcher when no subject filter matches', async () => {
       processed.exists.mockResolvedValue(false);
       watchers.findManyForUser.mockResolvedValue([
-        buildWatcher({ vaultId: 'vault-salary', gmailLabelId: 'L1', subjectFilter: 'salary', parseScript: 'SALARY' }),
-        buildWatcher({ vaultId: 'vault-catchall', gmailLabelId: 'L1', subjectFilter: null, parseScript: 'CATCHALL' }),
+        buildWatcher({ vaultId: 'vault-salary', gmailLabelId: 'L1', subjectFilter: 'salary' }),
+        buildWatcher({ vaultId: 'vault-catchall', gmailLabelId: 'L1', subjectFilter: null }),
       ]);
-      scriptRunner.run.mockReturnValue({ title: 'DARAZ', amount: 1500, type: 'expense', date: '2026-07-12' });
+      aiExtractor.extract.mockResolvedValue({ title: 'DARAZ', amount: 1500, type: 'expense', date: '2026-07-12', tagIds: [] });
 
       await svc.handlePushNotification({ emailAddress: 'me@example.com', historyId: '250' });
 
-      expect(scriptRunner.run).toHaveBeenCalledWith('CATCHALL', expect.objectContaining({ subject: 'Debit Alert' }));
       expect(transactions.create).toHaveBeenCalledWith('user-1', expect.objectContaining({ vaultId: 'vault-catchall' }));
     });
 
     it('records but does not create when a subject filter is set but the subject does not match (no catch-all)', async () => {
       processed.exists.mockResolvedValue(false);
-      watchers.findManyForUser.mockResolvedValue([buildWatcher({ vaultId: 'vault-salary', gmailLabelId: 'L1', subjectFilter: 'salary', parseScript: 'SALARY' })]);
+      watchers.findManyForUser.mockResolvedValue([buildWatcher({ vaultId: 'vault-salary', gmailLabelId: 'L1', subjectFilter: 'salary' })]);
 
       await svc.handlePushNotification({ emailAddress: 'me@example.com', historyId: '250' });
 
-      expect(scriptRunner.run).not.toHaveBeenCalled();
+      expect(aiExtractor.extract).not.toHaveBeenCalled();
       expect(transactions.create).not.toHaveBeenCalled();
       expect(processed.record).toHaveBeenCalledWith('user-1', 'm1');
     });
@@ -449,14 +465,14 @@ describe('GmailService', () => {
 
       await svc.handlePushNotification({ emailAddress: 'me@example.com', historyId: '250' });
 
-      expect(scriptRunner.run).not.toHaveBeenCalled();
+      expect(aiExtractor.extract).not.toHaveBeenCalled();
       expect(transactions.create).not.toHaveBeenCalled();
       expect(processed.record).toHaveBeenCalledWith('user-1', 'm1');
     });
 
-    it('records but does not create when the script returns null (not a transaction)', async () => {
+    it('records but does not create when the extractor resolves null (not a transaction / matched:false)', async () => {
       processed.exists.mockResolvedValue(false);
-      scriptRunner.run.mockReturnValue(null);
+      aiExtractor.extract.mockResolvedValue(null);
 
       await svc.handlePushNotification({ emailAddress: 'me@example.com', historyId: '250' });
 
@@ -464,11 +480,9 @@ describe('GmailService', () => {
       expect(processed.record).toHaveBeenCalledWith('user-1', 'm1');
     });
 
-    it('records but does not create when the script output is invalid (AppError swallowed)', async () => {
+    it('records but does not create when the extractor throws (AppError swallowed)', async () => {
       processed.exists.mockResolvedValue(false);
-      scriptRunner.run.mockImplementation(() => {
-        throw new AppError('bad shape', 400);
-      });
+      aiExtractor.extract.mockRejectedValue(new AppError('bad shape', 400));
 
       await svc.handlePushNotification({ emailAddress: 'me@example.com', historyId: '250' });
 
@@ -476,12 +490,12 @@ describe('GmailService', () => {
       expect(processed.record).toHaveBeenCalledWith('user-1', 'm1');
     });
 
-    it('skips a message already in the ledger (replay) without running the script', async () => {
+    it('skips a message already in the ledger (replay) without calling the AI extractor', async () => {
       processed.exists.mockResolvedValue(true);
 
       await svc.handlePushNotification({ emailAddress: 'me@example.com', historyId: '250' });
 
-      expect(scriptRunner.run).not.toHaveBeenCalled();
+      expect(aiExtractor.extract).not.toHaveBeenCalled();
       expect(transactions.create).not.toHaveBeenCalled();
       expect(processed.record).not.toHaveBeenCalled();
     });

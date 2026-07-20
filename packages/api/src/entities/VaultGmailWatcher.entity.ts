@@ -5,10 +5,10 @@ import { BaseEntity } from './BaseEntity';
 
 /**
  * Per-vault Gmail bank-alert watcher. Attaches one Gmail label (plus an optional
- * subject substring) to one vault, plus a user-supplied JS script
- * (`function parse(email){...}`) that turns a matching email into a transaction
- * created in that vault. The set of watched labels for a user is derived as the
- * union of `gmailLabelId` across their (non-deleted) rows; `UserOAuthCredential`
+ * subject substring and free-text guidance hint) to one vault; a matching email
+ * is turned into a transaction by an AI extractor (`GmailAiExtractorService`),
+ * not a user-supplied script. The set of watched labels for a user is derived as
+ * the union of `gmailLabelId` across their (non-deleted) rows; `UserOAuthCredential`
  * keeps only the single-mailbox watch bookkeeping.
  *
  * Indexes:
@@ -38,12 +38,9 @@ export class VaultGmailWatcher extends BaseEntity {
   @Column({ type: 'varchar', nullable: true })
   subjectFilter: string | null;
 
-  @Column({ type: 'text' })
-  parseScript: string;
-
-  /** Tag ids applied to every transaction this watcher creates. */
-  @Column({ type: 'simple-json', nullable: true })
-  tagIds: string[] | null;
+  /** Optional free-text nudge appended to the AI extraction prompt. */
+  @Column({ type: 'text', nullable: true })
+  guidanceHint: string | null;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })

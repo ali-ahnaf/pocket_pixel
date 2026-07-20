@@ -245,7 +245,7 @@ export default function GoogleOAuthSettingsPage() {
               </div>
             )}
 
-            {/* Bank-alert watch — attach a Gmail label + parse script per vault */}
+            {/* Bank-alert watch — attach a Gmail label per vault; AI extracts the transaction */}
             {!statusLoading && connected && (
               <div className="px-6 py-6 border-t-4 border-black flex flex-col gap-4">
                 <div className="flex items-center gap-2">
@@ -254,8 +254,7 @@ export default function GoogleOAuthSettingsPage() {
                 </div>
 
                 <p className="text-[12px] text-on-surface-variant">
-                  Attach a Gmail label to a vault and write a small script that turns a matching email into a transaction. New emails under an attached label run that vault&apos;s script and land as
-                  transactions in that vault automatically.
+                  Attach a Gmail label to a vault. AI reads each matching email and fills in the transaction — amount, title, type and tags — automatically.
                 </p>
 
                 {watchStatus?.watching ? (

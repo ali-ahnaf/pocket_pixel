@@ -19,6 +19,8 @@ import type {
   GmailWatchStatusDto,
   VaultGmailWatcherDto,
   SetVaultGmailWatcherInput,
+  AiExtractResultDto,
+  TestExtractInput,
 } from '@expense-tracker/shared';
 import ApiClient from './ApiClient';
 
@@ -70,7 +72,7 @@ export default class ProfileApi extends ApiClient {
     return this.get<GmailWatchStatusDto>(`/users/${userId}/oauth-credentials/gmail/watch`);
   }
 
-  // Per-vault Gmail watchers (label + parse script)
+  // Per-vault Gmail watchers (label + AI extraction guidance)
   getVaultWatchers(userId: string): Promise<VaultGmailWatcherDto[]> {
     return this.get<VaultGmailWatcherDto[]>(`/users/${userId}/vault-watchers`);
   }
@@ -81,6 +83,11 @@ export default class ProfileApi extends ApiClient {
 
   deleteVaultWatcher(userId: string, vaultId: string): Promise<void> {
     return this.delete<void>(`/users/${userId}/vault-watchers/${vaultId}`);
+  }
+
+  /** Dry-run: preview what the AI extractor would resolve from a pasted sample email, without saving a watcher. */
+  testExtract(userId: string, input: TestExtractInput): Promise<AiExtractResultDto> {
+    return this.post<AiExtractResultDto>(`/users/${userId}/vault-watchers/test`, input);
   }
 
   // Vaults
