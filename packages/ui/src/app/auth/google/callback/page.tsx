@@ -50,7 +50,7 @@ export default function GoogleCallbackPage() {
       return () => clearTimeout(timer);
     }
 
-    setSession(token, { id: decoded.userId, name: decoded.name, email: decoded.email, avatar: decoded.avatar });
+    setSession({ id: decoded.userId, name: decoded.name, email: decoded.email, avatar: decoded.avatar });
     router.replace('/');
   }, [router, setSession]);
 
