@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { PROFILE_STORAGE_KEY } from '@/lib/api/ApiClient';
 import PixelLoader from '@/components/PixelLoader';
 
-const PUBLIC_PATHS = ['/signin', '/signup', '/forgot-password', '/reset-password', '/auth/google/callback'];
+const PUBLIC_PATHS = ['/signin', '/signup', '/forgot-password', '/reset-password'];
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
