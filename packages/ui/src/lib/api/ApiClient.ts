@@ -1,33 +1,21 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, Method } from 'axios';
 
-export const AUTH_TOKEN_STORAGE_KEY = 'auth_token';
 export const PROFILE_STORAGE_KEY = 'pocket_pixel_profile';
 const SIGN_IN_PATH = '/signin';
 
-export function getStoredAuthToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return window.localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
-}
-
 /**
- * Handle an expired/invalid session. Clears stored credentials then navigates
+ * Handle an expired/invalid session. Clears stored profile then navigates
  * to /signin. Guards against redirect loops — normalises trailing slash since
  * next.config.js has trailingSlash: true (pathname may be '/signin/').
  */
 function handleUnauthorized(): void {
   if (typeof window === 'undefined') return;
-  window.localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
   window.localStorage.removeItem(PROFILE_STORAGE_KEY);
   const current = window.location.pathname.replace(/\/$/, '');
   if (current !== SIGN_IN_PATH) {
-    // Use Next.js client-side navigation to avoid a full reload and keep the
-    // SPA shell alive. Falls back to location.href if the router isn't available.
     try {
-      // Dynamically import to avoid circular deps; works reliably in browser.
       import('next/navigation')
-        .then(({ useRouter: _unused, ...mod }) => {
-          // next/navigation router is hook-only; use the global router instance
-          // exposed by Next 13+ App Router.
+        .then(() => {
           window.location.href = SIGN_IN_PATH;
         })
         .catch(() => {
@@ -46,6 +34,7 @@ export default class ApiClient {
   constructor(baseURL: string, baseConfig?: AxiosRequestConfig) {
     this.axiosInstance = axios.create({
       baseURL,
+      withCredentials: true,
       ...baseConfig,
     });
 
@@ -57,24 +46,20 @@ export default class ApiClient {
   }
 
   private async request<T = any>(method: Method, url: string, config: AxiosRequestConfig = {}): Promise<T> {
-    const authToken = getStoredAuthToken();
     try {
       const response: AxiosResponse<T> = await this.axiosInstance.request({
         method,
         url,
         ...config,
-        headers: {
-          ...(config.headers ?? {}),
-          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-        },
       });
 
       return response.data;
     } catch (error: any) {
-      // Only treat a 401 as an expired session when we actually sent a token.
-      // A 401 from an unauthenticated request (e.g. a failed sign-in) is an
-      // expected error the caller should surface, not a reason to redirect.
-      if (error.response?.status === 401 && authToken) {
+      console.log('error', error);
+      // Skip redirect for auth endpoints themselves â€” a failed sign-in/sign-up
+      // is an expected error the caller should surface, not a reason to redirect.
+      const isAuthEndpoint = url.includes('/sign-in') || url.includes('/sign-up');
+      if (error.response?.status === 401 && !isAuthEndpoint) {
         handleUnauthorized();
       }
       if (error.response?.data instanceof Blob) {
