@@ -8,16 +8,14 @@ import { DebtsService } from './debts.service';
 import { AnalyticsService } from './analytics.service';
 import { RecurringService } from './recurring.service';
 import { AuthService } from './auth.service';
-import { PromptService } from './prompt.service';
-import { WizardService } from './wizard.service';
 import { PreferencesService } from './preferences.service';
 import { BackupService } from './backup.service';
 import { UserOAuthCredentialService } from './user-oauth-credential.service';
-import { GmailAiExtractorService } from './gmail-ai-extractor.service';
 import { PushService } from './push.service';
 import { GmailService } from './gmail.service';
 import { VaultWatchersService } from './vault-watchers.service';
 import { UserAiCredentialService } from './user-ai-credential.service';
+import { PendingGmailExpenseService } from './pending-gmail-expense.service';
 
 export const utilService = new UtilService();
 export const logger = new Logger();
@@ -29,16 +27,14 @@ export const debtsService = new DebtsService();
 export const analyticsService = new AnalyticsService();
 export const recurringService = new RecurringService();
 export const authService = new AuthService();
-export const promptService = new PromptService();
-export const wizardService = new WizardService();
 export const preferencesService = new PreferencesService();
 export const backupService = new BackupService();
 export const userOAuthCredentialService = new UserOAuthCredentialService();
-export const gmailAiExtractorService = new GmailAiExtractorService();
 export const pushService = new PushService();
 export const gmailService = new GmailService();
 export const vaultWatchersService = new VaultWatchersService();
 export const userAiCredentialService = new UserAiCredentialService();
+export const pendingGmailExpenseService = new PendingGmailExpenseService();
 
 export {
   UtilService,
@@ -51,14 +47,12 @@ export {
   AnalyticsService,
   RecurringService,
   AuthService,
-  PromptService,
-  WizardService,
   PreferencesService,
   BackupService,
   UserOAuthCredentialService,
-  GmailAiExtractorService,
   PushService,
   GmailService,
   VaultWatchersService,
   UserAiCredentialService,
+  PendingGmailExpenseService,
 };

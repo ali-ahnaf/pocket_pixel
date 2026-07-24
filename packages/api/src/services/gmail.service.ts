@@ -5,16 +5,14 @@ import { UserOAuthCredential } from '../entities/UserOAuthCredential.entity';
 import { UserOAuthCredentialRepository } from '../repositories/user-oauth-credential.repository';
 import { ProcessedGmailMessageRepository } from '../repositories/processed-gmail-message.repository';
 import { VaultGmailWatchersRepository } from '../repositories/vault-gmail-watchers.repository';
-import { TagsRepository } from '../repositories/tags.repository';
 import { VaultsRepository } from '../repositories/vaults.repository';
-import { userOAuthCredentialRepository, processedGmailMessageRepository, vaultGmailWatchersRepository, tagsRepository, vaultsRepository } from '../repositories';
+import { userOAuthCredentialRepository, processedGmailMessageRepository, vaultGmailWatchersRepository, vaultsRepository } from '../repositories';
 import { UserOAuthCredentialService } from './user-oauth-credential.service';
-import { TransactionsService } from './transactions.service';
-import { GmailAiExtractorService } from './gmail-ai-extractor.service';
+import { PendingGmailExpenseService } from './pending-gmail-expense.service';
 import { PushService } from './push.service';
 import { PubSubNotification } from '../utils/gmail-webhook.util';
 import { extractMessageContent } from '../utils/gmail-message.util';
-import { userOAuthCredentialService, transactionsService, gmailAiExtractorService, pushService, logger } from '.';
+import { userOAuthCredentialService, pendingGmailExpenseService, pushService, logger } from '.';
 
 /** Base for all `users.me` Gmail REST calls; reused by the history-diff phase. */
 export const GMAIL_API_BASE = 'https://gmail.googleapis.com/gmail/v1/users/me';
@@ -59,19 +57,18 @@ interface GmailWatchResponse {
  * encrypt/decrypt stays inside `UserOAuthCredentialService` — this service only
  * touches the plaintext watch-bookkeeping columns (`gmailHistoryId`,
  * `gmailWatchExpiry`) via the repository. The watched-label set is derived from
- * the user's `VaultGmailWatcher` rows, and a matching message is turned into a
- * transaction by `GmailAiExtractorService`, given the user's tags for AI-driven
- * categorisation.
+ * the user's `VaultGmailWatcher` rows, and a matching message is enqueued as a
+ * `PendingGmailExpense` pointer via `PendingGmailExpenseService` — no email body
+ * is stored and no AI runs server-side; the user parses it client-side later,
+ * with their own OpenRouter key.
  */
 export class GmailService {
   constructor(
     private readonly oauth: UserOAuthCredentialService = userOAuthCredentialService,
     private readonly credentials: UserOAuthCredentialRepository = userOAuthCredentialRepository,
-    private readonly transactions: TransactionsService = transactionsService,
     private readonly processedMessages: ProcessedGmailMessageRepository = processedGmailMessageRepository,
     private readonly watchers: VaultGmailWatchersRepository = vaultGmailWatchersRepository,
-    private readonly tags: TagsRepository = tagsRepository,
-    private readonly aiExtractor: GmailAiExtractorService = gmailAiExtractorService,
+    private readonly pendingExpenses: PendingGmailExpenseService = pendingGmailExpenseService,
     private readonly vaults: VaultsRepository = vaultsRepository,
     private readonly push: PushService = pushService,
   ) {}
@@ -302,15 +299,15 @@ export class GmailService {
   }
 
   /**
-   * Turns one fetched Gmail message into a transaction, idempotently: a message
-   * already in the ledger is skipped **before any model call**, so a Pub/Sub
-   * replay never double-inserts nor pays for a second extraction. The message is
-   * matched to a vault watcher by label **and subject**; that watcher's email +
-   * the user's tag list are sent to the AI extractor and, on a valid result, a
-   * transaction is created **in that vault**. No matching watcher, a
-   * `matched: false` result, or an invalid extraction all fall through to
-   * `record` so the message isn't re-processed. The transaction is created only
-   * through `TransactionsService` — the extractor never touches storage.
+   * Turns one fetched Gmail message into a pending review item, idempotently: a
+   * message already in the ledger is skipped **before any work**, so a Pub/Sub
+   * replay never double-enqueues. The message is matched to a vault watcher by
+   * label **and subject**; on a match, only a pointer (`gmailMessageId` +
+   * `vaultId` + `guidanceHint`) is enqueued via `PendingGmailExpenseService` — no
+   * email body is stored and no AI runs server-side (the email is re-fetched and
+   * parsed client-side, with the user's own OpenRouter key, when they review the
+   * pending item). No matching watcher falls straight through to `record` so the
+   * message isn't re-processed.
    */
   private async handleMessage(userId: string, message: GmailMessage): Promise<void> {
     if (await this.processedMessages.exists(userId, message.id)) return;
@@ -318,34 +315,18 @@ export class GmailService {
     const content = extractMessageContent(message);
     const watcher = await this.matchWatcher(userId, message.labelIds ?? [], content.subject);
     if (watcher) {
-      const tags = (await this.tags.findManyForUser(userId)).map((tag) => ({ id: tag.id, name: tag.name }));
+      await this.pendingExpenses.enqueue(userId, {
+        gmailMessageId: message.id,
+        vaultId: watcher.vaultId,
+        guidanceHint: watcher.guidanceHint,
+      });
 
-      let parsed = null;
-      try {
-        parsed = await this.aiExtractor.extract(content, tags, watcher.guidanceHint);
-      } catch (err) {
-        // Invalid/unreachable model output (AppError) — skip this message, don't retry.
-        logger.warn('Gmail AI extractor produced an invalid result, skipping', { userId, vaultId: watcher.vaultId, messageId: message.id, err });
-      }
-      if (parsed) {
-        await this.transactions.create(userId, {
-          amount: parsed.amount,
-          type: parsed.type,
-          title: parsed.title.toLowerCase(),
-          date: parsed.date,
-          vaultId: watcher.vaultId,
-          tagIds: parsed.tagIds.length ? parsed.tagIds : undefined,
-          isCommitted: false,
-        });
-        logger.info('Created transaction from Gmail watcher', { userId, messageId: message.id, vaultId: watcher.vaultId, type: parsed.type });
-
-        const vault = await this.vaults.findOneForUser(userId, watcher.vaultId);
-        await this.push.notify(userId, {
-          title: 'New transaction',
-          body: `${parsed.type === 'income' ? 'Income' : 'Expense'} of ${parsed.amount} in ${vault?.name ?? 'your vault'}`,
-          url: '/transactions',
-        });
-      }
+      const vault = await this.vaults.findOneForUser(userId, watcher.vaultId);
+      await this.push.notify(userId, {
+        title: 'Pending expense to review',
+        body: `A new email in ${vault?.name ?? 'your vault'} is ready to review`,
+        url: '/transactions',
+      });
     }
 
     await this.processedMessages.record(userId, message.id);

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useDisplaySettings } from '@/hooks/useDisplaySettings';
-import { Button, Card, ProgressBar, LogResourceModal, AppBar, BottomNavBar, DesktopSidebar, EditTransactionModal, AdjustBalanceModal } from '@/components';
+import { Button, Card, ProgressBar, LogResourceModal, AppBar, BottomNavBar, DesktopSidebar, EditTransactionModal, AdjustBalanceModal, PendingExpensesPanel } from '@/components';
 import { iconMapper } from '@/lib/iconMapper';
 import { profileApi } from '@/lib/api';
 import { formatCurrency, formatDate, formatTime } from '@/lib/helpers/formatters';
@@ -332,6 +332,8 @@ export default function DashboardPage() {
               <ChevronRight />
             </Button>
           </section>
+
+          <PendingExpensesPanel userId={userId} />
 
           {/* Dashboard Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-stack-md lg:flex-1 lg:min-h-0 lg:grid-rows-[minmax(0,1fr)_auto]">
