@@ -1,11 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { X, FlaskConical, CheckCircle2, XCircle } from 'lucide-react';
 import type { AiExtractResultDto, TagDto } from '@expense-tracker/shared';
 import { Button } from '@/components/Button';
 import { profileApi } from '@/lib/api';
 import { iconMapper } from '@/lib/iconMapper';
+import { useDekSession } from '@/hooks/useDekSession';
+import { decryptKey } from '@/lib/crypto/ai-key';
+import { extractTransactionFromEmail, toAiExtractResult } from '@/lib/ai/gmail-extractor';
 
 interface TestExtractModalProps {
   isOpen: boolean;
@@ -21,6 +25,7 @@ interface TestExtractModalProps {
  * a transaction.
  */
 export function TestExtractModal({ isOpen, onClose, userId, guidanceHint, tags }: TestExtractModalProps): JSX.Element | null {
+  const { dek, loading: dekLoading } = useDekSession();
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isVisible, setIsVisible] = useState(false);
   const [from, setFrom] = useState('');
@@ -29,6 +34,7 @@ export function TestExtractModal({ isOpen, onClose, userId, guidanceHint, tags }
   const [testing, setTesting] = useState(false);
   const [result, setResult] = useState<AiExtractResultDto | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [needsAiSetup, setNeedsAiSetup] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -37,6 +43,7 @@ export function TestExtractModal({ isOpen, onClose, userId, guidanceHint, tags }
       setBodyText('');
       setResult(null);
       setError(null);
+      setNeedsAiSetup(false);
       setShouldRender(true);
       const t = setTimeout(() => setIsVisible(true), 20);
       return () => clearTimeout(t);
@@ -51,19 +58,47 @@ export function TestExtractModal({ isOpen, onClose, userId, guidanceHint, tags }
 
   const canTest = bodyText.trim().length > 0;
 
+  /**
+   * Runs the same client-side extractor as the pending-expense flow
+   * (`lib/ai/gmail-extractor.ts`) against the pasted sample, using the user's
+   * own E2E-encrypted OpenRouter key. No server round-trip — see
+   * documentation/openrouter-ai-migration.md (T12).
+   */
   const handleTest = async (): Promise<void> => {
     if (!canTest) return;
     setTesting(true);
     setError(null);
     setResult(null);
+    setNeedsAiSetup(false);
     try {
-      const response = await profileApi.testExtract(userId, {
-        sample: { from: from.trim(), subject: subject.trim(), bodyText },
+      if (dekLoading) {
+        throw new Error('Still unlocking your encryption key — try again in a moment.');
+      }
+      if (!dek) {
+        throw new Error('Your encryption key is not unlocked in this session. Please log out and log back in to unlock it, then try again.');
+      }
+
+      const status = await profileApi.getAiCredentialStatus(userId);
+      if (!status.hasKey || !status.keyCiphertext || !status.keyIv) {
+        setNeedsAiSetup(true);
+        throw new Error('Set up your OpenRouter API key in Settings before testing.');
+      }
+      if (!status.selectedModel) {
+        setNeedsAiSetup(true);
+        throw new Error('Pick an OpenRouter model in Settings before testing.');
+      }
+
+      const apiKey = await decryptKey(status.keyCiphertext, status.keyIv, dek);
+      const parsed = await extractTransactionFromEmail({
+        apiKey,
+        model: status.selectedModel,
+        email: { from: from.trim(), subject: subject.trim(), bodyText, emailDate: null },
+        tags: tags.map((tag) => ({ id: tag.id, name: tag.name })),
         guidanceHint: guidanceHint.trim() || undefined,
       });
-      setResult(response);
+      setResult(toAiExtractResult(parsed));
     } catch (err) {
-      setError(profileApi.parseError(err));
+      setError(err instanceof Error ? err.message : profileApi.parseError(err));
     } finally {
       setTesting(false);
     }
@@ -123,7 +158,16 @@ export function TestExtractModal({ isOpen, onClose, userId, guidanceHint, tags }
             />
           </div>
 
-          {error && <p className="font-mono text-label-caps text-error uppercase border-4 border-black bg-surface-container p-3">{error}</p>}
+          {error && (
+            <div className="border-4 border-black bg-surface-container p-3 space-y-2">
+              <p className="font-mono text-label-caps text-error uppercase">{error}</p>
+              {needsAiSetup && (
+                <Link href="/settings/ai" onClick={onClose} className="inline-block font-label-caps text-primary underline underline-offset-2">
+                  GO TO SETTINGS
+                </Link>
+              )}
+            </div>
+          )}
 
           {result && (
             <div className="border-4 border-black bg-surface-container p-4 flex flex-col gap-2">

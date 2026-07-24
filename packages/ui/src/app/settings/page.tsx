@@ -55,7 +55,7 @@ function SettingLink({ label, description, icon: Icon, href }: SettingLinkProps)
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center justify-between gap-4 bg-surface p-4 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)] hover:bg-primary hover:text-on-primary active:translate-y-0.5 transition-colors"
+      className="group flex items-center justify-between gap-4 bg-surface p-4 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)] hover:bg-primary hover:text-on-primary active:translate-y-0.5 transition-colors"
     >
       <div className="flex items-center gap-3 min-w-0">
         <div className="h-10 w-10 border-2 border-black flex items-center justify-center shrink-0 bg-secondary-container">
@@ -63,7 +63,7 @@ function SettingLink({ label, description, icon: Icon, href }: SettingLinkProps)
         </div>
         <div className="min-w-0">
           <p className="font-body-sm font-bold truncate">{label}</p>
-          <p className="text-[12px] text-on-surface-variant truncate">{description}</p>
+          <p className="text-[12px] text-on-surface-variant truncate group-hover:text-on-primary">{description}</p>
         </div>
       </div>
 
@@ -115,7 +115,7 @@ export default function SettingsPage() {
 
             <Link
               href="/change-password"
-              className="flex items-center justify-between gap-4 bg-surface p-4 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)] hover:bg-primary hover:text-on-primary active:translate-y-0.5 transition-colors"
+              className="group flex items-center justify-between gap-4 bg-surface p-4 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)] hover:bg-primary hover:text-on-primary active:translate-y-0.5 transition-colors"
             >
               <div className="flex items-center gap-3 min-w-0">
                 <div className="h-10 w-10 border-2 border-black flex items-center justify-center shrink-0 bg-secondary-container">
@@ -124,7 +124,7 @@ export default function SettingsPage() {
 
                 <div className="min-w-0">
                   <p className="font-body-sm font-bold truncate">Change Password</p>
-                  <p className="text-[12px] text-on-surface-variant truncate">Update your secret passphrase</p>
+                  <p className="text-[12px] text-on-surface-variant truncate group-hover:text-on-primary">Update your secret passphrase</p>
                 </div>
               </div>
 
@@ -133,7 +133,7 @@ export default function SettingsPage() {
 
             <Link
               href="/settings/google-oauth"
-              className="flex items-center justify-between gap-4 bg-surface p-4 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)] hover:bg-primary hover:text-on-primary active:translate-y-0.5 transition-colors"
+              className="group flex items-center justify-between gap-4 bg-surface p-4 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)] hover:bg-primary hover:text-on-primary active:translate-y-0.5 transition-colors"
             >
               <div className="flex items-center gap-3 min-w-0">
                 <div className="h-10 w-10 border-2 border-black flex items-center justify-center shrink-0 bg-secondary-container">
@@ -142,7 +142,7 @@ export default function SettingsPage() {
 
                 <div className="min-w-0">
                   <p className="font-body-sm font-bold truncate">Setup Google OAuth</p>
-                  <p className="text-[12px] text-on-surface-variant truncate">Connect your own Google client credentials</p>
+                  <p className="text-[12px] text-on-surface-variant truncate group-hover:text-on-primary">Connect your own Google client credentials</p>
                 </div>
               </div>
 
@@ -151,7 +151,7 @@ export default function SettingsPage() {
 
             <Link
               href="/settings/ai"
-              className="flex items-center justify-between gap-4 bg-surface p-4 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)] hover:bg-primary hover:text-on-primary active:translate-y-0.5 transition-colors"
+              className="group flex items-center justify-between gap-4 bg-surface p-4 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)] hover:bg-primary hover:text-on-primary active:translate-y-0.5 transition-colors"
             >
               <div className="flex items-center gap-3 min-w-0">
                 <div className="h-10 w-10 border-2 border-black flex items-center justify-center shrink-0 bg-secondary-container">
@@ -160,7 +160,7 @@ export default function SettingsPage() {
 
                 <div className="min-w-0">
                   <p className="font-body-sm font-bold truncate">OpenRouter AI</p>
-                  <p className="text-[12px] text-on-surface-variant truncate">Save your key and pick an AI model</p>
+                  <p className="text-[12px] text-on-surface-variant truncate group-hover:text-on-primary">Save your key and pick an AI model</p>
                 </div>
               </div>
 
@@ -180,7 +180,7 @@ export default function SettingsPage() {
 
             <Link
               href="/settings/attributions"
-              className="flex items-center justify-between gap-4 bg-surface p-4 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)] hover:bg-primary hover:text-on-primary active:translate-y-0.5 transition-colors"
+              className="group flex items-center justify-between gap-4 bg-surface p-4 border-4 border-black shadow-[inset_2px_2px_0_rgba(255,255,255,0.08),inset_-2px_-2px_0_rgba(0,0,0,0.5)] hover:bg-primary hover:text-on-primary active:translate-y-0.5 transition-colors"
             >
               <div className="flex items-center gap-3 min-w-0">
                 <div className="h-10 w-10 border-2 border-black flex items-center justify-center shrink-0 bg-secondary-container">

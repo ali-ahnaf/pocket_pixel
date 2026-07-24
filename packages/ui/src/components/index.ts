@@ -34,3 +34,5 @@ export { PixelDatePicker } from './PixelDatePicker';
 export { QueryParamsProvider, useQueryParams } from './QueryParamsProvider';
 export { WizardFab } from './wizard/WizardFab';
 export { WizardChatSheet } from './wizard/WizardChatSheet';
+export { PendingExpensesPanel } from './pending-expenses/PendingExpensesPanel';
+export { PendingExpenseDetailModal } from './pending-expenses/PendingExpenseDetailModal';
