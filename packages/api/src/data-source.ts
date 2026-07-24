@@ -14,6 +14,7 @@ import { UserOAuthCredential } from './entities/UserOAuthCredential.entity';
 import { ProcessedGmailMessage } from './entities/ProcessedGmailMessage.entity';
 import { VaultGmailWatcher } from './entities/VaultGmailWatcher.entity';
 import { PushSubscription } from './entities/PushSubscription.entity';
+import { UserAiCredential } from './entities/UserAiCredential.entity';
 
 const isTsNode = !!(process as any)[Symbol.for('ts-node.register.instance')];
 
@@ -24,7 +25,21 @@ export const DB_PATH = process.env.NODE_ENV === 'production' ? '/var/www/pocket_
 export const AppDataSource = new DataSource({
   type: 'better-sqlite3',
   database: DB_PATH,
-  entities: [User, Expense, Vault, Tag, TransactionTag, RecurringOccurrenceSkip, Debt, UserPreference, UserOAuthCredential, ProcessedGmailMessage, VaultGmailWatcher, PushSubscription],
+  entities: [
+    User,
+    Expense,
+    Vault,
+    Tag,
+    TransactionTag,
+    RecurringOccurrenceSkip,
+    Debt,
+    UserPreference,
+    UserOAuthCredential,
+    ProcessedGmailMessage,
+    VaultGmailWatcher,
+    PushSubscription,
+    UserAiCredential,
+  ],
   migrations: [isTsNode ? 'src/migrations/*.ts' : 'dist/migrations/*.js'],
   synchronize: false,
   logging: false,

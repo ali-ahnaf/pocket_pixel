@@ -1,10 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { X, Coins, ChevronDown, Plus, Package, Sparkles, Send, SlidersHorizontal } from 'lucide-react';
 import { iconMapper } from '../lib/iconMapper';
 import { profileApi } from '../lib/api';
 import { TransactionTypeToggle } from './TransactionTypeToggle';
+import { useDekSession } from '../hooks/useDekSession';
+import { parseTransactionPrompt } from '../lib/ai/transaction-parser';
 import type { TagDto, VaultDto } from '@expense-tracker/shared';
 
 interface LogResourceModalProps {
@@ -17,10 +20,13 @@ interface LogResourceModalProps {
 }
 
 export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedMonth, selectedYear }: LogResourceModalProps) {
+  const { dek, loading: dekLoading } = useDekSession();
+
   const [manualEntry, setManualEntry] = useState(false);
   const [promptText, setPromptText] = useState('');
   const [isPrompting, setIsPrompting] = useState(false);
   const [promptResult, setPromptResult] = useState<string | null>(null);
+  const [promptNeedsAiSetup, setPromptNeedsAiSetup] = useState(false);
 
   const [isExpense, setIsExpense] = useState(true);
   const [amount, setAmount] = useState('');
@@ -48,6 +54,7 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
       setManualEntry(false);
       setPromptText('');
       setPromptResult(null);
+      setPromptNeedsAiSetup(false);
     }
     if (isOpen && userId) {
       profileApi.getTags(userId).then((res) => {
@@ -67,16 +74,26 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
     if (!promptText.trim() || isPrompting || !userId) return;
     setIsPrompting(true);
     setPromptResult(null);
+    setPromptNeedsAiSetup(false);
+
     try {
-      const res = await profileApi.sendPrompt(userId, promptText.trim());
+      const outcome = await parseTransactionPrompt({ userId, promptText, availableTags, vaults, dek, dekLoading });
+
+      if (outcome.status !== 'success') {
+        setPromptResult(outcome.message);
+        setPromptNeedsAiSetup(outcome.status === 'needs-ai-setup');
+        return;
+      }
+
+      const res = outcome.transaction;
       setTitle(res.title);
       setAmount(String(res.amount));
       setIsExpense(res.type === 'expense');
       setSelectedTags(availableTags.filter((tag) => res.tagIds.includes(tag.id)));
-      setSelectedVaultId(res?.vaultId ?? null);
+      setSelectedVaultId(res.vaultId ?? null);
       setManualEntry(true);
-    } catch {
-      setPromptResult('Something went wrong. Please try manual entry');
+    } catch (err) {
+      setPromptResult(profileApi.parseError(err));
       setManualEntry(true);
     } finally {
       setIsPrompting(false);
@@ -197,8 +214,13 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
                 <span className="font-headline-md font-black uppercase tracking-wider">{isPrompting ? 'SENDING...' : 'SEND'}</span>
               </button>
               {promptResult && (
-                <div className="p-4 bg-surface-container-lowest border-4 border-black shadow-[inset_4px_4px_0px_rgba(0,0,0,0.6)]">
+                <div className="p-4 bg-surface-container-lowest border-4 border-black shadow-[inset_4px_4px_0px_rgba(0,0,0,0.6)] space-y-2">
                   <p className="font-body-lg text-on-surface whitespace-pre-wrap">{promptResult}</p>
+                  {promptNeedsAiSetup && (
+                    <Link href="/settings/ai" onClick={onClose} className="inline-block font-label-caps text-primary underline underline-offset-2">
+                      GO TO SETTINGS
+                    </Link>
+                  )}
                 </div>
               )}
             </div>

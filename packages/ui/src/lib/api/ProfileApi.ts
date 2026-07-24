@@ -5,8 +5,6 @@ import type {
   TransactionDto,
   OccurrenceDto,
   RecurringDto,
-  ParsedTransaction,
-  UsageReport,
   DebtDto,
   DebtStatus,
   ChangePasswordPayload,
@@ -23,6 +21,9 @@ import type {
   TestExtractInput,
   PushSubscriptionInput,
   PushSubscriptionDto,
+  AiCredentialStatusDto,
+  SetAiCredentialInput,
+  SetAiModelInput,
 } from '@expense-tracker/shared';
 import ApiClient from './ApiClient';
 
@@ -122,13 +123,17 @@ export default class ProfileApi extends ApiClient {
     return this.put<VaultDto>(`/users/${userId}/vaults/${vaultId}/set-default`);
   }
 
-  // AI prompt
-  sendPrompt(userId: string, prompt: string): Promise<ParsedTransaction> {
-    return this.post<ParsedTransaction>(`/users/${userId}/prompt`, { prompt });
+  // OpenRouter AI credentials (E2E-encrypted key blobs, owner-only)
+  getAiCredentialStatus(userId: string): Promise<AiCredentialStatusDto> {
+    return this.get<AiCredentialStatusDto>(`/users/${userId}/ai-credentials`);
   }
 
-  getTokenUsage(userId: string): Promise<UsageReport> {
-    return this.get<UsageReport>(`/users/${userId}/prompt/usage`);
+  setAiCredential(userId: string, data: SetAiCredentialInput): Promise<AiCredentialStatusDto> {
+    return this.put<AiCredentialStatusDto>(`/users/${userId}/ai-credentials`, data);
+  }
+
+  setAiModel(userId: string, data: SetAiModelInput): Promise<AiCredentialStatusDto> {
+    return this.put<AiCredentialStatusDto>(`/users/${userId}/ai-credentials/model`, data);
   }
 
   // Tags
