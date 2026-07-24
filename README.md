@@ -26,20 +26,22 @@ Pocket Pixel is a **gamified personal finance tracker** built for people who wan
 - **Tags** — label transactions with custom icons and colors for granular analytics
 - **Analytics** — monthly and yearly breakdowns, tag-based insights
 - **Profiles** — pick your avatar and make it your own
+- **Transaction auto-import** — watch a Gmail label (bank/card alerts) and turn matching emails into transactions automatically, no manual entry
+- **AI-Assisted Parsing** — a review queue for emails that need a closer look; parsed client-side in your browser using your own OpenRouter API key
+- **Wizard Assistant** — an in-character chat guide that reads your vaults/transactions and gives spending advice, also powered by your own AI key
+- **Push Notifications** — get pinged when a new pending expense is waiting for review
+
+### 🔐 User-managed, not shared
+
+Pocket Pixel doesn't ship with a shared Google OAuth client or a shared AI API key. Every user connects **their own** Gmail OAuth client and brings **their own** OpenRouter key:
+
+- Gmail OAuth credentials are encrypted at rest on the server (AES-256-GCM).
+- The OpenRouter key is encrypted **client-side** (DEK-based, end-to-end) before it ever leaves your browser — the server only ever stores opaque ciphertext and never sees your plaintext key.
+- No email body is parsed or stored server-side. Matching emails are held as a pointer (message id + vault) in a pending queue; the actual parsing happens in your browser with your own key.
+
+See [`documentation/gmail-integration.md`](documentation/gmail-integration.md) for the full setup (GCP project, Pub/Sub, OAuth client, per-user onboarding).
 
 ---
-
-## Tech Stack
-
-| Layer           | Technology                                                  |
-| --------------- | ----------------------------------------------------------- |
-| Frontend        | Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS |
-| Backend         | Express.js, TypeORM, SQLite (better-sqlite3)                |
-| Auth            | JWT (30-day sessions), bcryptjs password hashing            |
-| Scheduling      | node-cron (recurring transaction automation)                |
-| Validation      | Joi                                                         |
-| Process Manager | PM2                                                         |
-| Monorepo        | npm workspaces                                              |
 
 ## Project Structure
 
@@ -48,10 +50,13 @@ pocket_pixel/
 ├── packages/
 │   ├── api/          # Express REST API + TypeORM entities
 │   │   └── src/
-│   │       ├── entities/     # User, Expense, Vault, Tag, TransactionTag
-│   │       ├── routes/       # auth, users, transactions, vaults, tags, recurring, analytics
+│   │       ├── entities/     # User, Expense, Vault, Tag, TransactionTag, VaultGmailWatcher, PendingGmailExpense
+│   │       ├── routes/       # auth, users, transactions, vaults, tags, recurring, analytics,
+│   │       │                 # vault-watchers, pending-expenses, ai-credentials, oauth (Google/Gmail)
+│   │       ├── services/     # gmail.service (watch + webhook), pending-gmail-expense, user-ai-credential,
+│   │       │                 # user-oauth-credential (encrypted Google tokens), ...
 │   │       ├── middleware/   # JWT auth, error handling
-│   │       └── scheduler/   # node-cron recurring job manager
+│   │       └── scheduler/   # node-cron recurring job manager + daily Gmail watch renewal
 │   │
 │   ├── ui/           # Next.js frontend
 │   │   └── src/
@@ -69,11 +74,6 @@ pocket_pixel/
 ---
 
 ## Getting Started
-
-### Prerequisites
-
-- Node.js ≥ 18
-- npm ≥ 9
 
 ### Clone the repo
 
@@ -136,7 +136,7 @@ All endpoints are prefixed with `/api`. Protected routes require an `Authorizati
 
 ---
 
-## Database Schema
+## Database
 
 SQLite database managed via TypeORM with migrations.
 
@@ -221,6 +221,19 @@ Three views to understand your spending:
 - **Monthly report** — income vs. expenses by month
 - **Yearly report** — long-term trend across all months
 
+### Gmail Auto-Import & AI Parsing
+
+Connect Gmail, pick a label (e.g. a filter that tags bank alert emails), and point it at a vault. Google pushes new mail to the API via Pub/Sub in real time:
+
+1. A confident, rule-based match is recorded straight as a transaction.
+2. Anything less certain is enqueued in a **pending review queue** instead — only the Gmail message id, vault, and a guidance hint are stored, never the email body.
+3. You get a **push notification**, open the pending item in the UI, and it's parsed **client-side**, in your browser, using your own OpenRouter API key.
+4. Confirm and it becomes a transaction; dismiss and it's cleared from the queue.
+
+The **Wizard Assistant** chat (Settings → AI) uses the same client-side OpenRouter key to answer questions about your spending — nothing is sent to Pocket Pixel's own servers for either feature.
+
+Full setup (GCP project, Pub/Sub topic/subscription, OAuth client, per-user onboarding): [`documentation/gmail-integration.md`](documentation/gmail-integration.md).
+
 ---
 
 ## Contributing
@@ -259,11 +272,11 @@ Open an issue with:
 ## ⚔️ The Adventuring Party
 
 ```
-    ╔═══════════════════════════════════════════════════╗
-    ║   ★  P A R T Y   R O S T E R  ★                    ║
-    ║   These brave heroes joined the quest to slay      ║
-    ║   the dreaded budget-goblins of Pocket Pixel.      ║
-    ╚═══════════════════════════════════════════════════╝
+                              ╔═══════════════════════════════════════════════════╗
+                              ║   ★  P A R T Y   R O S T E R  ★                    ║
+                              ║   These brave heroes joined the quest to slay      ║
+                              ║   the dreaded budget-goblins of Pocket Pixel.      ║
+                              ╚═══════════════════════════════════════════════════╝
 ```
 
 <div align="center">

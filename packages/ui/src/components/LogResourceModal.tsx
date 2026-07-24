@@ -7,8 +7,25 @@ import { iconMapper } from '../lib/iconMapper';
 import { profileApi } from '../lib/api';
 import { TransactionTypeToggle } from './TransactionTypeToggle';
 import { useDekSession } from '../hooks/useDekSession';
-import { parseTransactionPrompt } from '../lib/ai/transaction-parser';
-import type { TagDto, VaultDto } from '@expense-tracker/shared';
+import { decryptKey } from '../lib/crypto/ai-key';
+import { chat, type JsonSchemaResponseFormat } from '../lib/ai/openrouter';
+import type { TagDto, VaultDto, ParsedTransaction } from '@expense-tracker/shared';
+
+// What the model returns: tags and vault by name, never by id.
+interface ModelTransaction {
+  title: string;
+  amount: number;
+  type: 'expense' | 'income';
+  tags: string[];
+  vault: string | null;
+}
+
+type TransactionPromptOutcome =
+  | { status: 'success'; transaction: ParsedTransaction }
+  | { status: 'needs-ai-setup'; message: string }
+  | { status: 'dek-loading'; message: string }
+  | { status: 'dek-unavailable'; message: string }
+  | { status: 'unparseable'; message: string };
 
 interface LogResourceModalProps {
   isOpen: boolean;
@@ -70,6 +87,97 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
     }
   }, [isOpen, userId]);
 
+  /**
+   * Sends `promptText` to the user's chosen OpenRouter model, constrained to a
+   * JSON schema built from `availableTags`/`vaults` so the model can only pick
+   * existing tag/vault names, then maps the result back to ids. Throws on
+   * network/decrypt/chat failures — caller surfaces those via `profileApi.parseError(err)`.
+   */
+  const parseTransactionPrompt = async (): Promise<TransactionPromptOutcome> => {
+    const status = await profileApi.getAiCredentialStatus(userId!);
+    if (!status.hasKey || !status.selectedModel || !status.keyCiphertext || !status.keyIv) {
+      return { status: 'needs-ai-setup', message: 'Set up your OpenRouter API key and pick a model in Settings before parsing prompts.' };
+    }
+
+    if (dekLoading) {
+      return { status: 'dek-loading', message: 'Still unlocking your encryption key — try again in a moment.' };
+    }
+
+    if (!dek) {
+      return { status: 'dek-unavailable', message: 'Your encryption key is not unlocked in this session. Please log out and log back in to unlock it, then try again.' };
+    }
+
+    const apiKey = await decryptKey(status.keyCiphertext, status.keyIv, dek);
+
+    const tagList = availableTags.map((tag) => `- ${tag.name}`).join('\n');
+    const vaultList = vaults.map((vault) => vault.name).join(', ');
+    const seedPrompt = `This is an expense tracker app. Translate the user's prompt into a transaction.
+Only pick existing tag names from this list. Do not create new tags:
+${tagList}
+User's vaults: ${vaultList}
+Only pick a vault when the user explicitly names one from the list. Do not invent a vault, and return null when no vault is mentioned.
+"title" should be a short 3-4 word description of the transaction.
+
+prompt: ${promptText.trim()}`;
+
+    // Constrain tags/vault to existing names via an enum so the model cannot
+    // invent any. An empty enum is an invalid schema, so fall back to a plain
+    // string array (or nullable string) when empty.
+    const tagNames = availableTags.map((tag) => tag.name);
+    const vaultNames = vaults.map((vault) => vault.name);
+    const tagsSchema: Record<string, unknown> = tagNames.length > 0 ? { type: 'array', items: { type: 'string', enum: tagNames } } : { type: 'array', items: { type: 'string' } };
+    const vaultSchema: Record<string, unknown> = vaultNames.length > 0 ? { type: ['string', 'null'], enum: [...vaultNames, null] } : { type: ['string', 'null'] };
+
+    const responseFormat: JsonSchemaResponseFormat = {
+      type: 'json_schema',
+      json_schema: {
+        name: 'transaction',
+        strict: true,
+        schema: {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            amount: { type: 'number' },
+            type: { type: 'string', enum: ['expense', 'income'] },
+            tags: tagsSchema,
+            vault: vaultSchema,
+          },
+          required: ['title', 'amount', 'type', 'tags', 'vault'],
+          additionalProperties: false,
+        },
+      },
+    };
+
+    const content = await chat({
+      apiKey,
+      model: status.selectedModel,
+      messages: [{ role: 'user', content: seedPrompt }],
+      responseFormat,
+    });
+
+    let candidate: ModelTransaction;
+    try {
+      candidate = JSON.parse(content) as ModelTransaction;
+    } catch {
+      return { status: 'unparseable', message: 'AI response could not be parsed. Please try again.' };
+    }
+
+    // Map tag/vault names back to ids, case-insensitively, dropping anything the model invented.
+    const tagIdsByName = new Map(availableTags.map((tag) => [tag.name.toLowerCase(), tag.id]));
+    const vaultIdsByName = new Map(vaults.map((vault) => [vault.name.toLowerCase(), vault.id]));
+
+    const tagIds = Array.isArray(candidate.tags)
+      ? candidate.tags
+          .filter((name): name is string => typeof name === 'string')
+          .map((name) => tagIdsByName.get(name.toLowerCase()))
+          .filter((id): id is string => typeof id === 'string')
+      : [];
+
+    const vaultId = typeof candidate.vault === 'string' ? (vaultIdsByName.get(candidate.vault.toLowerCase()) ?? null) : null;
+
+    return { status: 'success', transaction: { title: candidate.title, amount: candidate.amount, type: candidate.type, tagIds, vaultId } };
+  };
+
   const handleSendPrompt = async () => {
     if (!promptText.trim() || isPrompting || !userId) return;
     setIsPrompting(true);
@@ -77,7 +185,7 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
     setPromptNeedsAiSetup(false);
 
     try {
-      const outcome = await parseTransactionPrompt({ userId, promptText, availableTags, vaults, dek, dekLoading });
+      const outcome = await parseTransactionPrompt();
 
       if (outcome.status !== 'success') {
         setPromptResult(outcome.message);
@@ -176,7 +284,7 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
 
       {/* Main Container (The Bottom Sheet) */}
       <div
-        className={`fixed bottom-0 left-0 right-0 md:left-1/2 md:-translate-x-1/2 z-[60] w-full max-w-md bg-surface-container-high border-4 border-black shadow-[inset_2px_2px_0px_rgba(255,255,255,0.1),_inset_-2px_-2px_0px_rgba(0,0,0,0.4)] flex flex-col mt-auto mx-auto max-h-[90vh] overflow-y-auto rounded-t-lg md:rounded-none transition-transform duration-300 ease-in-out ${
+        className={`fixed bottom-0 left-0 right-0 md:left-1/2 md:-translate-x-1/2 z-[60] w-full max-w-md md:max-w-2xl bg-surface-container-high border-4 border-black shadow-[inset_2px_2px_0px_rgba(255,255,255,0.1),_inset_-2px_-2px_0px_rgba(0,0,0,0.4)] flex flex-col mt-auto mx-auto max-h-[90vh] md:max-h-[95vh] overflow-y-auto rounded-t-lg md:rounded-none transition-transform duration-300 ease-in-out ${
           isVisible ? 'translate-y-0' : 'translate-y-full'
         }`}
       >

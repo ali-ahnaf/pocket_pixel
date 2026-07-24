@@ -17,13 +17,13 @@ import type {
   GmailWatchStatusDto,
   VaultGmailWatcherDto,
   SetVaultGmailWatcherInput,
-  AiExtractResultDto,
-  TestExtractInput,
   PushSubscriptionInput,
   PushSubscriptionDto,
   AiCredentialStatusDto,
   SetAiCredentialInput,
   SetAiModelInput,
+  PendingGmailExpenseDto,
+  PendingExpenseEmailDto,
 } from '@expense-tracker/shared';
 import ApiClient from './ApiClient';
 
@@ -97,9 +97,17 @@ export default class ProfileApi extends ApiClient {
     return this.delete<void>(`/users/${userId}/vault-watchers/${vaultId}`);
   }
 
-  /** Dry-run: preview what the AI extractor would resolve from a pasted sample email, without saving a watcher. */
-  testExtract(userId: string, input: TestExtractInput): Promise<AiExtractResultDto> {
-    return this.post<AiExtractResultDto>(`/users/${userId}/vault-watchers/test`, input);
+  // Gmail pending-expense queue (pointers only; email body is re-fetched live and never persisted)
+  getPendingExpenses(userId: string): Promise<PendingGmailExpenseDto[]> {
+    return this.get<PendingGmailExpenseDto[]>(`/users/${userId}/pending-expenses`);
+  }
+
+  getPendingExpenseEmail(userId: string, id: string): Promise<PendingExpenseEmailDto> {
+    return this.get<PendingExpenseEmailDto>(`/users/${userId}/pending-expenses/${id}/email`);
+  }
+
+  deletePendingExpense(userId: string, id: string): Promise<void> {
+    return this.delete<void>(`/users/${userId}/pending-expenses/${id}`);
   }
 
   // Vaults
