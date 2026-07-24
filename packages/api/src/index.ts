@@ -14,8 +14,6 @@ import vaultsRouter from './routes/vaults.routes';
 import tagsRouter from './routes/tags.routes';
 import recurringRouter from './routes/recurring.routes';
 import debtsRouter from './routes/debts.routes';
-import promptRouter from './routes/prompt.routes';
-import wizardRouter from './routes/wizard.routes';
 import preferencesRouter from './routes/preferences.routes';
 import BackupRouter from './routes/backup.routes';
 import oauthCredentialsRouter from './routes/oauth-credentials.routes';
@@ -23,6 +21,7 @@ import vaultWatchersRouter from './routes/vault-watchers.routes';
 import pushSubscriptionsRouter from './routes/push-subscriptions.routes';
 import oauthRouter from './routes/oauth.routes';
 import aiCredentialsRouter from './routes/ai-credentials.routes';
+import pendingExpensesRouter from './routes/pending-expenses.routes';
 import { authenticate, requireAuth } from './middleware/auth';
 import { errorHandler } from './middleware/error-handler';
 import { restoreAllRecurringJobs } from './scheduler/recurring-scheduler';
@@ -50,8 +49,6 @@ app.get('/health', (_req, res) => {
 app.use('/api/auth', authRouter);
 
 app.use('/api/users', requireAuth, usersRouter);
-app.use('/api/users/:userId/prompt', requireAuth, promptRouter);
-app.use('/api/users/:userId/wizard', requireAuth, wizardRouter);
 app.use('/api/users/:userId/transactions', requireAuth, transactionsRouter);
 app.use('/api/users/:userId/analytics', requireAuth, analyticsRouter);
 app.use('/api/users/:userId/vaults', requireAuth, vaultsRouter);
@@ -64,6 +61,7 @@ app.use('/api/users/:userId/oauth-credentials', requireAuth, oauthCredentialsRou
 app.use('/api/users/:userId/vault-watchers', requireAuth, vaultWatchersRouter);
 app.use('/api/users/:userId/push-subscriptions', requireAuth, pushSubscriptionsRouter);
 app.use('/api/users/:userId/ai-credentials', requireAuth, aiCredentialsRouter);
+app.use('/api/users/:userId/pending-expenses', requireAuth, pendingExpensesRouter);
 
 // Public Google OAuth callback — no requireAuth; the user id rides in a signed state.
 app.use('/api/oauth', oauthRouter);
