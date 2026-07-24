@@ -47,6 +47,7 @@ export default function ChangePasswordPage() {
 
     try {
       await profileApi.changePassword(user.id, { currentPassword, newPassword });
+      // TODO(T4/T8): re-derive KEK from newPassword, re-wrap the DEK (@/lib/crypto/ai-key), and PUT the updated wrappedDek/salt once the ai-credentials endpoint exists.
       setSuccess(true);
       setCurrentPassword('');
       setNewPassword('');

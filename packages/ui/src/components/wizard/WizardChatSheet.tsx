@@ -3,13 +3,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { Wand2, X } from 'lucide-react';
 import ReactMarkdown, { Components } from 'react-markdown';
-import { WIZARD_PROMPT_KEYS, WizardPromptKey } from '@expense-tracker/shared';
-import { wizardApi } from '@/lib/api';
+import { TransactionDto, VaultDto, WIZARD_PROMPT_KEYS, WizardPromptKey } from '@expense-tracker/shared';
+import { useDekSession } from '@/hooks/useDekSession';
+import { profileApi } from '@/lib/api';
+import { decryptKey } from '@/lib/crypto/ai-key';
+import { getWizardResponse } from '@/lib/ai/wizard';
 
 interface WizardChatSheetProps {
   isOpen: boolean;
   onClose: () => void;
   userId: string | null;
+  transactions: TransactionDto[];
+  vaults: VaultDto[];
 }
 
 interface ChatMessage {
@@ -58,7 +63,8 @@ function TypingIndicator() {
   );
 }
 
-export function WizardChatSheet({ isOpen, onClose, userId }: WizardChatSheetProps) {
+export function WizardChatSheet({ isOpen, onClose, userId, transactions, vaults }: WizardChatSheetProps) {
+  const { dek, loading: dekLoading } = useDekSession();
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isVisible, setIsVisible] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -95,10 +101,26 @@ export function WizardChatSheet({ isOpen, onClose, userId }: WizardChatSheetProp
     setMessages((prev) => [...prev, { id: nextId.current++, role: 'user', text: PROMPT_LABELS[promptKey] }]);
     setIsLoading(true);
     try {
-      const { message } = await wizardApi.chat(userId, promptKey);
+      if (dekLoading) {
+        throw new Error('Still unlocking your encryption key — try again in a moment.');
+      }
+      if (!dek) {
+        throw new Error('Your encryption key is not unlocked in this session. Please log out and log back in to unlock it, then try again.');
+      }
+
+      const status = await profileApi.getAiCredentialStatus(userId);
+      if (!status.hasKey || !status.keyCiphertext || !status.keyIv) {
+        throw new Error('Save an OpenRouter API key in Settings before asking the wizard.');
+      }
+      if (!status.selectedModel) {
+        throw new Error('Pick an OpenRouter model in Settings before asking the wizard.');
+      }
+
+      const apiKey = await decryptKey(status.keyCiphertext, status.keyIv, dek);
+      const message = await getWizardResponse(promptKey, transactions, vaults, apiKey, status.selectedModel);
       setMessages((prev) => [...prev, { id: nextId.current++, role: 'wizard', text: message }]);
-    } catch {
-      setError('The wizard could not conjure a response. Try again, adventurer.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'The wizard could not conjure a response. Try again, adventurer.');
     } finally {
       setIsLoading(false);
     }

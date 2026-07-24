@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { WizardChatResponse, WizardPromptKey } from '@expense-tracker/shared';
+import { WizardPromptKey } from '@expense-tracker/shared';
 import { AppError } from '../errors/app-error';
 import { Expense } from '../entities/Expense.entity';
 import { TransactionsRepository } from '../repositories/transactions.repository';
@@ -61,7 +61,7 @@ export class WizardService {
     return this.client;
   }
 
-  async chat(userId: string, promptKey: WizardPromptKey): Promise<WizardChatResponse> {
+  async chat(userId: string, promptKey: WizardPromptKey): Promise<any> {
     if (!process.env.OPENAI_API_KEY) {
       throw new AppError('OPENAI_API_KEY is not configured', 500);
     }

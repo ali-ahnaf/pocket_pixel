@@ -10,6 +10,7 @@ import { UserOAuthCredentialRepository } from './user-oauth-credential.repositor
 import { ProcessedGmailMessageRepository } from './processed-gmail-message.repository';
 import { VaultGmailWatchersRepository } from './vault-gmail-watchers.repository';
 import { PushSubscriptionRepository } from './push-subscription.repository';
+import { UserAiCredentialRepository } from './user-ai-credential.repository';
 
 export const transactionsRepository = new TransactionsRepository();
 export const usersRepository = new UsersRepository();
@@ -23,6 +24,7 @@ export const userOAuthCredentialRepository = new UserOAuthCredentialRepository()
 export const processedGmailMessageRepository = new ProcessedGmailMessageRepository();
 export const vaultGmailWatchersRepository = new VaultGmailWatchersRepository();
 export const pushSubscriptionRepository = new PushSubscriptionRepository();
+export const userAiCredentialRepository = new UserAiCredentialRepository();
 
 export {
   TransactionsRepository,
@@ -37,4 +39,5 @@ export {
   ProcessedGmailMessageRepository,
   VaultGmailWatchersRepository,
   PushSubscriptionRepository,
+  UserAiCredentialRepository,
 };

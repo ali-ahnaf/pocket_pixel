@@ -9,6 +9,7 @@ import { AVATARS } from '@/lib/helpers/static';
 import { AvatarPickerModal } from '@/components/AvatarPickerModal';
 import { authApi } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
+import { setupOrUnwrapDekAtLogin } from '@/lib/crypto/dek-login';
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -43,6 +44,11 @@ export default function SignUpPage() {
     try {
       const res = (await authApi.signUp({ name, email, password, avatar: selectedAvatar })) as any;
       setSession(res.token, { id: res.id, name: res.name, email: res.email, avatar: res.avatar });
+      try {
+        await setupOrUnwrapDekAtLogin(res.id, password);
+      } catch (dekErr) {
+        console.error('Failed to set up AI encryption key at signup', dekErr);
+      }
       router.push('/');
     } catch (err: any) {
       setErrors({ form: err.message ?? 'Something went wrong. Please try again.' });
