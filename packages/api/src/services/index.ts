@@ -17,6 +17,7 @@ import { GmailAiExtractorService } from './gmail-ai-extractor.service';
 import { PushService } from './push.service';
 import { GmailService } from './gmail.service';
 import { VaultWatchersService } from './vault-watchers.service';
+import { UserAiCredentialService } from './user-ai-credential.service';
 
 export const utilService = new UtilService();
 export const logger = new Logger();
@@ -37,6 +38,7 @@ export const gmailAiExtractorService = new GmailAiExtractorService();
 export const pushService = new PushService();
 export const gmailService = new GmailService();
 export const vaultWatchersService = new VaultWatchersService();
+export const userAiCredentialService = new UserAiCredentialService();
 
 export {
   UtilService,
@@ -58,4 +60,5 @@ export {
   PushService,
   GmailService,
   VaultWatchersService,
+  UserAiCredentialService,
 };

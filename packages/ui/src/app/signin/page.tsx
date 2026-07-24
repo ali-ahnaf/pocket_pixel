@@ -8,6 +8,7 @@ import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { authApi } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
+import { setupOrUnwrapDekAtLogin } from '@/lib/crypto/dek-login';
 
 export default function SignInPage() {
   const router = useRouter();
@@ -37,6 +38,11 @@ export default function SignInPage() {
     try {
       const res = await authApi.signIn({ email, password });
       setSession(res.token, { id: res.id, name: res.name, email: res.email, avatar: res.avatar });
+      try {
+        await setupOrUnwrapDekAtLogin(res.id, password);
+      } catch (dekErr) {
+        console.error('Failed to unlock AI encryption key at login', dekErr);
+      }
       router.push('/');
     } catch (err: any) {
       setErrors({ form: err.message ?? 'Something went wrong. Please try again.' });

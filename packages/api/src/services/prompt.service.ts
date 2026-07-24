@@ -1,9 +1,9 @@
 import OpenAI from 'openai';
-import { ParsedTransaction, ModelUsage, UsageReport } from '@expense-tracker/shared';
+import { ParsedTransaction } from '@expense-tracker/shared';
 import { AppError } from '../errors/app-error';
 import { logger, tagsService, vaultsService } from '.';
 
-export type { ParsedTransaction, ModelUsage, UsageReport };
+export type { ParsedTransaction };
 
 export const OPENAI_MODEL = 'gpt-5.4-nano';
 
@@ -119,13 +119,13 @@ prompt: ${prompt}`;
    * Reports this month's OpenAI token consumption, broken down per model.
    * https://platform.openai.com/docs/api-reference/usage/completions
    */
-  async usage(): Promise<UsageReport> {
+  async usage(): Promise<any> {
     if (!process.env.OPENAI_ADMIN_KEY) {
       throw new AppError('OPENAI_ADMIN_KEY is not configured', 500);
     }
 
     const startTime = this.startOfMonthUnix();
-    const byModel = new Map<string, ModelUsage>();
+    const byModel = new Map<string, any>();
     let inputTokens = 0;
     let outputTokens = 0;
     let requests = 0;

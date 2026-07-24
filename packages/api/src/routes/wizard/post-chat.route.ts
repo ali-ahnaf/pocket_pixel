@@ -1,13 +1,13 @@
 import { Request, Response, Router } from 'express';
 import Joi from 'joi';
-import { WizardChatRequest, WIZARD_PROMPT_KEYS } from '@expense-tracker/shared';
+import {  WIZARD_PROMPT_KEYS } from '@expense-tracker/shared';
 import { utilService, wizardService } from '../../services';
 import { asyncHandler } from '../../middleware/error-handler';
 import { promptRateLimiter } from '../../middleware/rate-limit';
 
 const router = Router({ mergeParams: true });
 
-const chatSchema = Joi.object<WizardChatRequest>({
+const chatSchema = Joi.object<any>({
   promptKey: Joi.string()
     .valid(...WIZARD_PROMPT_KEYS)
     .required(),
