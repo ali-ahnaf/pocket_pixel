@@ -6,7 +6,7 @@ import { BaseEntity } from './BaseEntity';
 /**
  * Per-vault Gmail bank-alert watcher. Attaches one Gmail label (plus an optional
  * subject substring and free-text guidance hint) to one vault; a matching email
- * is turned into a transaction by an AI extractor (`GmailAiExtractorService`),
+ * is enqueued as a `PendingGmailExpense` for the user to parse client-side,
  * not a user-supplied script. The set of watched labels for a user is derived as
  * the union of `gmailLabelId` across their (non-deleted) rows; `UserOAuthCredential`
  * keeps only the single-mailbox watch bookkeeping.

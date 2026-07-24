@@ -15,6 +15,7 @@ import { ProcessedGmailMessage } from './entities/ProcessedGmailMessage.entity';
 import { VaultGmailWatcher } from './entities/VaultGmailWatcher.entity';
 import { PushSubscription } from './entities/PushSubscription.entity';
 import { UserAiCredential } from './entities/UserAiCredential.entity';
+import { PendingGmailExpense } from './entities/PendingGmailExpense.entity';
 
 const isTsNode = !!(process as any)[Symbol.for('ts-node.register.instance')];
 
@@ -39,6 +40,7 @@ export const AppDataSource = new DataSource({
     VaultGmailWatcher,
     PushSubscription,
     UserAiCredential,
+    PendingGmailExpense,
   ],
   migrations: [isTsNode ? 'src/migrations/*.ts' : 'dist/migrations/*.js'],
   synchronize: false,
