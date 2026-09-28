@@ -21,7 +21,7 @@ interface TestExtractModalProps {
 
 /**
  * Dry-run preview: paste a sample email and see what the AI extractor would
- * resolve it to (amount/title/type/tags), without saving a watcher or creating
+ * resolve it to (amount/title/type/tags/date), without saving a watcher or creating
  * a transaction.
  */
 export function TestExtractModal({ isOpen, onClose, userId, guidanceHint, tags }: TestExtractModalProps): JSX.Element | null {
@@ -31,6 +31,7 @@ export function TestExtractModal({ isOpen, onClose, userId, guidanceHint, tags }
   const [from, setFrom] = useState('');
   const [subject, setSubject] = useState('');
   const [bodyText, setBodyText] = useState('');
+  const [emailDate, setEmailDate] = useState('');
   const [testing, setTesting] = useState(false);
   const [result, setResult] = useState<AiExtractResultDto | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +42,7 @@ export function TestExtractModal({ isOpen, onClose, userId, guidanceHint, tags }
       setFrom('');
       setSubject('');
       setBodyText('');
+      setEmailDate('');
       setResult(null);
       setError(null);
       setNeedsAiSetup(false);
@@ -92,7 +94,7 @@ export function TestExtractModal({ isOpen, onClose, userId, guidanceHint, tags }
       const parsed = await extractTransactionFromEmail({
         apiKey,
         model: status.selectedModel,
-        email: { from: from.trim(), subject: subject.trim(), bodyText, emailDate: null },
+        email: { from: from.trim(), subject: subject.trim(), bodyText, emailDate: emailDate || null },
         tags: tags.map((tag) => ({ id: tag.id, name: tag.name })),
         guidanceHint: guidanceHint.trim() || undefined,
       });
@@ -147,6 +149,11 @@ export function TestExtractModal({ isOpen, onClose, userId, guidanceHint, tags }
           </div>
 
           <div className="space-y-2">
+            <label className="pixel-input-label ml-1">Email date (optional, defaults to today)</label>
+            <input type="date" value={emailDate} onChange={(e) => setEmailDate(e.target.value)} className="pixel-input" />
+          </div>
+
+          <div className="space-y-2">
             <label className="pixel-input-label ml-1">Body</label>
             <textarea
               value={bodyText}
@@ -184,6 +191,8 @@ export function TestExtractModal({ isOpen, onClose, userId, guidanceHint, tags }
                     <span className="text-right">{result.amount}</span>
                     <span className="text-on-surface-variant">Type</span>
                     <span className="text-right capitalize">{result.type}</span>
+                    <span className="text-on-surface-variant">Date</span>
+                    <span className="text-right">{result.date}</span>
                   </div>
                   {result.tagIds && result.tagIds.length > 0 && (
                     <div className="flex flex-wrap gap-2 pt-1">
