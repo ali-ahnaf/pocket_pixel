@@ -34,7 +34,7 @@ export interface SetVaultGmailWatcherInput {
 export interface ParsedEmailDto {
   title: string;
   amount: number;
-  /** `yyyy-mm-dd`; defaults to today when the model omits it. */
+  /** `yyyy-mm-dd`, relative to the email's date (guidance may shift it); falls back to the email's date when the model returns an invalid one. */
   date: string;
   type: 'income' | 'expense';
   /** Resolved, validated tag ids the model judged relevant. */
@@ -48,6 +48,8 @@ export interface AiExtractResultDto {
   amount?: number;
   type?: 'income' | 'expense';
   tagIds?: string[];
+  /** `yyyy-mm-dd` the transaction would be booked on. */
+  date?: string;
 }
 
 /** Dry-run payload: preview what the AI would extract from a pasted sample email. */
