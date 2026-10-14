@@ -1,4 +1,3 @@
-// STUB: sign up (no accounts offline, submit simulates success and the chosen avatar is not saved). No local data layer for this in packages/app yet, so it uses hardcoded stub data.
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -7,10 +6,11 @@ import { AuthCard } from '../components/auth/AuthCard';
 import { AuthLogo } from '../components/auth/AuthLogo';
 import { AuthScreen } from '../components/auth/AuthScreen';
 import { AuthSwitchLink } from '../components/auth/AuthSwitchLink';
-import { stubRequest } from '../components/auth/stubRequest';
 import { AvatarPickerModal } from '../components/AvatarPickerModal';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
+import { AppError } from '../errors/app-error';
+import { useAuth } from '../hooks/AuthProvider';
 import { AVATARS, avatarSource } from '../lib/static';
 import { color, font, shadow, space, text } from '../theme';
 
@@ -23,6 +23,7 @@ interface SignUpErrors {
 
 export default function SignUpScreen() {
   const router = useRouter();
+  const { signUp } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -50,11 +51,11 @@ export default function SignUpScreen() {
     setErrors({});
     setLoading(true);
     try {
-      // Web also sets up the AI encryption key (DEK) here; dropped, the offline app has no accounts.
-      await stubRequest();
-      router.replace('/');
-    } catch {
-      setErrors({ form: 'Something went wrong. Please try again.' });
+      // Signing up flips the root layout's route guard, which moves the user into the app.
+      await signUp({ name: name.trim(), email, password, avatar: selectedAvatar });
+    } catch (err) {
+      if (err instanceof AppError && err.statusCode === 409) setErrors({ email: err.message });
+      else setErrors({ form: err instanceof AppError ? err.message : 'Something went wrong. Please try again.' });
     } finally {
       setLoading(false);
     }

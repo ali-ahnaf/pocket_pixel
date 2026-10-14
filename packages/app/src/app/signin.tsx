@@ -1,4 +1,3 @@
-// STUB: sign in (no accounts offline, submit simulates success). No local data layer for this in packages/app yet, so it uses hardcoded stub data.
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -7,9 +6,10 @@ import { AuthCard } from '../components/auth/AuthCard';
 import { AuthLogo } from '../components/auth/AuthLogo';
 import { AuthScreen } from '../components/auth/AuthScreen';
 import { AuthSwitchLink } from '../components/auth/AuthSwitchLink';
-import { stubRequest } from '../components/auth/stubRequest';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
+import { AppError } from '../errors/app-error';
+import { useAuth } from '../hooks/AuthProvider';
 import { color, font, space, text } from '../theme';
 
 interface SignInErrors {
@@ -20,6 +20,7 @@ interface SignInErrors {
 
 export default function SignInScreen() {
   const router = useRouter();
+  const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<SignInErrors>({});
@@ -42,11 +43,10 @@ export default function SignInScreen() {
     setErrors({});
     setLoading(true);
     try {
-      // Web also unlocks the AI encryption key (DEK) here; dropped, the offline app has no accounts.
-      await stubRequest();
-      router.replace('/');
-    } catch {
-      setErrors({ form: 'Something went wrong. Please try again.' });
+      // Signing in flips the root layout's route guard, which moves the user into the app.
+      await signIn({ email, password });
+    } catch (err) {
+      setErrors({ form: err instanceof AppError ? err.message : 'Something went wrong. Please try again.' });
     } finally {
       setLoading(false);
     }
