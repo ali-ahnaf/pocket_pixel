@@ -37,10 +37,13 @@ export const font = {
 // Pass through ms() at the call site, e.g. padding: ms(space[4]).
 export const space = { 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32 };
 
+// Horizontal padding for page content and the app bar. Pass through ms().
+export const gutter = space[4];
+
 // Pass through ms() at the call site.
 export const text = {
-  headlineLg: { fontSize: 32, lineHeight: 38 },
-  headlineMd: { fontSize: 24, lineHeight: 29 },
+  headlineLg: { fontSize: 20, lineHeight: 31 },
+  headlineMd: { fontSize: 18, lineHeight: 24 },
   bodyLg: { fontSize: 16, lineHeight: 26 },
   bodySm: { fontSize: 14, lineHeight: 21 },
   labelCaps: { fontSize: 12, lineHeight: 12 },
