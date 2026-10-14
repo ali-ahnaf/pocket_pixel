@@ -1,6 +1,6 @@
 # Repo Shape
 
-Actual layout of `packages/api/src/` (verified — trust this over any idealized description):
+Layout of `packages/api/src/` (verified against the tree):
 
 ```
 packages/api/src/
@@ -12,19 +12,21 @@ packages/api/src/
 ├── entities/                    # <Feature>.entity.ts, classes extend BaseEntity (no barrel)
 ├── middleware/
 │   ├── auth.ts                  # authenticate (global, best-effort) + requireAuth (401 guard)
-│   └── error-handler.ts         # asyncHandler + global errorHandler
+│   ├── error-handler.ts         # asyncHandler + global errorHandler
+│   └── rate-limit.ts            # express-rate-limit instances
 ├── migrations/                  # TypeORM migrations; Z-seed-data.ts must sort last
 ├── repositories/                # <feature>.repository.ts + index.ts barrel (singleton instances)
 ├── routes/
 │   ├── <feature>.routes.ts      # aggregator: mounts the per-action sub-routes
 │   └── <feature>/               # <verb>-<feature>.route.ts, one file per endpoint
-├── scheduler/                   # recurring-scheduler.ts (node-cron), backup-scheduler.ts (R2/S3)
+├── scheduler/                   # node-cron jobs: recurring, backup (R2/S3), gmail-watch
 ├── services/                    # <feature>.service.ts + index.ts barrel (singleton instances)
 ├── tests/                       # Jest unit tests for services (jest.config only scans this dir)
-└── types/                       # ambient type declarations
+├── types/                       # ambient type declarations
+└── utils/                       # <name>.util.ts helpers (Google OAuth, Gmail, encryption)
 ```
 
-Things that do **not** exist here (do not invent them): `config/conf.ts`, `redis.ts`, `constants/`, a `validate()` middleware, an entities barrel.
+Not present: a `validate()` middleware, a typed config module, `constants/`, an entities barrel.
 
 File naming:
 
@@ -38,4 +40,4 @@ File naming:
 
 DTOs crossing the API/UI boundary live in `packages/shared/src/contracts/<feature>.ts`, re-exported through `contracts/index.ts` → `src/index.ts`. Import from `@expense-tracker/shared` on both sides; never redefine locally.
 
-Always run `npm run build:shared` from the repo root after any change to `packages/shared/src/` — consumers use the built output and fail silently on stale types.
+Run `npm run build:shared` from the repo root after any change to `packages/shared/src/`. Consumers use the built output, so stale types otherwise go unnoticed.

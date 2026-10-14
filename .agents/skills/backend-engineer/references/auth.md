@@ -1,10 +1,12 @@
 # Authentication
 
+Verified against `middleware/auth.ts` and `index.ts`.
+
 ## Middleware (`middleware/auth.ts`)
 
 | **Middleware** | **Purpose** | **Behavior** |
 | :------------- | :---------- | :----------- |
-| **`authenticate`** | Parses and validates JWT authentication. | Mounted globally in `index.ts`. Reads the `Authorization: Bearer <token>` header, verifies the JWT, and sets `req.user: TokenPayload` when the token is valid. **Never rejects the request**—if the token is missing or invalid, `req.user` remains `undefined` and the request continues. |
+| **`authenticate`** | Parses and validates JWT authentication. | Mounted globally in `index.ts`. Reads the `Authorization: Bearer <token>` header, verifies the JWT, and sets `req.user: TokenPayload` when the token is valid. **Never rejects the request**, if the token is missing or invalid, `req.user` remains `undefined` and the request continues. |
 | **`requireAuth`** | Protects routes that require authentication. | Applied per route. Checks whether `req.user` is set. If not, responds with **`401 Unauthorized`** using `utilService.replyError({ message: 'Unauthorized' })`. Otherwise, calls `next()`, allowing downstream handlers to safely access `req.user!`. |
 
 Tokens are JWTs with 30-day expiry, created/verified by `AuthService` (`createToken` / `verifyToken`). Passwords are bcrypt-hashed.
@@ -12,16 +14,18 @@ Tokens are JWTs with 30-day expiry, created/verified by `AuthService` (`createTo
 ## Mounting pattern (`index.ts`)
 
 ```ts
-app.use(authenticate); // global, best-effort — populates req.user when possible
+app.use(authenticate); // global, best-effort, populates req.user when possible
 
 // public
 app.use('/api/auth', authRouter);
 
-// protected — requireAuth blocks when req.user is unset
+// protected, requireAuth blocks when req.user is unset
 app.use('/api/users/:userId/tags', requireAuth, tagsRouter);
 ```
 
-Every `/api/users/...` mount carries `requireAuth`. Routers under it use `Router({ mergeParams: true })` so `:userId` is visible — but handlers should identify the acting user with `req.user!.userId`, not the path param.
+The Google OAuth callback (`/api/oauth`) is public by design; the user id rides in a signed state.
+
+Every `/api/users/...` mount carries `requireAuth`. Routers under it use `Router({ mergeParams: true })` so `:userId` is visible, but handlers should identify the acting user with `req.user!.userId`, not the path param.
 
 ## Adding a new protected resource
 

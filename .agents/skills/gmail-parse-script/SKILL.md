@@ -1,77 +1,64 @@
 ---
 name: gmail-parse-script
-description: Write a vault watcher `parse(email)` JS script from a sample bank/alert email, for the Gmail-to-transaction pipeline. Use when the user gives a sample email (or describes one) and wants a parseScript for a Vault Gmail Watcher.
+description: Write the `guidanceHint` for a vault Gmail watcher from a sample bank or alert email, so the AI extractor turns that email into a transaction correctly. Use when the user gives a sample email (or describes one) and wants it parsed, or asks for a parse script for a Gmail watcher.
 ---
 
-# Gmail watcher parse script
+# Gmail watcher guidance hint
 
-Vault watchers turn matching Gmail messages into transactions. Each watcher stores a user-authored `parseScript` string that `GmailScriptRunnerService` (`packages/api/src/services/gmail-script-runner.service.ts`) runs in a locked-down `node:vm` context — no `require`, `process`, `fetch`, timers; 1s timeout.
+This repo has no parse-script mechanism. An earlier `parseScript` (user-authored JS run in `node:vm`) was removed by migration `ReplaceParseScriptWithGuidanceHint`. Do not write a `parse(email)` function.
 
-## Input contract — `email`
+Today a matching email is turned into a transaction by an AI extractor. The only thing a user authors per watcher is an optional free-text `guidanceHint` (max 2000 characters). This skill writes that hint, plus the watcher's `subjectFilter` when useful.
 
-Script sees one global, `email: GmailMessageContent` (`packages/api/src/utils/gmail-message.util.ts`):
+## How it works
 
-```ts
-interface GmailMessageContent {
-  from: string; // raw From header, e.g. "Bank Alerts <alerts@bank.com>"
-  subject: string; // raw Subject header
-  bodyText: string; // decoded body, HTML already stripped to plain text, whitespace collapsed
-  emailDate: string | null; // Date header or internalDate, ISO-ish string
-}
-```
+1. A Gmail push reaches `GmailService` (`packages/api/src/services/gmail.service.ts`). `matchWatcher` picks a vault watcher by label and `subjectFilter` (case-insensitive substring; no filter means catch-all for the label).
+2. The API stores only a pointer in `PendingGmailExpense`: `gmailMessageId`, `vaultId`, `subject`, `guidanceHint`. No email body is stored and no AI runs on the server.
+3. When the user reviews the pending item, the UI re-fetches the email through the `GET /:id/email` pending-expenses route (`routes/pending-expenses/get-pending-expense-email.route.ts`, returns `PendingExpenseEmailDto`: `from`, `subject`, `bodyText`, `emailDate`). `bodyText` is already decoded and HTML-stripped by `packages/api/src/utils/gmail-message.util.ts`.
+4. The browser runs `extractTransactionFromEmail` in `packages/ui/src/lib/ai/gmail-extractor.ts` with the user's own OpenRouter key and model. It sends `{ referenceDate, email, availableTags, guidance }` to the model and validates the reply.
 
-`bodyText` is already de-HTML'd — never write `<[^>]+>` stripping in the script, it's done upstream.
+Contracts live in `packages/shared/src/contracts/vault-watchers.ts` and `pending-expenses.ts`: `VaultGmailWatcherDto`, `SetVaultGmailWatcherInput`, `AiExtractResultDto`, `ParsedEmailDto`, `TestExtractInput`.
 
-## Output contract — return of `parse(email)`
+## What the extractor already does
 
-Must be `function parse(email) { ... }` (exact name, top-level). Return either:
+Read `EXTRACTOR_INSTRUCTIONS` in `gmail-extractor.ts` before writing a hint. Do not repeat these in the hint:
 
-- `null` / `undefined` — not a matching transaction, skip silently (also the result of a thrown error or timeout).
-- an object validated by `GmailScriptRunnerService.validate` against `ParsedEmailDto`:
+- amount is the transaction amount only, not balance, limit, points or reference numbers; thousands separators stripped
+- type: spent, debited, purchase, withdrawn, paid mean `expense`; credited, received, deposit, refund, salary mean `income`
+- title is the merchant or payee, falling back to "Bank transaction"
+- tagIds are picked from the user's tags, `[]` if none fit
+- non-transactions (OTP, promo, statement, balance-only) return `matched: false` and are skipped
 
-```ts
-{
-  title: string; // non-empty after trim
-  amount: number; // finite, > 0 — never negative, sign comes from `type` not the number
-  type: 'income' | 'expense'; // exactly one of these two strings
-}
-```
+Output is validated into `ParsedEmailDto`: non-empty `title`, finite `amount > 0`, `type` of `income` or `expense`, `tagIds` filtered to real tag ids, `date` as `yyyy-mm-dd`.
 
-Any other shape throws `AppError(..., 400)` — surfaced to the user via the dry-run test endpoint, not silently skipped like a runtime error.
+## Dates
+
+- `referenceDate` is the email's date (RFC 2822 `Date` header or ISO), converted to a local `yyyy-mm-dd` by `toReferenceDate`, falling back to today if missing or unparsable.
+- The model returns `date` as `yyyy-mm-dd`. If it is not a real calendar date (for example `2026-02-30` or `10/01/2026`), validation falls back to `referenceDate`.
+- Guidance may shift the date, for example "book on the 1st of next month" for a billing cycle. Relative dates are computed from `referenceDate`, never from today. Phrase date hints that way.
 
 ## Process
 
-1. **Get the sample.** Ask the user to paste the raw email (or at least subject + body text) if not already given. Prefer real sample over a guess — bank alert formats vary a lot (currency placement, comma vs period decimals, HTML tables collapsed to text, debit/credit wording).
-2. **Identify the signal for `type`.** Look for wording like "debited"/"spent"/"purchase" → `expense`; "credited"/"received"/"deposit" → `income`. Pick the exact keyword(s) present in the sample body and match on those — don't guess a keyword that isn't in the sample.
-3. **Identify the amount.** Write a regex against `email.bodyText` (or `subject` if the amount lives there) that captures the numeric amount, handling thousands separators (`1,500.00` → strip commas) and currency prefix/suffix as it appears in the sample. Use `Number(...)` and confirm `> 0`.
-4. **Identify the title.** Usually the merchant/payee name near the amount, or a fixed label plus a merchant field extracted from the body. Keep it non-empty in every real-match case — if extraction can fail, fall back to a static string like `'Bank transaction'` rather than letting a bad match slip an empty string through (which throws).
-5. **Date (optional).** Only extract when the sample has a clean date field; otherwise omit `date` and let the default (today) apply. If extracting, coerce to strict `yyyy-mm-dd` — anything else throws.
-6. **Guard against false matches.** If the regex might not find the amount (e.g. email doesn't match this format), `return null` rather than throwing — a thrown error and a `null` return behave identically (skip), but a _found-but-malformed_ result should still throw so the user's dry-run test surfaces the bug instead of silently skipping. Concretely: guard the regex match and `return null` if it's absent; don't guard the object shape once you've decided to return one.
-7. **Keep it self-contained.** No helper functions defined outside `parse`; inline everything inside the function body (the whole script is executed as `<script>\n;parse(email);`, so a top-level `function parse` plus optional top-level `const`/`function` helpers above it are fine, but nothing after it and no I/O).
+1. Get the sample. Ask for the raw email (from, subject, body text, date) if not given. Never invent wording that is not in the sample. If it contains real account numbers or personal data, flag that pasting it into chat is an exposure and ask for a redacted version.
+2. Decide whether a hint is needed at all. If the defaults above already handle the email, say so and return an empty hint. Do not pad.
+3. Write a short hint only for what the defaults miss. Typical cases:
+   - the wrong number sits near the amount (for example a fee or foreign-currency figure next to the billed amount)
+   - the title should be a specific field (for example "use the text after 'at'")
+   - type is ambiguous (for example a card refund that should count as income)
+   - the date should follow a rule (billing cycle, value date instead of send date)
+   - a fixed tag preference
+4. Quote the exact words from the sample the hint relies on, and keep it under 2000 characters. Plain sentences, no markup.
+5. If several vaults share one label, suggest a `subjectFilter` (case-insensitive substring of the subject, max 500 characters) so each watcher fires on its own emails.
 
-## Example (from this repo's test fixture)
+## Verifying
 
-Sample: `from: 'alerts@bank.com'`, `subject: 'Transaction Alert'`, `bodyText: 'You spent BDT 1,500.00 at DARAZ'`.
+- Dry run: the settings UI `TestExtractModal` (`packages/ui/src/app/settings/google-oauth/TestExtractModal.tsx`) takes a pasted sample plus the hint and shows an `AiExtractResultDto`. It runs in the browser with the user's own key, so only the user can run it. Ask them to paste the result.
+- Unit tests: `packages/ui/src/lib/ai/gmail-extractor.test.ts` (Vitest, mocks `chat`). It covers `toReferenceDate`, guidance passthrough and date fallback. Run `npm run test:ui:unit` from the repo root. Extend it only if you change extractor code, which this skill does not do.
+- The model output is not deterministic, so never claim a hint "works". Say what it is meant to do and ask for the dry-run result.
 
-```js
-function parse(email) {
-  const m = email.bodyText.match(/BDT ([\d,]+(?:\.\d+)?)/);
-  if (!m) return null;
-  return {
-    title: email.subject,
-    amount: Number(m[1].replace(/,/g, '')),
-    type: 'expense',
-    date: undefined, // omit -> defaults to today; set 'yyyy-mm-dd' if the email has a reliable date
-  };
-}
-```
+## Delivering
 
-## Verifying the script
+Hand back the hint text, the suggested `subjectFilter` if any, and one line saying which phrase in the sample each part of the hint relies on. The user pastes the hint into the watcher form (`VaultWatcherCard`). Do not change extractor code, the prompt or the shared contracts as part of this skill.
 
-- Unit-test style check: `packages/api/src/tests/gmail-script-runner.service.test.ts` shows the exact validation rules — reuse its `email(...)` factory shape when reasoning about edge cases.
-- The product has a live dry-run: `PUT`-adjacent route `packages/api/src/routes/vault-watchers/test-parse-script.route.ts` takes `TestParseScriptInput { script, sample: { from, subject, bodyText } }` and returns `TestParseScriptResultDto { ok, result?, error? }` — mention this to the user as the way to try the script against a pasted sample before saving it to a watcher.
-- Never claim a script "works" without either running it through that dry-run contract mentally against the exact sample text, or asking the user to paste dry-run output.
+## Offline note (open decision)
 
-## Delivering the result
-
-Hand back just the script body (the `function parse(email) {...}` block) plus one line noting what regex/keyword it keys off of, so the user can paste it straight into the watcher's `parseScript` field. Don't wrap it in extra scaffolding — the VM only expects `parse` defined.
+The long-term plan is an offline-first Expo app in `packages/app` with no API server and local SQLite. Gmail watching depends on the server today (OAuth tokens, Pub/Sub push, history diff, the pending queue), and the extractor needs network for OpenRouter. How, or whether, email extraction works offline is undecided. Until the user decides, this skill describes the current web and API behaviour only.
