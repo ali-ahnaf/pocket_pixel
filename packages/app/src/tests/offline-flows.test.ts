@@ -2,7 +2,15 @@ import { AppDataSource } from '../db/data-source';
 import { initDatabase } from '../db/init';
 import { User } from '../entities/User.entity';
 import { AppError } from '../errors/app-error';
-import { analyticsService, debtsService, preferencesService, recurringService, tagsService, transactionsService, vaultsService } from '../services';
+import { analyticsService, authService, debtsService, preferencesService, recurringService, tagsService, transactionsService, vaultsService } from '../services';
+
+// ../services builds AiService, whose store imports expo-secure-store (a native module Jest cannot load).
+jest.mock('../lib/ai/credential-store', () => ({ aiCredentialStore: {} }));
+// Same for AuthService's session store. An in-memory stand-in lets restoreSession run for real.
+jest.mock('../lib/auth/session-store', () => {
+  let stored: string | null = null;
+  return { sessionStore: { get: async () => stored, set: async (id: string) => void (stored = id), clear: async () => void (stored = null) } };
+});
 
 const today = new Date().toISOString().slice(0, 10);
 const [year, month] = today.split('-').map(Number);
@@ -17,14 +25,15 @@ describe('offline flows', () => {
   let userId: string;
 
   beforeAll(async () => {
-    ({ userId } = await initDatabase());
+    await initDatabase();
+    userId = await authService.signUp({ name: 'Ada', email: 'ada@example.com', password: 's3cret-pass' });
   });
 
   afterAll(async () => {
     await AppDataSource.destroy();
   });
 
-  it('creates the local user and Main Stash on first launch, and nothing more on the next', async () => {
+  it('creates the user and Main Stash on sign-up, and nothing more on sign-in', async () => {
     const yearly = await analyticsService.yearly(userId);
     expect(yearly.reduce((sum, r) => sum + Number(r.count), 0)).toBe(0);
 
@@ -32,9 +41,19 @@ describe('offline flows', () => {
     expect(vaults).toHaveLength(1);
     expect(vaults[0]).toMatchObject({ name: 'Main Stash', isDefault: true });
 
-    const again = await initDatabase();
-    expect(again.userId).toBe(userId);
+    expect(await authService.signIn({ email: ' ADA@example.com ', password: 's3cret-pass' })).toBe(userId);
     expect(await AppDataSource.getRepository(User).count()).toBe(1);
+    expect(await vaultsService.list(userId)).toHaveLength(1);
+  });
+
+  it('rejects a duplicate sign-up and a wrong password, and restores the session of a signed-in user', async () => {
+    await expect(authService.signUp({ name: 'Other', email: 'ada@example.com', password: 'another-pass' })).rejects.toMatchObject({ constructor: AppError, statusCode: 409 });
+    await expect(authService.signIn({ email: 'ada@example.com', password: 'wrong' })).rejects.toMatchObject({ constructor: AppError, statusCode: 401 });
+
+    expect(await authService.restoreSession()).toBe(userId);
+    await authService.signOut();
+    expect(await authService.restoreSession()).toBeNull();
+    await authService.signIn({ email: 'ada@example.com', password: 's3cret-pass' });
   });
 
   it('runs a migration that matches the entities exactly', async () => {
@@ -157,11 +176,14 @@ describe('offline flows', () => {
       expect((await recurringService.occurrences(userId, y, m)).map((o) => o.date)).not.toContain(deletedDate);
     });
 
-    it('catches up when the app reopens', async () => {
+    // AuthProvider runs this catch-up for the restored user on launch and on every foreground.
+    it('catches up for the restored session user when the app reopens', async () => {
       await recurringService.create(userId, { title: 'Coffee', amount: 3, type: 'expense', interval: 'daily', startDate: today });
 
-      await initDatabase();
-      await initDatabase();
+      await authService.signIn({ email: 'ada@example.com', password: 's3cret-pass' });
+      const restored = (await authService.restoreSession())!;
+      await recurringService.catchUp(restored);
+      await recurringService.catchUp(restored);
 
       const coffee = (await transactionsService.list(userId, { period: 'all' })).filter((tx) => tx.title === 'Coffee');
       expect(coffee.map((tx) => tx.date)).toEqual([today]);

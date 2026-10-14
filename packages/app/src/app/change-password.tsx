@@ -1,16 +1,17 @@
-// STUB: password change (no accounts offline, submit simulates success). No local data layer for this in packages/app yet, so it uses hardcoded stub data.
 import { useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 import { ms } from 'react-native-size-matters';
 import { AuthCard } from '../components/auth/AuthCard';
 import { AuthScreen } from '../components/auth/AuthScreen';
-import { stubRequest } from '../components/auth/stubRequest';
 import { BackButton } from '../components/BackButton';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
+import { AppError } from '../errors/app-error';
+import { useAuth } from '../hooks/AuthProvider';
 import { color, font, space, text } from '../theme';
 
 export default function ChangePasswordScreen() {
+  const { changePassword } = useAuth();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -35,13 +36,13 @@ export default function ChangePasswordScreen() {
     setSuccess(false);
     setLoading(true);
     try {
-      await stubRequest();
+      await changePassword({ currentPassword, newPassword });
       setSuccess(true);
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-    } catch {
-      setError('Something went wrong');
+    } catch (err) {
+      setError(err instanceof AppError ? err.message : 'Something went wrong');
     } finally {
       setLoading(false);
     }
