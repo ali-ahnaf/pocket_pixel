@@ -1,6 +1,7 @@
-import type { ParsedTransaction, TagDto, VaultDto } from '@expense-tracker/shared';
+import type { ParsedEmailDto, ParsedTransaction, TagDto, VaultDto } from '@expense-tracker/shared';
 import { aiCredentialStore, type AiCredentialStore } from '../lib/ai/credential-store';
 import { chat, fetchUsage, listModels, type JsonSchemaResponseFormat, type OpenRouterModel, type OpenRouterUsage } from '../lib/ai/openrouter';
+import { extractTransactionFromEmail, type ExtractorEmailInput } from '../lib/ai/gmail-extractor';
 
 /** The OpenRouter calls AiService makes, injectable so tests do not hit the network. */
 export interface OpenRouterClient {
@@ -13,6 +14,8 @@ export interface AiStatus {
   hasKey: boolean;
   selectedModel: string | null;
 }
+
+export type EmailExtractOutcome = { status: 'success'; parsed: ParsedEmailDto } | { status: 'needs-ai-setup'; message: string } | { status: 'unmatched' };
 
 export type TransactionPromptOutcome = { status: 'success'; transaction: ParsedTransaction } | { status: 'needs-ai-setup'; message: string } | { status: 'unparseable'; message: string };
 
@@ -141,5 +144,20 @@ prompt: ${prompt.trim()}`;
     const vaultId = typeof candidate.vault === 'string' ? (vaultIdsByName.get(candidate.vault.toLowerCase()) ?? null) : null;
 
     return { status: 'success', transaction: { title: candidate.title, amount: candidate.amount, type: candidate.type, tagIds, vaultId } };
+  }
+
+  /**
+   * Runs the Gmail bank-alert extractor on one email (a pending item or a pasted
+   * sample). `unmatched` covers a non-transaction email and an unusable model answer.
+   * Throws on network/OpenRouter failures; the caller shows `err.message`.
+   */
+  async extractTransactionFromEmail(email: ExtractorEmailInput, tags: Pick<TagDto, 'id' | 'name'>[], guidanceHint: string | null): Promise<EmailExtractOutcome> {
+    const [apiKey, model] = await Promise.all([this.store.getApiKey(), this.store.getModel()]);
+    if (!apiKey || !model) {
+      return { status: 'needs-ai-setup', message: AI_SETUP_MESSAGE };
+    }
+
+    const parsed = await extractTransactionFromEmail({ chat: this.client.chat, apiKey, model, email, tags: tags.map((tag) => ({ id: tag.id, name: tag.name })), guidanceHint });
+    return parsed ? { status: 'success', parsed } : { status: 'unmatched' };
   }
 }

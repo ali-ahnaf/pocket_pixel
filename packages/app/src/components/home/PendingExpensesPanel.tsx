@@ -1,55 +1,97 @@
-// STUB: Gmail pending expenses queue (hardcoded items; dismiss only removes them from screen state). No local data layer for this in packages/app yet, so it uses hardcoded stub data.
 import type { PendingGmailExpenseDto } from '@expense-tracker/shared';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { AppState, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ms } from 'react-native-size-matters';
+import { useLocalUserId } from '../../hooks/DatabaseProvider';
+import { gmailService, logger, pendingGmailExpenseService } from '../../services';
 import { color, font, space, text } from '../../theme';
 import { Badge } from '../Badge';
 import { Card } from '../Card';
+import { GmailReconnectBanner } from './GmailReconnectBanner';
 import { PendingExpenseDetailSheet } from './PendingExpenseDetailSheet';
 import { PixelIcon } from '../PixelIcon';
 import { IconText } from '../IconText';
 
-const STUB_ITEMS: PendingGmailExpenseDto[] = [
-  { id: 'stub-pending-1', gmailMessageId: 'stub-msg-1', vaultId: 'stub-vault', vaultName: 'Main Vault', subject: 'Card purchase alert', guidanceHint: 'Amount after "BDT", merchant after "at"' },
-  { id: 'stub-pending-2', gmailMessageId: 'stub-msg-2', vaultId: 'stub-vault', vaultName: 'Main Vault', subject: null, guidanceHint: null },
-];
+export interface PendingExpensesPanelProps {
+  /** Called after a pending email was parsed into a transaction, so the dashboard can reload. */
+  onTransactionCreated: () => void;
+}
 
 // Port of packages/ui/src/components/pending-expenses/PendingExpensesPanel.tsx. Hidden when the queue is empty.
-export function PendingExpensesPanel() {
-  const [items, setItems] = useState(STUB_ITEMS);
+// The phone gets no Gmail push, so this panel also polls Gmail: on focus and whenever the app returns to the foreground.
+export function PendingExpensesPanel({ onTransactionCreated }: PendingExpensesPanelProps) {
+  const userId = useLocalUserId();
+  const [items, setItems] = useState<PendingGmailExpenseDto[]>([]);
+  const [reconnectRequired, setReconnectRequired] = useState(false);
   const [selected, setSelected] = useState<PendingGmailExpenseDto | null>(null);
 
-  if (items.length === 0) return null;
+  // Shows the local queue at once, then syncs in the background and shows anything new. A failed sync keeps the app usable.
+  const refresh = useCallback(() => {
+    let active = true;
+    const show = () =>
+      Promise.all([pendingGmailExpenseService.list(userId), gmailService.getStatus(userId)]).then(([list, status]) => {
+        if (!active) return;
+        setItems(list);
+        setReconnectRequired(status.reconnectRequired);
+      });
+
+    show()
+      .then(() => gmailService.sync(userId))
+      .catch((err) => logger.warn('Gmail sync failed', { err }))
+      .then(show)
+      .catch((err) => logger.error('Load pending expenses failed', { err }));
+    return () => {
+      active = false;
+    };
+  }, [userId]);
+
+  useFocusEffect(refresh);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') refresh();
+    });
+    return () => sub.remove();
+  }, [refresh]);
+
+  const handleResolved = (id: string, transactionCreated: boolean): void => {
+    setItems((prev) => prev.filter((item) => item.id !== id));
+    if (transactionCreated) onTransactionCreated();
+  };
 
   return (
     <>
-      <Card style={styles.card}>
-        <View style={styles.header}>
-          <IconText icon="Mail" iconSize={20} style={styles.title} accessibilityRole="header">
-            Pending Expenses
-          </IconText>
-          <Badge label={String(items.length)} variant="secondary" />
-        </View>
-        {items.map((item) => (
-          <Pressable key={item.id} accessibilityRole="button" onPress={() => setSelected(item)} style={({ pressed }) => [styles.item, pressed && styles.pressed]}>
-            <View style={styles.itemBody}>
-              <Text style={styles.subject} numberOfLines={1}>
-                {item.subject ?? 'No subject'}
-              </Text>
-              <Badge label={item.vaultName} variant="secondary" />
-              {item.guidanceHint ? (
-                <Text style={styles.hint} numberOfLines={1}>
-                  {item.guidanceHint}
-                </Text>
-              ) : null}
-            </View>
-            <PixelIcon name="ChevronRight" size={ms(20)} />
-          </Pressable>
-        ))}
-      </Card>
+      {reconnectRequired && <GmailReconnectBanner />}
 
-      {selected ? <PendingExpenseDetailSheet item={selected} onResolved={(id) => setItems((prev) => prev.filter((item) => item.id !== id))} onClose={() => setSelected(null)} /> : null}
+      {items.length > 0 && (
+        <Card style={styles.card}>
+          <View style={styles.header}>
+            <IconText icon="Mail" iconSize={20} style={styles.title} accessibilityRole="header">
+              Pending Expenses
+            </IconText>
+            <Badge label={String(items.length)} variant="secondary" />
+          </View>
+          {items.map((item) => (
+            <Pressable key={item.id} accessibilityRole="button" onPress={() => setSelected(item)} style={({ pressed }) => [styles.item, pressed && styles.pressed]}>
+              <View style={styles.itemBody}>
+                <Text style={styles.subject} numberOfLines={1}>
+                  {item.subject ?? 'No subject'}
+                </Text>
+                <Badge label={item.vaultName} variant="secondary" />
+                {item.guidanceHint ? (
+                  <Text style={styles.hint} numberOfLines={1}>
+                    {item.guidanceHint}
+                  </Text>
+                ) : null}
+              </View>
+              <PixelIcon name="ChevronRight" size={ms(20)} />
+            </Pressable>
+          ))}
+        </Card>
+      )}
+
+      {selected ? <PendingExpenseDetailSheet item={selected} onResolved={handleResolved} onClose={() => setSelected(null)} /> : null}
     </>
   );
 }

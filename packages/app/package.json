@@ -7,6 +7,7 @@
     "@expo-google-fonts/anybody": "^0.4.2",
     "@expo-google-fonts/inter": "^0.4.2",
     "@expo-google-fonts/jetbrains-mono": "^0.4.1",
+    "@react-native-google-signin/google-signin": "^16.1.5",
     "bcryptjs": "^3.0.3",
     "expo": "~57.0.25",
     "expo-constants": "~57.0.19",

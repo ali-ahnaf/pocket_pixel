@@ -4,13 +4,14 @@
     "slug": "pocket-pixel",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.expensetracker.app"
+      "bundleIdentifier": "com.pocketpixel.app"
     },
     "android": {
-      "package": "com.expensetracker.app"
+      "package": "com.pocketpixel.app"
     },
     "plugins": [
       "expo-router",
@@ -26,6 +27,12 @@
     "backgroundColor": "#141315",
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "942f373e-dc4c-4412-8610-e634dd97eeec"
+      }
     }
   }
 }
