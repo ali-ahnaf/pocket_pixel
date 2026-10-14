@@ -7,7 +7,8 @@
   "scripts": {
     "dev:api": "npm run dev --workspace=packages/api",
     "dev:ui": "npm run dev --workspace=packages/ui",
-    "build": "npm run build --workspaces",
+    "dev:app": "npm run start --workspace=packages/app",
+    "build": "npm run build --workspaces --if-present",
     "build:prod": "npm run build --workspace=packages/shared && npm run build --workspace=packages/ui && npm run build --workspace=packages/api",
     "start": "npm run start --workspace=packages/api",
     "build:shared": "npm run build --workspace=packages/shared",
@@ -20,6 +21,7 @@
     
     "test:unit": "npm run build:shared && npm run test:api && npm run test:ui:unit",
     "test:api": "npm run test --workspace=packages/api",
+    "test:app": "npm run test --workspace=packages/app",
     "test:ui:unit": "npm run test:unit --workspace=packages/ui",
     "test:ui:e2e": "npm run test:e2e --workspace=packages/ui",
     "test:ui:e2e-ui": "npm run test:e2e:ui --workspace=packages/ui",

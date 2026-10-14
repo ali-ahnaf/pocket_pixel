@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "Pocket Pixel",
+    "slug": "pocket-pixel",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.expensetracker.app"
+    },
+    "android": {
+      "package": "com.expensetracker.app"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-sqlite"
+    ],
+    "scheme": "expense-tracker",
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "backgroundColor": "#141315",
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
