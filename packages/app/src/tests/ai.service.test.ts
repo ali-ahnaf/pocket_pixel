@@ -134,4 +134,36 @@ describe('AiService', () => {
       await expect(service.parseTransactionPrompt('lunch 12', tags, vaults)).rejects.toThrow('Invalid API key');
     });
   });
+
+  describe('extractTransactionFromEmail', () => {
+    const email = { from: 'alerts@bank.example', subject: 'Debit alert', bodyText: 'BDT 450 at CITY GROCERS', emailDate: '2026-10-12' };
+
+    it('asks for AI setup without calling OpenRouter when no model is picked', async () => {
+      store.getApiKey.mockResolvedValue('sk-or-key');
+      store.getModel.mockResolvedValue(null);
+
+      expect(await service.extractTransactionFromEmail(email, tags, null)).toEqual({ status: 'needs-ai-setup', message: AI_SETUP_MESSAGE });
+      expect(client.chat).not.toHaveBeenCalled();
+    });
+
+    it('sends the guidance and tags, and drops tag ids the model invented', async () => {
+      store.getApiKey.mockResolvedValue('sk-or-key');
+      store.getModel.mockResolvedValue('openai/gpt-4o-mini');
+      client.chat.mockResolvedValue(JSON.stringify({ matched: true, title: ' City Grocers ', amount: 450, type: 'expense', tagIds: ['tag-food', 'made-up'], date: 'not-a-date' }));
+
+      expect(await service.extractTransactionFromEmail(email, tags, 'always groceries')).toEqual({
+        status: 'success',
+        parsed: { title: 'City Grocers', amount: 450, type: 'expense', tagIds: ['tag-food'], date: '2026-10-12' },
+      });
+      const userMessage = JSON.parse(client.chat.mock.calls[0][0].messages[1].content);
+      expect(userMessage).toMatchObject({
+        referenceDate: '2026-10-12',
+        guidance: 'always groceries',
+        availableTags: [
+          { id: 'tag-food', name: 'FOOD' },
+          { id: 'tag-fun', name: 'FUN' },
+        ],
+      });
+    });
+  });
 });

@@ -1,6 +1,6 @@
-// STUB: AI test extraction (Run Test). No local data layer for this in packages/app yet, so it uses hardcoded stub data.
+import type { AiExtractResultDto, TagDto } from '@expense-tracker/shared';
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ms } from 'react-native-size-matters';
 import { color, font, space, text } from '../../theme';
 import { BottomSheetModal } from '../BottomSheetModal';
@@ -8,22 +8,51 @@ import { Button } from '../Button';
 import { Input } from '../Input';
 import { settingsStyles } from './SettingsWindow';
 import { IconText } from '../IconText';
+import { AiSetupLink } from '../AiSetupLink';
+import { TagChips } from '../home/TagChips';
+import { toAiExtractResult } from '../../lib/ai/gmail-extractor';
+import { aiService } from '../../services';
 
 export interface TestExtractSheetProps {
+  /** The guidance currently typed in the watcher editor, so the test matches what Save would store. */
+  guidanceHint: string;
+  tags: TagDto[];
   onClose: () => void;
 }
 
 /** Dry-run preview: paste a sample email and see what the AI extractor would resolve it to. Mount to open. */
-export function TestExtractSheet({ onClose }: TestExtractSheetProps) {
+export function TestExtractSheet({ guidanceHint, tags, onClose }: TestExtractSheetProps) {
   const [from, setFrom] = useState('');
   const [subject, setSubject] = useState('');
   const [emailDate, setEmailDate] = useState('');
   const [bodyText, setBodyText] = useState('');
 
+  const [testing, setTesting] = useState(false);
+  const [result, setResult] = useState<AiExtractResultDto | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [needsAiSetup, setNeedsAiSetup] = useState(false);
+
   const canTest = bodyText.trim().length > 0;
 
-  const handleTest = (): void => {
-    Alert.alert('Not available yet', 'Testing the AI extractor is not supported in the offline app yet.');
+  // Same extractor as the pending-expense review, run on the pasted sample. Saves nothing.
+  const handleTest = async (): Promise<void> => {
+    setTesting(true);
+    setError(null);
+    setResult(null);
+    setNeedsAiSetup(false);
+    try {
+      const outcome = await aiService.extractTransactionFromEmail({ from, subject, bodyText, emailDate: emailDate.trim() || null }, tags, guidanceHint.trim() || null);
+      if (outcome.status === 'needs-ai-setup') {
+        setNeedsAiSetup(true);
+        setError(outcome.message);
+        return;
+      }
+      setResult(toAiExtractResult(outcome.status === 'success' ? outcome.parsed : null));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Test failed');
+    } finally {
+      setTesting(false);
+    }
   };
 
   return (
@@ -53,9 +82,44 @@ export function TestExtractSheet({ onClose }: TestExtractSheetProps) {
               spellCheck={false}
               style={styles.bodyInput}
             />
+
+            {error && (
+              <View style={styles.resultBox}>
+                <Text style={styles.error}>{error}</Text>
+                {needsAiSetup && <AiSetupLink onPress={close} />}
+              </View>
+            )}
+
+            {result && (
+              <View style={styles.resultBox}>
+                {result.matched ? (
+                  <>
+                    <IconText icon="Check" style={styles.matched}>
+                      Matched a transaction
+                    </IconText>
+                    {[
+                      ['Title', result.title],
+                      ['Amount', result.amount],
+                      ['Type', result.type],
+                      ['Date', result.date],
+                    ].map(([label, value]) => (
+                      <View key={label} style={styles.row}>
+                        <Text style={styles.rowLabel}>{label}</Text>
+                        <Text style={styles.rowValue}>{value}</Text>
+                      </View>
+                    ))}
+                    <TagChips tags={tags.filter((tag) => result.tagIds?.includes(tag.id))} />
+                  </>
+                ) : (
+                  <IconText icon="X" style={styles.unmatched}>
+                    Not a transaction. This email would be skipped
+                  </IconText>
+                )}
+              </View>
+            )}
           </ScrollView>
 
-          <Button label="Run Test" icon="FlaskConical" variant="primary" size="lg" disabled={!canTest} onPress={handleTest} />
+          <Button label={testing ? 'Testing…' : 'Run Test'} icon="FlaskConical" variant="primary" size="lg" disabled={!canTest || testing} onPress={handleTest} />
         </>
       )}
     </BottomSheetModal>
@@ -69,4 +133,11 @@ const styles = StyleSheet.create({
   body: { height: ms(380) },
   bodyContent: { gap: ms(space[4]), paddingBottom: ms(space[2]) },
   bodyInput: { height: ms(160), fontFamily: font.mono, fontSize: ms(12), lineHeight: ms(18) },
+  resultBox: { borderWidth: ms(4), borderColor: color.border, backgroundColor: color.surface, padding: ms(space[3]), gap: ms(space[2]) },
+  error: { fontFamily: font.mono, fontSize: ms(text.labelCaps.fontSize), color: color.error, textTransform: 'uppercase' },
+  matched: { fontFamily: font.mono, fontSize: ms(text.labelCaps.fontSize), color: color.primary, textTransform: 'uppercase' },
+  unmatched: { fontFamily: font.mono, fontSize: ms(text.labelCaps.fontSize), color: color.onSurfaceVariant, textTransform: 'uppercase' },
+  row: { flexDirection: 'row', justifyContent: 'space-between', gap: ms(space[4]) },
+  rowLabel: { fontFamily: font.body, fontSize: ms(12), color: color.onSurfaceVariant },
+  rowValue: { flexShrink: 1, fontFamily: font.body, fontSize: ms(12), color: color.onSurface, textAlign: 'right' },
 });

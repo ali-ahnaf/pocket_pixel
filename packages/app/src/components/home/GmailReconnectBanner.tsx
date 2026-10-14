@@ -1,4 +1,3 @@
-// STUB: Gmail OAuth connection status (always connected, so the banner stays hidden). No local data layer for this in packages/app yet, so it uses hardcoded stub data.
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ms } from 'react-native-size-matters';
@@ -6,12 +5,8 @@ import { color, font, space, text } from '../../theme';
 import { Card } from '../Card';
 import { PixelIcon } from '../PixelIcon';
 
-const RECONNECT_REQUIRED: boolean = false;
-
-// Port of packages/ui/src/components/GmailReconnectBanner.tsx. Not dismissible: shown only while Gmail needs reconnecting.
+// Port of packages/ui/src/components/GmailReconnectBanner.tsx. Not dismissible: PendingExpensesPanel renders it only while Gmail needs reconnecting.
 export function GmailReconnectBanner() {
-  if (!RECONNECT_REQUIRED) return null;
-
   return (
     <Card style={styles.card}>
       <View style={styles.header}>

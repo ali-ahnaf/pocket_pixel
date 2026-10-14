@@ -1,7 +1,6 @@
-// STUB: saving and removing a Gmail watcher (Alert only). No local data layer for this in packages/app yet, so it uses hardcoded stub data.
-import type { GmailLabelDto, VaultGmailWatcherDto } from '@expense-tracker/shared';
+import type { GmailLabelDto, TagDto, VaultGmailWatcherDto } from '@expense-tracker/shared';
 import { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { ms } from 'react-native-size-matters';
 import { color, font, space, text } from '../../theme';
 import { Button } from '../Button';
@@ -10,24 +9,29 @@ import { Input } from '../Input';
 import { settingsStyles } from './SettingsWindow';
 import { TestExtractSheet } from './TestExtractSheet';
 import { IconText } from '../IconText';
+import { useLocalUserId } from '../../hooks/DatabaseProvider';
+import { vaultWatchersService } from '../../services';
 
 export interface VaultWatcherCardProps {
   vault: { id: string; name: string };
   watcher?: VaultGmailWatcherDto;
   labels: GmailLabelDto[];
+  tags: TagDto[];
+  /** Called after the watcher is saved or removed so the screen can reload. */
+  onChanged: () => void;
   onError: (message: string) => void;
 }
 
 const NO_LABEL: GmailLabelDto = { id: '', name: 'Select a label…' };
-
-const notAvailable = (): void => Alert.alert('Not available yet', 'Gmail watchers are not supported in the offline app yet.');
 
 /**
  * One card per vault: shows its attached Gmail watcher (label + AI extraction
  * guidance) or an "attach listener" editor with a label dropdown, an optional
  * subject filter, an optional guidance hint, and a dry-run test sheet.
  */
-export function VaultWatcherCard({ vault, watcher, labels, onError }: VaultWatcherCardProps) {
+export function VaultWatcherCard({ vault, watcher, labels, tags, onChanged, onError }: VaultWatcherCardProps) {
+  const userId = useLocalUserId();
+  const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
   const [gmailLabelId, setGmailLabelId] = useState(watcher?.gmailLabelId ?? '');
   const [subjectFilter, setSubjectFilter] = useState(watcher?.subjectFilter ?? '');
@@ -43,12 +47,39 @@ export function VaultWatcherCard({ vault, watcher, labels, onError }: VaultWatch
 
   const labelName = (id: string): string => labels.find((label) => label.id === id)?.name ?? watcher?.gmailLabelName ?? id;
 
-  const handleSave = (): void => {
+  const handleSave = async (): Promise<void> => {
     if (!gmailLabelId) {
       onError('Pick a Gmail label to attach to this vault');
       return;
     }
-    notAvailable();
+    setSaving(true);
+    try {
+      await vaultWatchersService.upsert(userId, vault.id, {
+        gmailLabelId,
+        gmailLabelName: labels.find((label) => label.id === gmailLabelId)?.name,
+        subjectFilter: subjectFilter.trim() || undefined,
+        guidanceHint: guidanceHint.trim() || undefined,
+      });
+      setEditing(false);
+      onChanged();
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Saving the listener failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRemove = async (): Promise<void> => {
+    setSaving(true);
+    try {
+      await vaultWatchersService.remove(userId, vault.id);
+      setEditing(false);
+      onChanged();
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Removing the listener failed');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const selectedLabel = labels.find((label) => label.id === gmailLabelId) ?? NO_LABEL;
@@ -76,7 +107,7 @@ export function VaultWatcherCard({ vault, watcher, labels, onError }: VaultWatch
             </Text>
             {watcher?.guidanceHint ? <Text style={styles.guidance}>Guidance: {watcher.guidanceHint}</Text> : null}
             <Button label={watcher ? 'Edit Listener' : 'Attach Listener'} variant="primary" onPress={startEditing} />
-            {watcher && <Button label="Remove" icon="Trash" variant="danger" onPress={notAvailable} />}
+            {watcher && <Button label="Remove" icon="Trash" variant="danger" disabled={saving} onPress={handleRemove} />}
           </>
         ) : (
           <>
@@ -114,13 +145,13 @@ export function VaultWatcherCard({ vault, watcher, labels, onError }: VaultWatch
             </View>
 
             <Button label="Test On A Pasted Email" icon="FlaskConical" variant="secondary" onPress={() => setTestOpen(true)} />
-            <Button label="Save Listener" variant="primary" onPress={handleSave} />
-            <Button label="Cancel" variant="ghost" onPress={() => setEditing(false)} />
+            <Button label={saving ? 'Saving…' : 'Save Listener'} variant="primary" disabled={saving} onPress={handleSave} />
+            <Button label="Cancel" variant="ghost" disabled={saving} onPress={() => setEditing(false)} />
           </>
         )}
       </View>
 
-      {testOpen && <TestExtractSheet onClose={() => setTestOpen(false)} />}
+      {testOpen && <TestExtractSheet guidanceHint={guidanceHint} tags={tags} onClose={() => setTestOpen(false)} />}
     </View>
   );
 }

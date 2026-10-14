@@ -11,6 +11,9 @@ jest.mock('../lib/auth/session-store', () => {
   let stored: string | null = null;
   return { sessionStore: { get: async () => stored, set: async (id: string) => void (stored = id), clear: async () => void (stored = null) } };
 });
+// GmailService's defaults load Google Sign-In and expo-secure-store; these flows never connect Gmail.
+jest.mock('../lib/gmail/google-auth', () => ({ googleAuth: {} }));
+jest.mock('../lib/gmail/connection-store', () => ({ gmailConnectionStore: {} }));
 
 const today = new Date().toISOString().slice(0, 10);
 const [year, month] = today.split('-').map(Number);
