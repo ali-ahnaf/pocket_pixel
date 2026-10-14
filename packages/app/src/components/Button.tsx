@@ -1,12 +1,15 @@
 import { Pressable, StyleProp, StyleSheet, Text, ViewStyle } from 'react-native';
 import { ms } from 'react-native-size-matters';
 import { color, font, shadow, space } from '../theme';
+import { PixelIcon, PixelIconName } from './PixelIcon';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'tertiary' | 'ghost' | 'danger';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 export interface ButtonProps {
   label: string;
+  /** Sprite shown before the label. */
+  icon?: PixelIconName;
   onPress?: () => void;
   variant?: ButtonVariant;
   size?: ButtonSize;
@@ -14,7 +17,7 @@ export interface ButtonProps {
   style?: StyleProp<ViewStyle>;
 }
 
-export function Button({ label, onPress, variant = 'primary', size = 'md', disabled = false, style }: ButtonProps) {
+export function Button({ label, icon, onPress, variant = 'primary', size = 'md', disabled = false, style }: ButtonProps) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -32,17 +35,20 @@ export function Button({ label, onPress, variant = 'primary', size = 'md', disab
         style,
       ]}
     >
+      {icon ? <PixelIcon name={icon} size={ms(iconSizes[size])} /> : null}
       <Text style={[styles.label, labelSizeStyles[size], labelVariantStyles[variant]]}>{label}</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  base: { alignItems: 'center', justifyContent: 'center', borderWidth: ms(4), borderColor: color.border },
+  base: { flexDirection: 'row', gap: ms(space[2]), alignItems: 'center', justifyContent: 'center', borderWidth: ms(4), borderColor: color.border },
   pressed: { transform: [{ translateY: 2 }] },
   disabled: { opacity: 0.4 },
   label: { fontFamily: font.heading, textTransform: 'uppercase', letterSpacing: 0.8 },
 });
+
+const iconSizes: Record<ButtonSize, number> = { sm: 14, md: 18, lg: 22 };
 
 const sizeStyles = StyleSheet.create({
   sm: { paddingHorizontal: ms(space[3]), paddingVertical: ms(space[1]) },

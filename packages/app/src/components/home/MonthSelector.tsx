@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ms } from 'react-native-size-matters';
 import { color, font, shadow, space, text } from '../../theme';
+import { PixelIcon } from '../PixelIcon';
 
 const MONTH_NAMES = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
 
@@ -23,7 +24,7 @@ export function MonthSelector({ month, year, onChange }: MonthSelectorProps) {
   return (
     <View style={styles.bar}>
       <Pressable accessibilityRole="button" accessibilityLabel="Previous month" hitSlop={4} onPress={() => shift(-1)} style={({ pressed }) => [styles.nav, pressed && styles.pressed]}>
-        <Text style={styles.navGlyph}>‹</Text>
+        <PixelIcon name="ChevronLeft" size={ms(20)} />
       </Pressable>
       <View style={styles.center}>
         <Text style={styles.title} accessibilityRole="header">
@@ -36,7 +37,7 @@ export function MonthSelector({ month, year, onChange }: MonthSelectorProps) {
         )}
       </View>
       <Pressable accessibilityRole="button" accessibilityLabel="Next month" hitSlop={4} onPress={() => shift(1)} style={({ pressed }) => [styles.nav, pressed && styles.pressed]}>
-        <Text style={styles.navGlyph}>›</Text>
+        <PixelIcon name="ChevronRight" size={ms(20)} />
       </Pressable>
     </View>
   );
@@ -54,7 +55,6 @@ const styles = StyleSheet.create({
     boxShadow: shadow.card,
   },
   nav: { width: ms(44), height: ms(44), alignItems: 'center', justifyContent: 'center', backgroundColor: color.bg, borderWidth: ms(4), borderColor: color.outline },
-  navGlyph: { fontSize: ms(24), lineHeight: ms(28), color: color.primary },
   pressed: { transform: [{ translateY: 2 }] },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: ms(60) },
   title: { fontFamily: font.heading, fontSize: ms(text.headlineMd.fontSize), lineHeight: ms(text.headlineMd.lineHeight), color: color.primary, textAlign: 'center' },

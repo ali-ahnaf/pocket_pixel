@@ -64,7 +64,7 @@ export default function SignUpScreen() {
     <AuthScreen>
       <AuthLogo />
 
-      <AuthCard title="Create Hero" glyph="+" tone="secondary" footerTag="REGISTER_V1">
+      <AuthCard title="Create Hero" icon="Plus" tone="secondary" footerTag="REGISTER_V1">
         <View style={styles.avatarSection}>
           <Text style={styles.label}>Choose Avatar</Text>
           <Pressable

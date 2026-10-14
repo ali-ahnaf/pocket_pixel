@@ -4,6 +4,7 @@ import { ms } from 'react-native-size-matters';
 import { BottomSheetModal } from '../BottomSheetModal';
 import { color, font, shadow, space, text } from '../../theme';
 import { ALL_TIME_PERIOD, MONTH_NAMES } from './useStats';
+import { PixelIcon } from '../PixelIcon';
 
 export const displayMonthYear = (yyyyMm: string): string => {
   if (yyyyMm === ALL_TIME_PERIOD) return 'ALL TIME';
@@ -32,11 +33,11 @@ export function PeriodPicker({ value, onChange }: PeriodPickerProps) {
         onPress={() => setIsOpen(true)}
         style={({ pressed }) => [styles.trigger, pressed && styles.pressed]}
       >
-        <Text style={styles.glyph}>📅</Text>
+        <PixelIcon name="Calendar" size={ms(20)} />
         <Text style={styles.triggerText} numberOfLines={1}>
           {displayMonthYear(value)}
         </Text>
-        <Text style={styles.chevron}>▾</Text>
+        <PixelIcon name="ChevronDown" size={ms(16)} />
       </Pressable>
 
       {isOpen ? (
@@ -59,11 +60,11 @@ export function PeriodPicker({ value, onChange }: PeriodPickerProps) {
 
                 <View style={styles.yearRow}>
                   <Pressable accessibilityRole="button" accessibilityLabel="Previous year" hitSlop={12} onPress={() => setPickerYear((y) => y - 1)} style={styles.yearButton}>
-                    <Text style={styles.yearArrow}>‹</Text>
+                    <PixelIcon name="ChevronLeft" size={ms(20)} />
                   </Pressable>
                   <Text style={styles.year}>{pickerYear}</Text>
                   <Pressable accessibilityRole="button" accessibilityLabel="Next year" hitSlop={12} onPress={() => setPickerYear((y) => y + 1)} style={styles.yearButton}>
-                    <Text style={styles.yearArrow}>›</Text>
+                    <PixelIcon name="ChevronRight" size={ms(20)} />
                   </Pressable>
                 </View>
 
@@ -106,16 +107,13 @@ const styles = StyleSheet.create({
     boxShadow: shadow.card,
   },
   pressed: { backgroundColor: color.surfaceHighest, transform: [{ translateY: 2 }] },
-  glyph: { fontSize: ms(14) },
   triggerText: { flex: 1, fontFamily: font.body, fontSize: ms(text.bodySm.fontSize), lineHeight: ms(text.bodySm.lineHeight), color: color.onSurface },
-  chevron: { fontSize: ms(16), color: color.onSurface },
   cell: { minHeight: ms(44), alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: color.border, backgroundColor: color.surface },
   cellActive: { backgroundColor: color.primary, boxShadow: shadow.card },
   allTime: { padding: ms(space[2]) },
   allTimeText: { fontFamily: font.mono, fontSize: ms(text.labelCaps.fontSize), color: color.onSurface, textTransform: 'uppercase' },
   yearRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: color.surfaceLow, borderWidth: 2, borderColor: color.border, padding: ms(space[1]) },
   yearButton: { width: ms(36), height: ms(36), alignItems: 'center', justifyContent: 'center' },
-  yearArrow: { fontSize: ms(22), color: color.onSurface },
   year: { fontFamily: font.heading, fontSize: ms(18), color: color.onSurface },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: ms(space[2]) },
   month: { width: '31%' },

@@ -7,6 +7,7 @@ import { BottomSheetModal } from '../BottomSheetModal';
 import { Button } from '../Button';
 import { Input } from '../Input';
 import { settingsStyles } from './SettingsWindow';
+import { IconText } from '../IconText';
 
 export interface TestExtractSheetProps {
   onClose: () => void;
@@ -30,10 +31,10 @@ export function TestExtractSheet({ onClose }: TestExtractSheetProps) {
       {(close) => (
         <>
           <View style={styles.header}>
-            <Text accessibilityRole="header" style={styles.title}>
-              🧪 Test On Sample Email
-            </Text>
-            <Button label="✕" variant="ghost" size="sm" onPress={close} />
+            <IconText icon="FlaskConical" iconSize={20} accessibilityRole="header" style={styles.title}>
+              Test On Sample Email
+            </IconText>
+            <Button label="Close" icon="X" variant="ghost" size="sm" onPress={close} />
           </View>
 
           <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} keyboardShouldPersistTaps="handled">
@@ -54,7 +55,7 @@ export function TestExtractSheet({ onClose }: TestExtractSheetProps) {
             />
           </ScrollView>
 
-          <Button label="🧪 Run Test" variant="primary" size="lg" disabled={!canTest} onPress={handleTest} />
+          <Button label="Run Test" icon="FlaskConical" variant="primary" size="lg" disabled={!canTest} onPress={handleTest} />
         </>
       )}
     </BottomSheetModal>

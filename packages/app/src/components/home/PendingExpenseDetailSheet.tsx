@@ -30,7 +30,7 @@ export function PendingExpenseDetailSheet({ item, onResolved, onClose }: Pending
     <BottomSheetModal onClose={onClose}>
       {(close) => (
         <>
-          <SheetHeader title="Review Expense" glyph="✉" onClose={close} />
+          <SheetHeader title="Review Expense" icon="Mail" onClose={close} />
           <Text style={styles.vault}>{item.vaultName}</Text>
           {item.guidanceHint ? <Text style={styles.guidance}>Guidance: {item.guidanceHint}</Text> : null}
 
@@ -70,9 +70,10 @@ export function PendingExpenseDetailSheet({ item, onResolved, onClose }: Pending
             </View>
           )}
 
-          <Button label="✦ Parse With AI" onPress={() => setParseError('Set up your OpenRouter API key in Settings before parsing this email.')} />
+          <Button label="Parse With AI" icon="Sparkles" onPress={() => setParseError('Set up your OpenRouter API key in Settings before parsing this email.')} />
           <Button
-            label="🗑 Dismiss"
+            label="Dismiss"
+            icon="Trash"
             variant="danger"
             onPress={() => {
               onResolved(item.id);

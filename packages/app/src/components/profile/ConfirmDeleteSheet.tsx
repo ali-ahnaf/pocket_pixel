@@ -22,7 +22,7 @@ export function ConfirmDeleteSheet({ title, before, name, after, onConfirm, onCl
     <BottomSheetModal onClose={onClose}>
       {(close) => (
         <>
-          <SheetHeader glyph="⚠" title={title} danger onClose={close} />
+          <SheetHeader icon="TriangleAlert" title={title} danger onClose={close} />
           <Text style={styles.message}>
             {before}
             <Text style={styles.name}>&quot;{name}&quot;</Text>

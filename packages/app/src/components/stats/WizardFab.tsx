@@ -1,12 +1,13 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 import { ms } from 'react-native-size-matters';
 import { color, shadow } from '../../theme';
+import { PixelIcon } from '../PixelIcon';
 
 // Floating button that summons the wizard chat sheet, bottom-right of the Stats screen.
 export function WizardFab({ onPress }: { onPress: () => void }) {
   return (
     <Pressable accessibilityRole="button" accessibilityLabel="Summon Aldric the Wise" onPress={onPress} style={({ pressed }) => [styles.fab, pressed && styles.pressed]}>
-      <Text style={styles.glyph}>🪄</Text>
+      <PixelIcon name="WandSparkles" size={ms(32)} />
     </Pressable>
   );
 }
@@ -26,5 +27,4 @@ const styles = StyleSheet.create({
     boxShadow: shadow.coin,
   },
   pressed: { transform: [{ translateY: 2 }], boxShadow: shadow.button.pressed },
-  glyph: { fontSize: ms(26) },
 });

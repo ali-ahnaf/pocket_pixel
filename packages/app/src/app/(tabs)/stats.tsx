@@ -6,6 +6,8 @@ import { ms } from 'react-native-size-matters';
 import { AppBar } from '../../components/AppBar';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { IconText } from '../../components/IconText';
+import { PixelIcon } from '../../components/PixelIcon';
 import { Dropdown } from '../../components/Dropdown';
 import { ProgressBar } from '../../components/ProgressBar';
 import { PeriodPicker } from '../../components/stats/PeriodPicker';
@@ -13,7 +15,7 @@ import { ALL_TIME_PERIOD, currentMonthYear, useStats } from '../../components/st
 import { VaultExpenseChart } from '../../components/stats/VaultExpenseChart';
 import { WizardChatSheet } from '../../components/stats/WizardChatSheet';
 import { WizardFab } from '../../components/stats/WizardFab';
-import { iconGlyph } from '../../lib/iconMapper';
+import { toPixelIcon } from '../../lib/iconMapper';
 import { color, font, shadow, gutter, space, text } from '../../theme';
 
 const TAG_COLORS = [color.error, color.tertiary, color.secondary, color.outline, color.primary];
@@ -113,7 +115,11 @@ export default function StatsScreen() {
                 onChange={(v) => setSelectedVaultId(v.id)}
                 keyExtractor={(v) => v.id}
                 accessibilityLabel={`Source vault: ${selectedVault.name}`}
-                renderValue={(v) => <Text style={styles.filterValue}>📦 {v.name}</Text>}
+                renderValue={(v) => (
+                  <IconText icon="Package" style={styles.filterValue}>
+                    {v.name}
+                  </IconText>
+                )}
                 renderOption={(v, isSelected) => <Text style={[styles.filterValue, isSelected && styles.optionSelected]}>{v.name}</Text>}
               />
             </View>
@@ -142,21 +148,31 @@ export default function StatsScreen() {
 
         <View style={styles.metricsRow}>
           <Card style={[styles.card, styles.flex]}>
-            <Text style={styles.bgGlyph}>💰</Text>
+            <View style={styles.bgGlyph} pointerEvents="none">
+              <PixelIcon name="MoneyBag" size={ms(96)} />
+            </View>
             <Text style={styles.metricLabel}>Total Hoard</Text>
             {loading ? <Skeleton /> : <Text style={[styles.metricValue, styles.primary]}>{formatCoins(stats.totalIncome)}</Text>}
-            <Text style={[styles.metricHint, styles.primary]}>↗ Income this period</Text>
+            <IconText icon="ArrowUpRight" iconSize={14} style={[styles.metricHint, styles.primary]}>
+              Income this period
+            </IconText>
           </Card>
           <Card style={[styles.card, styles.flex]}>
-            <Text style={styles.bgGlyph}>🔥</Text>
+            <View style={styles.bgGlyph} pointerEvents="none">
+              <PixelIcon name="Flame" size={ms(96)} />
+            </View>
             <Text style={styles.metricLabel}>Resources Burned</Text>
             {loading ? <Skeleton /> : <Text style={[styles.metricValue, styles.error]}>{formatCoins(stats.totalExpenses)}</Text>}
-            <Text style={[styles.metricHint, styles.error]}>↘ Expenses this period</Text>
+            <IconText icon="ArrowDownRight" iconSize={14} style={[styles.metricHint, styles.error]}>
+              Expenses this period
+            </IconText>
           </Card>
         </View>
 
         <Card style={styles.card}>
-          <Text style={styles.bgGlyph}>💎</Text>
+          <View style={styles.bgGlyph} pointerEvents="none">
+            <PixelIcon name="Gem" size={ms(96)} />
+          </View>
           <Text style={styles.metricLabel}>Net Yield</Text>
           {loading ? (
             <Skeleton />
@@ -239,7 +255,9 @@ export default function StatsScreen() {
 
         <Card style={styles.card}>
           <View>
-            <Text style={styles.sectionTitle}>📈 {isAllTime ? 'Monthly Expenses' : 'Daily Expenses'}</Text>
+            <IconText icon="TrendingUp" iconSize={20} style={styles.sectionTitle}>
+              {isAllTime ? 'Monthly Expenses' : 'Daily Expenses'}
+            </IconText>
             <Text style={styles.subtitle}>Expense burn per {isAllTime ? 'month' : 'day'}, by vault.</Text>
           </View>
           <View style={styles.tabs}>
@@ -283,7 +301,7 @@ export default function StatsScreen() {
               <View key={t.id} style={[styles.inset, styles.spaceBetween]}>
                 <View style={[styles.inline, styles.flex]}>
                   <View style={[styles.drainIcon, { backgroundColor: t.tags?.[0]?.backgroundColor || color.onErrorContainer }]}>
-                    <Text style={styles.drainGlyph}>{iconGlyph(t.tags?.[0]?.icon || t.vault?.icon || 'ShoppingCart')}</Text>
+                    <PixelIcon name={toPixelIcon(t.tags?.[0]?.icon || t.vault?.icon || 'ShoppingCart')} size={ms(20)} />
                   </View>
                   <Text style={[styles.body, styles.flex]} numberOfLines={1}>
                     {t.title || t.tags?.[0]?.name || 'Expense'}
@@ -333,7 +351,7 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.5 },
   metricsRow: { flexDirection: 'row', gap: ms(space[4]) },
   card: { padding: ms(space[3]), gap: ms(space[3]), overflow: 'hidden' },
-  bgGlyph: { position: 'absolute', right: ms(-16), top: ms(-16), fontSize: ms(96), opacity: 0.1 },
+  bgGlyph: { position: 'absolute', right: ms(-16), top: ms(-16), opacity: 0.1 },
   metricLabel: { ...labelCaps, color: color.outline },
   metricValue: { fontFamily: font.heading, fontSize: ms(text.headlineMd.fontSize), lineHeight: ms(text.headlineMd.lineHeight) },
   metricHint: { ...bodySm },
@@ -368,6 +386,5 @@ const styles = StyleSheet.create({
   tabTextActive: { color: color.onPrimary },
   divider: { borderBottomWidth: ms(4), borderColor: color.border, paddingBottom: ms(space[2]) },
   drainIcon: { padding: ms(space[2]), borderWidth: ms(4), borderColor: color.border },
-  drainGlyph: { fontSize: ms(18) },
   drainAmount: { ...labelCaps, color: color.error },
 });

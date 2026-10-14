@@ -9,6 +9,7 @@ import { Dropdown } from '../Dropdown';
 import { Input } from '../Input';
 import { settingsStyles } from './SettingsWindow';
 import { TestExtractSheet } from './TestExtractSheet';
+import { IconText } from '../IconText';
 
 export interface VaultWatcherCardProps {
   vault: { id: string; name: string };
@@ -55,13 +56,13 @@ export function VaultWatcherCard({ vault, watcher, labels, onError }: VaultWatch
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Text numberOfLines={1} style={styles.vaultName}>
-          🏦 {vault.name}
-        </Text>
+        <IconText icon="Vault" iconSize={20} numberOfLines={1} style={styles.vaultName}>
+          {vault.name}
+        </IconText>
         {watcher && !editing && (
-          <Text numberOfLines={1} style={styles.attached}>
-            ✔ {labelName(watcher.gmailLabelId)}
-          </Text>
+          <IconText icon="Check" numberOfLines={1} style={styles.attached}>
+            {labelName(watcher.gmailLabelId)}
+          </IconText>
         )}
       </View>
 
@@ -75,7 +76,7 @@ export function VaultWatcherCard({ vault, watcher, labels, onError }: VaultWatch
             </Text>
             {watcher?.guidanceHint ? <Text style={styles.guidance}>Guidance: {watcher.guidanceHint}</Text> : null}
             <Button label={watcher ? 'Edit Listener' : 'Attach Listener'} variant="primary" onPress={startEditing} />
-            {watcher && <Button label="🗑 Remove" variant="danger" onPress={notAvailable} />}
+            {watcher && <Button label="Remove" icon="Trash" variant="danger" onPress={notAvailable} />}
           </>
         ) : (
           <>
@@ -112,7 +113,7 @@ export function VaultWatcherCard({ vault, watcher, labels, onError }: VaultWatch
               <Text style={styles.fieldHint}>AI reads the email and fills in the transaction (amount, title, type, tags). This nudge is appended to its prompt.</Text>
             </View>
 
-            <Button label="🧪 Test On A Pasted Email" variant="secondary" onPress={() => setTestOpen(true)} />
+            <Button label="Test On A Pasted Email" icon="FlaskConical" variant="secondary" onPress={() => setTestOpen(true)} />
             <Button label="Save Listener" variant="primary" onPress={handleSave} />
             <Button label="Cancel" variant="ghost" onPress={() => setEditing(false)} />
           </>

@@ -2,13 +2,14 @@ import { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { ms } from 'react-native-size-matters';
 import { color, font, shadow, space } from '../../theme';
+import { PixelIcon, PixelIconName } from '../PixelIcon';
 
 export type AuthCardTone = 'primary' | 'secondary';
 
 export interface AuthCardProps {
   title: string;
-  /** Short unicode glyph shown before the title (stands in for the web lucide icon). */
-  glyph: string;
+  /** Sprite shown before the title. */
+  icon: PixelIconName;
   tone?: AuthCardTone;
   /** Tag in the faded footer decor (e.g. AUTH_V1). Omit to hide the footer. */
   footerTag?: string;
@@ -16,13 +17,13 @@ export interface AuthCardProps {
 }
 
 // Bordered pixel card with a header bar, ported from the card markup repeated in the web auth pages.
-export function AuthCard({ title, glyph, tone = 'primary', footerTag, children }: AuthCardProps) {
+export function AuthCard({ title, icon, tone = 'primary', footerTag, children }: AuthCardProps) {
   const toneStyle = tone === 'primary' ? styles.primary : styles.secondary;
 
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Text style={[styles.glyph, toneStyle]}>{glyph}</Text>
+        <PixelIcon name={icon} size={ms(24)} />
         <Text style={[styles.title, toneStyle]} accessibilityRole="header">
           {title}
         </Text>
@@ -54,7 +55,6 @@ const styles = StyleSheet.create({
     borderColor: color.border,
     backgroundColor: color.surface,
   },
-  glyph: { fontSize: ms(18) },
   title: { fontFamily: font.heading, fontSize: ms(18), textTransform: 'uppercase', letterSpacing: 0.8 },
   primary: { color: color.primary },
   secondary: { color: color.secondary },

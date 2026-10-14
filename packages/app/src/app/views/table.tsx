@@ -7,6 +7,8 @@ import { ms } from 'react-native-size-matters';
 import { BackButton } from '../../components/BackButton';
 import { Card } from '../../components/Card';
 import { Dropdown } from '../../components/Dropdown';
+import { IconText } from '../../components/IconText';
+import { PixelIcon } from '../../components/PixelIcon';
 import { buildYearlyTable, projectableMonths } from '../../components/views/build-yearly-table';
 import { YearlyTagTable } from '../../components/views/YearlyTagTable';
 import { useLocalUserId } from '../../hooks/DatabaseProvider';
@@ -95,9 +97,9 @@ export default function TabularViewScreen() {
       <BackButton />
 
       <View style={styles.header}>
-        <Text accessibilityRole="header" style={styles.title}>
-          ▦ Tabular View
-        </Text>
+        <IconText icon="ChartColumn" iconSize={24} style={styles.title} accessibilityRole="header">
+          Tabular View
+        </IconText>
         <Text style={styles.subtitle}>One year of spend, month by month and tag by tag.</Text>
       </View>
 
@@ -111,9 +113,9 @@ export default function TabularViewScreen() {
             keyExtractor={(vault) => vault.id}
             accessibilityLabel="Source vault"
             renderValue={(vault) => (
-              <Text numberOfLines={1} style={styles.controlValue}>
-                📦 {vault.name}
-              </Text>
+              <IconText icon="Package" numberOfLines={1} style={styles.controlValue}>
+                {vault.name}
+              </IconText>
             )}
             renderOption={(vault) => <Text style={styles.controlValue}>{vault.name}</Text>}
           />
@@ -131,9 +133,11 @@ export default function TabularViewScreen() {
               onPress={() => setYear((y) => Math.max(minYear, y - 1))}
               style={({ pressed }) => [styles.yearButton, pressed && styles.yearButtonPressed, year <= minYear && styles.disabled]}
             >
-              <Text style={styles.yearChevron}>‹</Text>
+              <PixelIcon name="ChevronLeft" size={ms(20)} />
             </Pressable>
-            <Text style={styles.yearText}>📅 {year}</Text>
+            <IconText icon="Calendar" style={styles.yearText}>
+              {year}
+            </IconText>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Next year"
@@ -143,7 +147,7 @@ export default function TabularViewScreen() {
               onPress={() => setYear((y) => Math.min(maxYear, y + 1))}
               style={({ pressed }) => [styles.yearButton, pressed && styles.yearButtonPressed, year >= maxYear && styles.disabled]}
             >
-              <Text style={styles.yearChevron}>›</Text>
+              <PixelIcon name="ChevronRight" size={ms(20)} />
             </Pressable>
           </View>
         </View>
@@ -178,7 +182,6 @@ const styles = StyleSheet.create({
   yearButton: { width: ms(36), alignItems: 'center', justifyContent: 'center' },
   yearButtonPressed: { backgroundColor: color.primary },
   disabled: { opacity: 0.4 },
-  yearChevron: { fontFamily: font.heading, fontSize: ms(22), color: color.onSurface },
   yearText: { flex: 1, alignSelf: 'center', textAlign: 'center', fontFamily: font.heading, fontSize: ms(18), color: color.onSurface },
   card: { padding: ms(space[3]) },
 });

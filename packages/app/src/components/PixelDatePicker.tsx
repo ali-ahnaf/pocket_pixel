@@ -4,6 +4,7 @@ import { ms } from 'react-native-size-matters';
 import { toIsoDate } from '../lib/formatters';
 import { color, font, shadow, space, text } from '../theme';
 import { BottomSheetModal } from './BottomSheetModal';
+import { PixelIcon } from './PixelIcon';
 
 export interface PixelDatePickerProps {
   /** YYYY-MM-DD, or '' for no date. */
@@ -35,7 +36,7 @@ export function PixelDatePicker({ value, onChange }: PixelDatePickerProps) {
   return (
     <>
       <Pressable accessibilityRole="button" accessibilityLabel="Change date" onPress={() => setViewDate(selected ?? new Date())} style={({ pressed }) => [styles.trigger, pressed && styles.pressed]}>
-        <Text style={styles.triggerGlyph}>📅</Text>
+        <PixelIcon name="Calendar" size={ms(24)} />
       </Pressable>
 
       {viewDate ? (
@@ -57,7 +58,7 @@ export function PixelDatePicker({ value, onChange }: PixelDatePickerProps) {
                       onPress={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))}
                       style={styles.navButton}
                     >
-                      <Text style={styles.navGlyph}>‹</Text>
+                      <PixelIcon name="ChevronLeft" size={ms(20)} />
                     </Pressable>
                     <Pressable
                       accessibilityRole="button"
@@ -66,7 +67,7 @@ export function PixelDatePicker({ value, onChange }: PixelDatePickerProps) {
                       onPress={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))}
                       style={styles.navButton}
                     >
-                      <Text style={styles.navGlyph}>›</Text>
+                      <PixelIcon name="ChevronRight" size={ms(20)} />
                     </Pressable>
                   </View>
                 </View>
@@ -125,12 +126,10 @@ const styles = StyleSheet.create({
     boxShadow: shadow.input,
   },
   pressed: { transform: [{ translateY: 2 }] },
-  triggerGlyph: { fontSize: ms(22) },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   month: { fontFamily: font.heading, fontSize: ms(18), color: color.primary, textTransform: 'uppercase' },
   navRow: { flexDirection: 'row', gap: ms(space[1]) },
   navButton: { width: ms(36), height: ms(36), alignItems: 'center', justifyContent: 'center', backgroundColor: color.surfaceLowest, borderWidth: ms(2), borderColor: color.border },
-  navGlyph: { fontFamily: font.bodyBold, fontSize: ms(20), color: color.onSurface },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
   cell: { width: `${100 / 7}%`, height: ms(40), alignItems: 'center', justifyContent: 'center' },
   weekday: { fontFamily: font.mono, fontSize: ms(10), lineHeight: ms(40), textAlign: 'center', color: color.outline },

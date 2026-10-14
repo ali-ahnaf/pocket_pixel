@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { ms } from 'react-native-size-matters';
 import { BottomSheetModal } from '../BottomSheetModal';
+import { IconText } from '../IconText';
+import { PixelIcon, PixelIconName } from '../PixelIcon';
 import { color, font, shadow, space, text } from '../../theme';
 
 interface ChatMessage {
@@ -15,11 +17,11 @@ interface ChatMessage {
 const WIZARD_NAME = 'Aldric the Wise';
 const GREETING = 'Greetings, adventurer! I am Aldric the Wise, keeper of thy coin. Choose a query and I shall divine thy fortunes.';
 
-const PROMPT_LABELS: Record<WizardPromptKey, string> = {
-  spending_breakdown: '🪄 Where is my gold going?',
-  budget_adherence: '📉 Am I on track this month?',
-  saving_opportunities: '💰 How can I save more coin?',
-  spending_patterns: '📅 What patterns do you see, wizard?',
+const PROMPTS: Record<WizardPromptKey, { icon: PixelIconName; label: string }> = {
+  spending_breakdown: { icon: 'WandSparkles', label: 'Where is my gold going?' },
+  budget_adherence: { icon: 'TrendingDown', label: 'Am I on track this month?' },
+  saving_opportunities: { icon: 'MoneyBag', label: 'How can I save more coin?' },
+  spending_patterns: { icon: 'Calendar', label: 'What patterns do you see, wizard?' },
 };
 
 const STUB_ANSWERS: Record<WizardPromptKey, string> = {
@@ -47,7 +49,7 @@ export function WizardChatSheet({ onClose }: { onClose: () => void }) {
 
   const askWizard = (promptKey: WizardPromptKey): void => {
     if (isLoading) return;
-    setMessages((prev) => [...prev, { id: nextId.current++, role: 'user', text: PROMPT_LABELS[promptKey] }]);
+    setMessages((prev) => [...prev, { id: nextId.current++, role: 'user', text: PROMPTS[promptKey].label }]);
     setIsLoading(true);
     timer.current = setTimeout(() => {
       setMessages((prev) => [...prev, { id: nextId.current++, role: 'wizard', text: STUB_ANSWERS[promptKey] }]);
@@ -62,7 +64,7 @@ export function WizardChatSheet({ onClose }: { onClose: () => void }) {
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               <View style={styles.avatar}>
-                <Text style={styles.avatarGlyph}>🧙</Text>
+                <PixelIcon name="Wizard" size={ms(28)} />
               </View>
               <View>
                 <Text style={styles.name} accessibilityRole="header">
@@ -72,7 +74,7 @@ export function WizardChatSheet({ onClose }: { onClose: () => void }) {
               </View>
             </View>
             <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={close} style={({ pressed }) => [styles.closeButton, pressed && styles.closePressed]}>
-              <Text style={styles.closeGlyph}>✕</Text>
+              <PixelIcon name="X" size={ms(20)} />
             </Pressable>
           </View>
 
@@ -86,7 +88,7 @@ export function WizardChatSheet({ onClose }: { onClose: () => void }) {
             {messages.map((msg) =>
               msg.role === 'wizard' ? (
                 <View key={msg.id} style={styles.wizardRow}>
-                  <Text style={styles.wizardIcon}>🪄</Text>
+                  <PixelIcon name="WandSparkles" size={ms(24)} />
                   <View style={[styles.bubble, styles.wizardBubble]}>
                     <Text style={styles.wizardText}>{msg.text}</Text>
                   </View>
@@ -99,7 +101,7 @@ export function WizardChatSheet({ onClose }: { onClose: () => void }) {
             )}
             {isLoading && (
               <View style={styles.wizardRow} accessibilityLabel="The wizard is conjuring a response">
-                <Text style={styles.wizardIcon}>🪄</Text>
+                <PixelIcon name="WandSparkles" size={ms(24)} />
                 <View style={[styles.bubble, styles.wizardBubble]}>
                   <Text style={styles.wizardText}>• • •</Text>
                 </View>
@@ -117,7 +119,9 @@ export function WizardChatSheet({ onClose }: { onClose: () => void }) {
                 onPress={() => askWizard(key)}
                 style={({ pressed }) => [styles.prompt, pressed && styles.promptPressed, isLoading && styles.disabled]}
               >
-                <Text style={styles.promptText}>{PROMPT_LABELS[key]}</Text>
+                <IconText icon={PROMPTS[key].icon} style={styles.promptText}>
+                  {PROMPTS[key].label}
+                </IconText>
               </Pressable>
             ))}
           </View>
@@ -133,16 +137,13 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: ms(space[3]) },
   avatar: { width: ms(44), height: ms(44), alignItems: 'center', justifyContent: 'center', backgroundColor: color.primary, borderWidth: ms(4), borderColor: color.border, boxShadow: shadow.card },
-  avatarGlyph: { fontSize: ms(22) },
   name: { fontFamily: font.heading, fontSize: ms(18), color: color.primary, textTransform: 'uppercase' },
   subtitle: { fontFamily: font.mono, fontSize: ms(10), color: color.onSurfaceVariant, textTransform: 'uppercase' },
   closeButton: { width: ms(44), height: ms(44), alignItems: 'center', justifyContent: 'center', backgroundColor: color.surfaceHighest, borderWidth: ms(4), borderColor: color.border },
   closePressed: { backgroundColor: color.errorContainer },
-  closeGlyph: { fontSize: ms(18), color: color.onSurface },
   chat: { backgroundColor: color.surfaceLowest, borderWidth: ms(4), borderColor: color.border },
   chatContent: { padding: ms(space[3]), gap: ms(space[3]) },
   wizardRow: { flexDirection: 'row', alignItems: 'flex-start', gap: ms(space[2]) },
-  wizardIcon: { fontSize: ms(20) },
   bubble: { maxWidth: '80%', paddingHorizontal: ms(space[3]), paddingVertical: ms(space[2]), borderWidth: 2 },
   wizardBubble: { backgroundColor: color.surfaceHigh, borderColor: color.secondary },
   wizardText: { ...bodySm, color: color.onSurface },

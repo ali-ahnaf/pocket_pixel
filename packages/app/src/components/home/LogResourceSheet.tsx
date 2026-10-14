@@ -17,6 +17,7 @@ import { SheetHeader } from '../SheetHeader';
 import { SheetFooterDecor } from './SheetChrome';
 import { TagPicker } from './TagPicker';
 import { VaultSelect } from './VaultSelect';
+import { IconText } from '../IconText';
 
 export interface LogResourceSheetProps {
   vaults: VaultDto[];
@@ -90,7 +91,7 @@ export function LogResourceSheet({ vaults, tags, selectedMonth, selectedYear, on
                   onChangeText={setPromptText}
                   style={styles.prompt}
                 />
-                <Button label="➤ SEND" size="lg" disabled={!promptText.trim()} onPress={() => setPromptResult(AI_SETUP_MESSAGE)} />
+                <Button label="SEND" icon="Send" size="lg" disabled={!promptText.trim()} onPress={() => setPromptResult(AI_SETUP_MESSAGE)} />
                 {promptResult && (
                   <View style={styles.result}>
                     <Text style={styles.resultText}>{promptResult}</Text>
@@ -116,7 +117,9 @@ export function LogResourceSheet({ vaults, tags, selectedMonth, selectedYear, on
                 onPress={() => setManualEntryOverride(!manualEntry)}
                 style={({ pressed }) => [styles.manualToggle, pressed && styles.pressed]}
               >
-                <Text style={styles.manualLabel}>{manualEntry ? '✦' : '⚙'} MANUAL ENTRY</Text>
+                <IconText icon={manualEntry ? 'Sparkles' : 'Settings'} style={styles.manualLabel}>
+                  MANUAL ENTRY
+                </IconText>
                 <View style={[styles.switchTrack, manualEntry ? styles.switchOn : styles.switchOff]}>
                   <View style={styles.switchKnob} />
                 </View>
@@ -132,7 +135,7 @@ export function LogResourceSheet({ vaults, tags, selectedMonth, selectedYear, on
                 <TransactionTypeToggle isExpense={isExpense} onChange={setIsExpense} />
                 {vaults.length > 0 && <VaultSelect vaults={vaults} value={selectedVaultId} onChange={setSelectedVaultId} />}
                 <TagPicker tags={tags} selected={selectedTags} onChange={setSelectedTags} uppercase />
-                <Button label={isSubmitting ? 'RECORDING...' : 'RECORD 📦'} size="lg" disabled={!amount || isSubmitting} onPress={() => submit(close)} style={styles.record} />
+                <Button label={isSubmitting ? 'RECORDING...' : 'RECORD'} icon="Package" size="lg" disabled={!amount || isSubmitting} onPress={() => submit(close)} style={styles.record} />
               </>
             )}
 

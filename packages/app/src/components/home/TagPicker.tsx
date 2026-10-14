@@ -3,10 +3,11 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ms } from 'react-native-size-matters';
 import { useLocalUserId } from '../../hooks/DatabaseProvider';
-import { iconGlyph } from '../../lib/iconMapper';
+import { toPixelIcon } from '../../lib/iconMapper';
 import { logger, tagsService } from '../../services';
 import { color, font, shadow, space } from '../../theme';
 import { Input } from '../Input';
+import { PixelIcon } from '../PixelIcon';
 
 export interface TagPickerProps {
   tags: TagDto[];
@@ -62,9 +63,9 @@ export function TagPicker({ tags, selected, onChange, uppercase = false }: TagPi
               onPress={() => toggle(tag)}
               style={({ pressed }) => [styles.selectedChip, { backgroundColor: tag.backgroundColor ?? color.outline }, pressed && styles.pressed]}
             >
-              <Text style={styles.selectedText}>
-                {iconGlyph(tag.icon || 'Hash')} {tag.name} ✕
-              </Text>
+              <PixelIcon name={toPixelIcon(tag.icon || 'Hash')} />
+              <Text style={styles.selectedText}>{tag.name}</Text>
+              <PixelIcon name="X" size={ms(12)} />
             </Pressable>
           ))}
         </View>
@@ -92,9 +93,9 @@ export function TagPicker({ tags, selected, onChange, uppercase = false }: TagPi
                 onPress={() => toggle(tag)}
                 style={({ pressed }) => [styles.suggestion, { backgroundColor: `${tint}20`, borderColor: tint }, pressed && styles.pressed]}
               >
-                <Text style={[styles.suggestionText, { color: tint }]}>
-                  {iconGlyph(tag.icon || 'Hash')} {tag.name} +
-                </Text>
+                <PixelIcon name={toPixelIcon(tag.icon || 'Hash')} />
+                <Text style={[styles.suggestionText, { color: tint }]}>{tag.name}</Text>
+                <PixelIcon name="Plus" size={ms(12)} />
               </Pressable>
             );
           })}
@@ -114,9 +115,18 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: ms(space[2]), marginBottom: ms(space[3]) },
   below: { marginTop: ms(space[3]), marginBottom: 0 },
   pressed: { transform: [{ translateY: 2 }] },
-  selectedChip: { borderWidth: ms(4), borderColor: color.border, paddingHorizontal: ms(space[2]), paddingVertical: ms(space[1]), boxShadow: shadow.coin },
+  selectedChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: ms(space[1]),
+    borderWidth: ms(4),
+    borderColor: color.border,
+    paddingHorizontal: ms(space[2]),
+    paddingVertical: ms(space[1]),
+    boxShadow: shadow.coin,
+  },
   selectedText: { fontFamily: font.mono, fontSize: ms(12), color: color.onSurface },
-  suggestion: { borderWidth: ms(4), paddingHorizontal: ms(space[2]), paddingVertical: ms(space[1]) },
+  suggestion: { flexDirection: 'row', alignItems: 'center', gap: ms(space[1]), borderWidth: ms(4), paddingHorizontal: ms(space[2]), paddingVertical: ms(space[1]) },
   suggestionText: { fontFamily: font.mono, fontSize: ms(12) },
   create: {
     alignSelf: 'flex-start',

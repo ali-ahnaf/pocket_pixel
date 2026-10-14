@@ -22,6 +22,7 @@ import { useUser } from '../../hooks/useUser';
 import { AVATARS, avatarSource } from '../../lib/static';
 import { logger, recurringService, tagsService, usersService, vaultsService } from '../../services';
 import { color, font, shadow, gutter, space, text } from '../../theme';
+import { PixelIcon } from '../../components/PixelIcon';
 
 type Item = RecurringDto | TagDto;
 interface Section {
@@ -154,13 +155,13 @@ export default function ProfileScreen() {
   const header = (
     <>
       <View style={styles.section}>
-        <SectionHeader glyph="👤" title="Player Profile" open={open.profile} onToggle={() => toggle('profile')} />
+        <SectionHeader icon="User" title="Player Profile" open={open.profile} onToggle={() => toggle('profile')} />
         {open.profile && (
           <Card style={styles.profileCard}>
             <View style={styles.avatarWrap}>
               <Image source={avatarSource(avatar)} style={styles.avatar} accessibilityLabel="Profile avatar" />
               <Pressable accessibilityRole="button" accessibilityLabel="Change avatar" hitSlop={8} onPress={() => setSheet({ kind: 'avatar' })} style={styles.avatarEdit}>
-                <Text style={styles.avatarEditGlyph}>✎</Text>
+                <PixelIcon name="Pencil" size={ms(18)} />
               </Pressable>
             </View>
             <Input label="Player Name" value={playerName} onChangeText={setDraftName} />
@@ -170,7 +171,7 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.section}>
-        <SectionHeader glyph="💼" title="Your Vaults" open={open.vaults} onToggle={() => toggle('vaults')} onAdd={() => setSheet({ kind: 'vault' })} />
+        <SectionHeader icon="Briefcase" title="Your Vaults" open={open.vaults} onToggle={() => toggle('vaults')} onAdd={() => setSheet({ kind: 'vault' })} />
         {open.vaults &&
           (loading ? (
             <Text style={styles.muted}>Loading...</Text>
@@ -190,19 +191,21 @@ export default function ProfileScreen() {
   const renderSectionHeader = ({ section }: { section: Section }): React.JSX.Element =>
     section.key === 'quests' ? (
       <View style={styles.section}>
-        <SectionHeader glyph="🔁" title="Recurring Quests" tone="secondary" open={open.quests} onToggle={() => toggle('quests')} onAdd={() => setSheet({ kind: 'quest' })} />
+        <SectionHeader icon="Repeat" title="Recurring Quests" tone="secondary" open={open.quests} onToggle={() => toggle('quests')} onAdd={() => setSheet({ kind: 'quest' })} />
         {open.quests && loading && <Text style={styles.muted}>Loading...</Text>}
       </View>
     ) : (
       <View style={styles.section}>
-        <SectionHeader glyph="🏷" title="Tags" tone="tertiary" open={open.tags} onToggle={() => toggle('tags')} onAdd={() => setSheet({ kind: 'tag' })} />
+        <SectionHeader icon="Tag" title="Tags" tone="tertiary" open={open.tags} onToggle={() => toggle('tags')} onAdd={() => setSheet({ kind: 'tag' })} />
         {open.tags &&
           (loading ? (
             <Text style={styles.muted}>Loading...</Text>
           ) : (
             <View>
               <Input placeholder="Search tags..." value={tagSearch} onChangeText={setTagSearch} accessibilityLabel="Search tags" style={styles.searchInput} />
-              <Text style={styles.searchGlyph}>🔍</Text>
+              <View style={styles.searchGlyph} pointerEvents="none">
+                <PixelIcon name="Search" size={ms(18)} />
+              </View>
             </View>
           ))}
         {open.tags && !loading && filteredTags.length === 0 && <Text style={styles.muted}>No tags found.</Text>}
@@ -277,9 +280,8 @@ const styles = StyleSheet.create({
     borderWidth: ms(4),
     borderColor: color.border,
   },
-  avatarEditGlyph: { fontFamily: font.bodyBold, fontSize: ms(14), color: color.onPrimary },
   vaultGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: ms(-space[2]) },
   vaultCell: { width: '50%', padding: ms(space[2]) },
   searchInput: { paddingLeft: ms(36) },
-  searchGlyph: { pointerEvents: 'none', position: 'absolute', left: ms(space[3]), bottom: ms(12), fontSize: ms(14) },
+  searchGlyph: { position: 'absolute', left: ms(space[3]), bottom: ms(12) },
 });
