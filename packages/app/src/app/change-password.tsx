@@ -50,7 +50,7 @@ export default function ChangePasswordScreen() {
   return (
     <AuthScreen centered={false}>
       <BackButton />
-      <AuthCard title="Change Password" glyph="🔑">
+      <AuthCard title="Change Password" icon="Key">
         <Input
           label="Current Password"
           value={currentPassword}

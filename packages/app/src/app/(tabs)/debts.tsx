@@ -14,6 +14,7 @@ import { DiscardDebtSheet } from '../../components/debts/DiscardDebtSheet';
 import { useLocalUserId } from '../../hooks/DatabaseProvider';
 import { debtsService, logger, vaultsService } from '../../services';
 import { color, font, gutter, space, text } from '../../theme';
+import { PixelIcon } from '../../components/PixelIcon';
 
 const STATUSES: DebtStatus[] = ['incomplete', 'completed', 'all'];
 const capitalize = (value: string): string => value.charAt(0).toUpperCase() + value.slice(1);
@@ -110,7 +111,9 @@ export default function DebtsScreen() {
     </View>
   ) : (
     <Card style={styles.emptyCard}>
-      <Text style={styles.emptyGlyph}>🪙</Text>
+      <View style={styles.emptyGlyph}>
+        <PixelIcon name="Coins" size={ms(56)} />
+      </View>
       <Text style={styles.emptyTitle}>No dues yet.</Text>
       <Text style={styles.emptyText}>Create a due to keep a reusable template — apply it whenever the payment lands.</Text>
     </Card>
@@ -158,7 +161,7 @@ const styles = StyleSheet.create({
   skeletons: { gap: ms(space[3]) },
   skeleton: { height: ms(96), backgroundColor: color.surfaceHighest, borderWidth: ms(4), borderColor: color.border },
   emptyCard: { alignItems: 'center', gap: ms(space[3]), paddingVertical: ms(48) },
-  emptyGlyph: { fontSize: ms(48), opacity: 0.5 },
+  emptyGlyph: { opacity: 0.7 },
   emptyTitle: { fontFamily: font.heading, fontSize: ms(20), lineHeight: ms(26), color: color.onSurface, textAlign: 'center' },
   emptyText: { fontFamily: font.body, fontSize: ms(text.bodySm.fontSize), lineHeight: ms(text.bodySm.lineHeight), color: color.onSurfaceVariant, textAlign: 'center' },
   separator: { height: ms(space[3]) },

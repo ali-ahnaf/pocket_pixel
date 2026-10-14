@@ -3,13 +3,14 @@ import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ms } from 'react-native-size-matters';
 import { formatCurrency, formatDate, formatTime } from '../../lib/formatters';
-import { iconGlyph } from '../../lib/iconMapper';
+import { toPixelIcon } from '../../lib/iconMapper';
 import { color, font, shadow, space, text } from '../../theme';
+import { PixelIcon } from '../PixelIcon';
 import { TagChips, VaultChip } from './TagChips';
 
 type Drop = Pick<TransactionDto, 'type' | 'tags' | 'vault' | 'title'>;
 
-const iconName = (d: Drop): string => (d.type === 'expense' ? d.tags[0]?.icon || d.vault?.icon || 'ShoppingCart' : d.vault?.icon || 'CircleDollarSign');
+const iconName = (d: Drop): string => (d.type === 'expense' ? d.tags[0]?.icon || d.vault?.icon || 'ShoppingCart' : d.vault?.icon || 'Coins');
 const category = (d: Drop): string => d.tags[0]?.name || (d.type === 'income' ? 'Income' : 'Expense');
 const title = (d: Drop): string => d.title || (d.type === 'income' ? 'Unnamed Income' : 'Unnamed Expense');
 
@@ -18,7 +19,7 @@ function DropIcon({ drop, ghost }: { drop: Drop; ghost?: boolean }) {
   const fallback = drop.type === 'income' ? styles.iconIncome : styles.iconExpense;
   return (
     <View style={[styles.icon, ghost && styles.iconGhost, tagBg ? { backgroundColor: tagBg } : fallback]}>
-      <Text style={styles.iconGlyph}>{iconGlyph(iconName(drop))}</Text>
+      <PixelIcon name={toPixelIcon(iconName(drop))} size={ms(22)} />
     </View>
   );
 }
@@ -93,7 +94,7 @@ export const OccurrenceRow = memo(function OccurrenceRow({ occ, isApplying, onAp
             onPress={() => onSkip(occ)}
             style={({ pressed }) => [styles.skipButton, pressed && styles.pressed, isApplying && styles.disabled]}
           >
-            <Text style={styles.skipGlyph}>✕</Text>
+            <PixelIcon name="X" size={ms(14)} />
           </Pressable>
         </View>
       </View>
@@ -111,7 +112,6 @@ const styles = StyleSheet.create({
   iconGhost: { borderStyle: 'dashed', borderColor: color.outline, opacity: 0.5 },
   iconIncome: { backgroundColor: color.primaryContainer },
   iconExpense: { backgroundColor: color.errorContainer },
-  iconGlyph: { fontSize: ms(18) },
   body: { flex: 1, minWidth: 0 },
   title: { fontFamily: font.bodyBold, fontSize: ms(text.bodySm.fontSize), lineHeight: ms(text.bodySm.lineHeight), color: color.onSurface },
   category: { fontFamily: font.body, fontSize: ms(text.bodySm.fontSize), lineHeight: ms(text.bodySm.lineHeight), color: color.onSurfaceVariant },
@@ -125,5 +125,4 @@ const styles = StyleSheet.create({
   applyButton: { backgroundColor: color.primary, borderWidth: ms(2), borderColor: color.border, paddingHorizontal: ms(space[2]), height: ms(26), justifyContent: 'center' },
   applyLabel: { fontFamily: font.mono, fontSize: ms(10), color: color.onPrimary, textTransform: 'uppercase' },
   skipButton: { width: ms(26), height: ms(26), alignItems: 'center', justifyContent: 'center', backgroundColor: color.bg, borderWidth: ms(2), borderColor: color.border },
-  skipGlyph: { fontSize: ms(12), color: color.onSurface },
 });

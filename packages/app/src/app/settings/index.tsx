@@ -9,6 +9,7 @@ import { SettingLink } from '../../components/settings/SettingLink';
 import { SettingToggle } from '../../components/settings/SettingToggle';
 import { useDisplaySettings } from '../../hooks/useDisplaySettings';
 import { color, font, shadow, gutter, space, text } from '../../theme';
+import { PixelIcon } from '../../components/PixelIcon';
 
 const REPO_URL = 'https://github.com/ali-ahnaf/pocket_pixel';
 const NEW_ISSUE_URL = 'https://github.com/ali-ahnaf/pocket_pixel/issues/new';
@@ -41,37 +42,37 @@ export default function SettingsScreen() {
       <BackButton />
 
       <View style={styles.titleBox}>
-        <Text style={styles.titleGlyph}>⚙</Text>
+        <PixelIcon name="Settings" size={ms(28)} />
         <Text accessibilityRole="header" style={styles.title}>
           SETTINGS
         </Text>
       </View>
 
       <Section title="Dashboard Visibility">
-        <SettingToggle label="Show Income" description="Reveal Loot Gained on the home dashboard" glyph="📈" checked={showIncome} onChange={setShowIncome} />
-        <SettingToggle label="Show Expense" description="Reveal Gold Spent on the home dashboard" glyph="📉" checked={showExpense} onChange={setShowExpense} />
+        <SettingToggle label="Show Income" description="Reveal Loot Gained on the home dashboard" icon="TrendingUp" checked={showIncome} onChange={setShowIncome} />
+        <SettingToggle label="Show Expense" description="Reveal Gold Spent on the home dashboard" icon="TrendingDown" checked={showExpense} onChange={setShowExpense} />
       </Section>
 
       <Section title="Transaction Entry">
         <SettingToggle
           label="Enable AI transaction entry"
           description="Open the log modal on the AI prompt instead of the manual form"
-          glyph="✨"
+          icon="Sparkles"
           checked={aiTransactionEntryEnabled}
           onChange={setAiTransactionEntryEnabled}
         />
       </Section>
 
       <Section title="Account">
-        <SettingToggle label="Push Notifications" description="Get notified when a Gmail watcher logs a transaction" glyph="🔔" checked={pushSubscribed} onChange={setPushSubscribed} />
-        <SettingLink label="Change Password" description="Update your secret passphrase" glyph="🔑" onPress={() => router.push('/change-password')} />
+        <SettingToggle label="Push Notifications" description="Get notified when a Gmail watcher logs a transaction" icon="Bell" checked={pushSubscribed} onChange={setPushSubscribed} />
+        <SettingLink label="Change Password" description="Update your secret passphrase" icon="Key" onPress={() => router.push('/change-password')} />
       </Section>
 
       <Section title="Community">
-        <SettingLink label="Request a Feature" description="Suggest a new feature" glyph="🚀" onPress={() => Linking.openURL(NEW_ISSUE_URL)} />
-        <SettingLink label="Contribute on GitHub" description="View the project repository" glyph="💻" onPress={() => Linking.openURL(REPO_URL)} />
-        <SettingLink label="Report a Bug" description="Report a problem" glyph="🐛" onPress={() => Linking.openURL(NEW_ISSUE_URL)} />
-        <SettingLink label="Attributions" description="Third-party libraries and assets" glyph="📖" onPress={() => router.push('/settings/attributions')} />
+        <SettingLink label="Request a Feature" description="Suggest a new feature" icon="Rocket" onPress={() => Linking.openURL(NEW_ISSUE_URL)} />
+        <SettingLink label="Contribute on GitHub" description="View the project repository" icon="Laptop" onPress={() => Linking.openURL(REPO_URL)} />
+        <SettingLink label="Report a Bug" description="Report a problem" icon="Bug" onPress={() => Linking.openURL(NEW_ISSUE_URL)} />
+        <SettingLink label="Attributions" description="Third-party libraries and assets" icon="BookOpen" onPress={() => router.push('/settings/attributions')} />
       </Section>
     </ScrollView>
   );
@@ -90,7 +91,6 @@ const styles = StyleSheet.create({
     padding: ms(space[4]),
     boxShadow: shadow.card,
   },
-  titleGlyph: { fontSize: ms(22), color: color.primary },
   title: { fontFamily: font.heading, fontSize: ms(text.headlineMd.fontSize), lineHeight: ms(text.headlineMd.lineHeight), color: color.primary },
   section: { gap: ms(space[4]), backgroundColor: color.surface, borderWidth: ms(4), borderColor: color.border, padding: ms(space[4]) },
   sectionTitle: {

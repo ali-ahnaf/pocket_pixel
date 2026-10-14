@@ -10,6 +10,7 @@ import { PixelDatePicker } from '../PixelDatePicker';
 import { TransactionTypeToggle } from '../TransactionTypeToggle';
 import { formatDueDate } from './DebtRow';
 import { SheetHeader } from '../SheetHeader';
+import { PixelIcon } from '../PixelIcon';
 
 export interface AddDebtSheetProps {
   /** Edit this debt; omit to create a new one. */
@@ -34,14 +35,14 @@ export function AddDebtSheet({ debt = null, onSave, onClose }: AddDebtSheetProps
     <BottomSheetModal onClose={onClose}>
       {(close) => (
         <>
-          <SheetHeader title={isEditing ? 'Edit Due' : 'New Due'} glyph={isEditing ? '✎' : '+'} onClose={close} />
+          <SheetHeader title={isEditing ? 'Edit Due' : 'New Due'} icon={isEditing ? 'Pencil' : 'Plus'} onClose={close} />
           <ScrollView style={{ maxHeight: height * 0.75 }} contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
             <Input label="Name" placeholder="e.g. Rent, Loan Repayment" value={name} onChangeText={setName} />
 
             <View>
               <Text style={styles.label}>Amount</Text>
               <View style={styles.amountBox}>
-                <Text style={styles.coin}>🪙</Text>
+                <PixelIcon name="Coins" size={ms(24)} />
                 <TextInput
                   accessibilityLabel="Amount"
                   style={styles.amountInput}
@@ -123,7 +124,6 @@ const styles = StyleSheet.create({
     borderColor: color.border,
     boxShadow: shadow.input,
   },
-  coin: { fontSize: ms(20) },
   amountInput: { flex: 1, height: '100%', fontFamily: font.heading, fontSize: ms(20), color: color.secondary },
   dateRow: { flexDirection: 'row', alignItems: 'center', gap: ms(space[3]) },
   dateField: {

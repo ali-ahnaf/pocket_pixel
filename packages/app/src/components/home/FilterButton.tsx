@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleProp, StyleSheet, Text, ViewStyle } from 'r
 import { ms } from 'react-native-size-matters';
 import { BottomSheetModal } from '../BottomSheetModal';
 import { color, font, space } from '../../theme';
+import { PixelIcon } from '../PixelIcon';
 
 export interface FilterButtonProps {
   label: string;
@@ -28,7 +29,7 @@ export function FilterButton({ label, accessibilityLabel, style, children }: Fil
         <Text style={styles.label} numberOfLines={1}>
           {label}
         </Text>
-        <Text style={styles.chevron}>▾</Text>
+        <PixelIcon name="ChevronDown" size={ms(16)} />
       </Pressable>
       {isOpen ? <BottomSheetModal onClose={() => setIsOpen(false)}>{(close) => <ScrollView style={styles.list}>{children(close)}</ScrollView>}</BottomSheetModal> : null}
     </>
@@ -62,7 +63,6 @@ const styles = StyleSheet.create({
   },
   pressed: { transform: [{ translateY: 1 }] },
   label: { flexShrink: 1, fontFamily: font.mono, fontSize: ms(10), color: color.onSurface, textTransform: 'uppercase' },
-  chevron: { fontSize: ms(12), color: color.onSurface },
   list: { maxHeight: ms(360), borderWidth: ms(2), borderColor: color.border },
   option: { minHeight: ms(44), justifyContent: 'center', paddingHorizontal: ms(space[3]), backgroundColor: color.bg, borderBottomWidth: 1, borderColor: color.border },
   optionPressed: { backgroundColor: color.surfaceHighest },

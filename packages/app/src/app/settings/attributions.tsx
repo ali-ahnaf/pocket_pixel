@@ -5,6 +5,8 @@ import { ms } from 'react-native-size-matters';
 import { BackButton } from '../../components/BackButton';
 import { AVATARS, avatarSource } from '../../lib/static';
 import { color, font, shadow, gutter, space, text } from '../../theme';
+import { PixelIcon } from '../../components/PixelIcon';
+import { IconText } from '../../components/IconText';
 
 const REPO_CONTRIBUTORS_PAGE = 'https://github.com/ali-ahnaf/pocket_pixel/graphs/contributors';
 
@@ -76,7 +78,7 @@ export default function AttributionsScreen() {
 
       <View style={styles.titleBox}>
         <View style={styles.iconBox}>
-          <Text style={styles.glyph}>📖</Text>
+          <PixelIcon name="BookOpen" size={ms(24)} />
         </View>
         <View style={styles.titleTexts}>
           <Text accessibilityRole="header" style={styles.title}>
@@ -92,7 +94,9 @@ export default function AttributionsScreen() {
             Contributors
           </Text>
           <View style={styles.countBadge}>
-            <Text style={styles.countText}>👥 {contributors.length} heroes</Text>
+            <IconText icon="Users" style={styles.countText}>
+              {contributors.length} heroes
+            </IconText>
           </View>
         </View>
 
@@ -139,7 +143,6 @@ const styles = StyleSheet.create({
     boxShadow: shadow.card,
   },
   iconBox: { width: ms(40), height: ms(40), borderWidth: ms(2), borderColor: color.border, alignItems: 'center', justifyContent: 'center', backgroundColor: color.secondaryContainer },
-  glyph: { fontSize: ms(18) },
   titleTexts: { flex: 1, minWidth: 0 },
   title: { fontFamily: font.heading, fontSize: ms(text.headlineMd.fontSize), lineHeight: ms(text.headlineMd.lineHeight), color: color.primary },
   subtitle: { fontFamily: font.body, fontSize: ms(12), lineHeight: ms(16), color: color.onSurfaceVariant },

@@ -7,6 +7,8 @@ import { color, font, space, text } from '../../theme';
 import { Badge } from '../Badge';
 import { Card } from '../Card';
 import { PendingExpenseDetailSheet } from './PendingExpenseDetailSheet';
+import { PixelIcon } from '../PixelIcon';
+import { IconText } from '../IconText';
 
 const STUB_ITEMS: PendingGmailExpenseDto[] = [
   { id: 'stub-pending-1', gmailMessageId: 'stub-msg-1', vaultId: 'stub-vault', vaultName: 'Main Vault', subject: 'Card purchase alert', guidanceHint: 'Amount after "BDT", merchant after "at"' },
@@ -24,9 +26,9 @@ export function PendingExpensesPanel() {
     <>
       <Card style={styles.card}>
         <View style={styles.header}>
-          <Text style={styles.title} accessibilityRole="header">
-            ✉ Pending Expenses
-          </Text>
+          <IconText icon="Mail" iconSize={20} style={styles.title} accessibilityRole="header">
+            Pending Expenses
+          </IconText>
           <Badge label={String(items.length)} variant="secondary" />
         </View>
         {items.map((item) => (
@@ -42,7 +44,7 @@ export function PendingExpensesPanel() {
                 </Text>
               ) : null}
             </View>
-            <Text style={styles.chevron}>›</Text>
+            <PixelIcon name="ChevronRight" size={ms(20)} />
           </Pressable>
         ))}
       </Card>
@@ -71,5 +73,4 @@ const styles = StyleSheet.create({
   itemBody: { flex: 1, gap: ms(space[1]) },
   subject: { fontFamily: font.bodyBold, fontSize: ms(text.bodySm.fontSize), color: color.onSurface },
   hint: { fontFamily: font.body, fontSize: ms(11), color: color.onSurfaceVariant },
-  chevron: { fontSize: ms(18), color: color.outline },
 });

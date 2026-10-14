@@ -6,6 +6,8 @@ import { formatCurrency } from '../../lib/formatters';
 import { color, font, shadow, space, text } from '../../theme';
 import { Card } from '../Card';
 import { IconButton } from './IconButton';
+import { PixelIcon } from '../PixelIcon';
+import { IconText } from '../IconText';
 
 export interface QuestRowProps {
   quest: RecurringDto;
@@ -22,7 +24,7 @@ export const QuestRow = memo(function QuestRow({ quest, onEdit, onDelete }: Ques
   return (
     <Card style={[styles.card, isExpense ? styles.cardExpense : styles.cardIncome]}>
       <View style={[styles.corner, isExpense ? styles.cornerExpense : styles.cornerIncome]}>
-        <Text style={[styles.cornerGlyph, isExpense ? styles.onError : styles.onPrimary]}>{isExpense ? '↘' : '↗'}</Text>
+        <PixelIcon name={isExpense ? 'ArrowDownRight' : 'ArrowUpRight'} size={ms(18)} />
       </View>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.description}>{tagNames.join(', ')}</Text>
@@ -31,7 +33,9 @@ export const QuestRow = memo(function QuestRow({ quest, onEdit, onDelete }: Ques
           {isExpense ? '-' : '+'} {formatCurrency(Number(quest.amount))}
         </Text>
         <View style={styles.frequency}>
-          <Text style={styles.frequencyText}>🗓 {quest.interval.charAt(0).toUpperCase() + quest.interval.slice(1)}</Text>
+          <IconText icon="Calendar" iconSize={14} style={styles.frequencyText}>
+            {quest.interval.charAt(0).toUpperCase() + quest.interval.slice(1)}
+          </IconText>
         </View>
       </View>
       <View style={styles.bottom}>
@@ -41,8 +45,8 @@ export const QuestRow = memo(function QuestRow({ quest, onEdit, onDelete }: Ques
           </Text>
         </View>
         <View style={styles.buttons}>
-          <IconButton glyph="✎" label={`Edit ${title}`} onPress={() => onEdit(quest)} />
-          <IconButton glyph="🗑" label={`Delete ${title}`} variant="danger" onPress={() => onDelete(quest)} />
+          <IconButton icon="Pencil" label={`Edit ${title}`} onPress={() => onEdit(quest)} />
+          <IconButton icon="Trash" label={`Delete ${title}`} variant="danger" onPress={() => onDelete(quest)} />
         </View>
       </View>
     </Card>
@@ -56,9 +60,6 @@ const styles = StyleSheet.create({
   corner: { position: 'absolute', top: 0, right: 0, padding: ms(6), borderLeftWidth: ms(4), borderBottomWidth: ms(4), borderColor: color.border },
   cornerExpense: { backgroundColor: color.error },
   cornerIncome: { backgroundColor: color.primary },
-  cornerGlyph: { fontFamily: font.bodyBold, fontSize: ms(18), lineHeight: ms(20) },
-  onError: { color: color.errorContainer },
-  onPrimary: { color: color.onPrimary },
   title: { fontFamily: font.heading, fontSize: ms(text.headlineMd.fontSize), lineHeight: ms(text.headlineMd.lineHeight), color: color.onSurface, marginTop: ms(space[2]), marginRight: ms(space[8]) },
   description: { fontFamily: font.body, fontSize: ms(text.bodySm.fontSize), lineHeight: ms(text.bodySm.lineHeight), color: color.onSurfaceVariant, marginBottom: ms(space[4]) },
   amountBox: {

@@ -1,6 +1,7 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ms } from 'react-native-size-matters';
-import { iconGlyph } from '../../lib/iconMapper';
+import { toPixelIcon } from '../../lib/iconMapper';
+import { IconText } from '../IconText';
 import { color, font, space, text } from '../../theme';
 import type { MonthRow, TableCell, TagColumn, YearlyTableModel } from './build-yearly-table';
 
@@ -109,10 +110,15 @@ export function YearlyTagTable({ model, isLoading = false, currentMonth }: Yearl
             <View style={styles.row}>
               {model.tagColumns.map((column) => (
                 <View key={column.id} style={styles.headerCell}>
-                  <Text numberOfLines={1} style={styles.headerText}>
-                    {column.icon ? `${iconGlyph(column.icon)} ` : ''}
-                    {column.name}
-                  </Text>
+                  {column.icon ? (
+                    <IconText icon={toPixelIcon(column.icon)} iconSize={14} numberOfLines={1} style={styles.headerText}>
+                      {column.name}
+                    </IconText>
+                  ) : (
+                    <Text numberOfLines={1} style={styles.headerText}>
+                      {column.name}
+                    </Text>
+                  )}
                 </View>
               ))}
               <View style={[styles.headerCell, styles.dividerLeft]}>

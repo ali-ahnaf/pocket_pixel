@@ -14,6 +14,7 @@ import { VaultWatcherCard } from '../../components/settings/VaultWatcherCard';
 import { useLocalUserId } from '../../hooks/DatabaseProvider';
 import { logger, vaultsService } from '../../services';
 import { color, gutter, space } from '../../theme';
+import { PixelIcon } from '../../components/PixelIcon';
 
 const STUB_CONFIGURED = true;
 const STUB_CONNECTED = true;
@@ -83,13 +84,13 @@ export default function GoogleOAuthSettingsScreen() {
     >
       <BackButton />
 
-      <SettingsWindow glyph="🛡" title="Setup Google OAuth">
+      <SettingsWindow icon="Shield" title="Setup Google OAuth">
         <View style={settingsStyles.section}>
           <Text style={settingsStyles.hint}>
             Bring your own Google OAuth client to enable Google sign-in for your account. Your Client Secret is encrypted at rest and is never shown again after saving.
           </Text>
 
-          {STUB_CONFIGURED && <StatusNote tone="success" glyph="✔" label="Already configured" />}
+          {STUB_CONFIGURED && <StatusNote tone="success" icon="Check" label="Already configured" />}
 
           <Input
             label="Client ID"
@@ -127,7 +128,7 @@ export default function GoogleOAuthSettingsScreen() {
         {STUB_CONFIGURED && (
           <View style={[settingsStyles.section, settingsStyles.dividerTop]}>
             <View style={settingsStyles.titleRow}>
-              <Text style={settingsStyles.glyph}>✉️</Text>
+              <PixelIcon name="Mail" size={ms(24)} />
               <Text accessibilityRole="header" style={settingsStyles.sectionTitle}>
                 Gmail Connection
               </Text>
@@ -137,7 +138,7 @@ export default function GoogleOAuthSettingsScreen() {
               Grant read-only access to your Gmail so bank alert emails can be scanned for transactions. You will be redirected to Google to approve the gmail.readonly scope.
             </Text>
 
-            {STUB_CONNECTED && <StatusNote tone="success" glyph="✔" label={STUB_GOOGLE_EMAIL ? `Connected as ${STUB_GOOGLE_EMAIL}` : 'Gmail connected'} />}
+            {STUB_CONNECTED && <StatusNote tone="success" icon="Check" label={STUB_GOOGLE_EMAIL ? `Connected as ${STUB_GOOGLE_EMAIL}` : 'Gmail connected'} />}
 
             <Button label={STUB_CONNECTED ? 'Reconnect Gmail' : 'Connect Gmail'} variant="primary" size="lg" onPress={() => notAvailable('Connecting Gmail')} />
           </View>
@@ -146,7 +147,7 @@ export default function GoogleOAuthSettingsScreen() {
         {STUB_CONNECTED && (
           <View style={[settingsStyles.section, settingsStyles.dividerTop]}>
             <View style={settingsStyles.titleRow}>
-              <Text style={settingsStyles.glyph}>🔔</Text>
+              <PixelIcon name="Bell" size={ms(24)} />
               <Text accessibilityRole="header" style={settingsStyles.sectionTitle}>
                 Bank Alert Watch
               </Text>
@@ -155,7 +156,7 @@ export default function GoogleOAuthSettingsScreen() {
             <Text style={settingsStyles.hint}>Attach a Gmail label to a vault. AI reads each matching email and fills in the transaction (amount, title, type and tags) automatically.</Text>
 
             {STUB_WATCH_STATUS.watching ? (
-              <StatusNote tone="success" glyph="✔" label={`Watching${STUB_WATCH_STATUS.expiry ? ` · renews by ${new Date(STUB_WATCH_STATUS.expiry).toLocaleDateString()}` : ''}`} />
+              <StatusNote tone="success" icon="Check" label={`Watching${STUB_WATCH_STATUS.expiry ? ` · renews by ${new Date(STUB_WATCH_STATUS.expiry).toLocaleDateString()}` : ''}`} />
             ) : (
               <StatusNote label="Not watching" />
             )}

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ms } from 'react-native-size-matters';
 import { toIsoDate } from '../../lib/formatters';
-import { iconGlyph } from '../../lib/iconMapper';
+import { toPixelIcon } from '../../lib/iconMapper';
 import { color, font, shadow, space, text } from '../../theme';
 import { BottomSheetModal } from '../BottomSheetModal';
 import { Button } from '../Button';
@@ -14,6 +14,7 @@ import { TransactionTypeToggle } from '../TransactionTypeToggle';
 import { SheetBody } from './SheetBody';
 import { SheetFooter } from './SheetFooter';
 import { SheetHeader } from '../SheetHeader';
+import { PixelIcon } from '../PixelIcon';
 
 const INTERVALS: RecurrenceInterval[] = ['daily', 'weekly', 'monthly', 'yearly'];
 
@@ -85,13 +86,15 @@ export function RecurringQuestSheet({ quest, tags, vaults, onSave, onCreateTag, 
     <BottomSheetModal onClose={onClose}>
       {(close) => (
         <>
-          <SheetHeader glyph="+" title={quest ? 'Edit Recurring Quest' : 'Add Recurring Quest'} onClose={close} />
+          <SheetHeader icon="Plus" title={quest ? 'Edit Recurring Quest' : 'Add Recurring Quest'} onClose={close} />
           <SheetBody>
             <Input label="Name" placeholder="e.g. Health Potion Subscription" value={name} onChangeText={setName} />
 
             <View>
               <Input label="Amount" placeholder="0.00" keyboardType="decimal-pad" value={amount} onChangeText={setAmount} style={styles.amountInput} />
-              <Text style={styles.coin}>⛁</Text>
+              <View style={styles.coin} pointerEvents="none">
+                <PixelIcon name="Coins" size={ms(24)} />
+              </View>
             </View>
 
             <View style={styles.field}>
@@ -105,7 +108,8 @@ export function RecurringQuestSheet({ quest, tags, vaults, onSave, onCreateTag, 
                 <View style={styles.chips}>
                   {selectedTags.map((tag) => (
                     <Pressable key={tag.id} accessibilityRole="button" accessibilityLabel={`Remove tag ${tag.name}`} onPress={() => toggleTag(tag.id)} style={[styles.chip, styles.chipSelected]}>
-                      <Text style={[styles.chipText, styles.chipSelectedText]}>{tag.name.toUpperCase()} ✕</Text>
+                      <Text style={[styles.chipText, styles.chipSelectedText]}>{tag.name.toUpperCase()}</Text>
+                      <PixelIcon name="X" size={ms(12)} />
                     </Pressable>
                   ))}
                 </View>
@@ -125,7 +129,8 @@ export function RecurringQuestSheet({ quest, tags, vaults, onSave, onCreateTag, 
                   <View style={styles.chips}>
                     {suggestions.map((tag) => (
                       <Pressable key={tag.id} accessibilityRole="button" accessibilityLabel={`Add tag ${tag.name}`} onPress={() => toggleTag(tag.id)} style={styles.chip}>
-                        <Text style={styles.chipText}>{tag.name.toUpperCase()} +</Text>
+                        <Text style={styles.chipText}>{tag.name.toUpperCase()}</Text>
+                        <PixelIcon name="Plus" size={ms(12)} />
                       </Pressable>
                     ))}
                   </View>
@@ -133,7 +138,8 @@ export function RecurringQuestSheet({ quest, tags, vaults, onSave, onCreateTag, 
               )}
               {canCreateTag && (
                 <Pressable accessibilityRole="button" onPress={createTag} style={[styles.chip, styles.chipCreate]}>
-                  <Text style={[styles.chipText, styles.chipCreateText]}>CREATE: {tagInputUpper} +</Text>
+                  <Text style={[styles.chipText, styles.chipCreateText]}>CREATE: {tagInputUpper}</Text>
+                  <PixelIcon name="Plus" size={ms(12)} />
                 </Pressable>
               )}
             </View>
@@ -164,14 +170,14 @@ export function RecurringQuestSheet({ quest, tags, vaults, onSave, onCreateTag, 
                   accessibilityLabel="Source vault"
                   renderValue={(vault) => (
                     <>
-                      <Text style={styles.optionGlyph}>{iconGlyph(vault.icon || 'Briefcase')}</Text>
+                      <PixelIcon name={toPixelIcon(vault.icon || 'Briefcase')} size={ms(22)} />
                       <Text style={styles.valueText}>{vault.name}</Text>
                     </>
                   )}
                   renderOption={(vault, isSelected) => (
                     <>
                       <View style={styles.optionRow}>
-                        <Text style={styles.optionGlyph}>{iconGlyph(vault.icon || 'Briefcase')}</Text>
+                        <PixelIcon name={toPixelIcon(vault.icon || 'Briefcase')} size={ms(22)} />
                         <Text style={isSelected ? styles.valueText : styles.optionText}>{vault.name}</Text>
                       </View>
                       {isSelected && <View style={styles.selectedMark} />}
@@ -191,7 +197,7 @@ export function RecurringQuestSheet({ quest, tags, vaults, onSave, onCreateTag, 
                 accessibilityLabel="Interval"
                 renderValue={(i) => (
                   <>
-                    <Text style={styles.optionGlyph}>🗓</Text>
+                    <PixelIcon name="Calendar" size={ms(22)} />
                     <Text style={styles.valueText}>{capitalize(i)}</Text>
                   </>
                 )}
@@ -234,11 +240,14 @@ const styles = StyleSheet.create({
   label: { fontFamily: font.mono, fontSize: ms(text.labelCaps.fontSize), lineHeight: ms(text.labelCaps.lineHeight), color: color.onSurfaceVariant, textTransform: 'uppercase' },
   hint: { fontFamily: font.mono, fontSize: ms(10), color: color.outline },
   amountInput: { paddingLeft: ms(44), fontFamily: font.heading, color: color.secondary },
-  coin: { pointerEvents: 'none', position: 'absolute', left: ms(space[4]), bottom: ms(10), fontSize: ms(20), color: color.secondary },
+  coin: { position: 'absolute', left: ms(space[4]), bottom: ms(12) },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: ms(space[2]) },
   chip: {
     minHeight: ms(36),
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
+    gap: ms(space[1]),
     paddingHorizontal: ms(space[3]),
     backgroundColor: color.surfaceHighest,
     borderWidth: ms(4),
@@ -262,7 +271,6 @@ const styles = StyleSheet.create({
     paddingVertical: ms(space[3]),
   },
   optionRow: { flexDirection: 'row', alignItems: 'center', gap: ms(space[3]) },
-  optionGlyph: { fontSize: ms(20) },
   valueText: { fontFamily: font.bodyBold, fontSize: ms(text.bodyLg.fontSize), color: color.primary },
   optionText: { fontFamily: font.body, fontSize: ms(text.bodyLg.fontSize), color: color.onSurface },
   selectedMark: { width: ms(16), height: ms(16), backgroundColor: color.primary, borderWidth: ms(2), borderColor: color.border },

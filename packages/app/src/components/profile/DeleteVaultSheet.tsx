@@ -5,6 +5,7 @@ import { color, font, shadow, space, text } from '../../theme';
 import { BottomSheetModal } from '../BottomSheetModal';
 import { Button } from '../Button';
 import { SheetFooter } from './SheetFooter';
+import { PixelIcon, PixelIconName } from '../PixelIcon';
 import { SheetHeader } from '../SheetHeader';
 
 export type DeleteVaultAction = 'delete_transactions' | 'move_transactions';
@@ -15,9 +16,9 @@ export interface DeleteVaultSheetProps {
   onClose: () => void;
 }
 
-const OPTIONS: { action: DeleteVaultAction; glyph: string; title: string; body: string }[] = [
-  { action: 'move_transactions', glyph: '⇄', title: 'Move to Default', body: 'Transfer all transactions to your default vault.' },
-  { action: 'delete_transactions', glyph: '🗑', title: 'Delete All', body: 'Permanently delete all related transactions.' },
+const OPTIONS: { action: DeleteVaultAction; icon: PixelIconName; title: string; body: string }[] = [
+  { action: 'move_transactions', icon: 'ArrowLeftRight', title: 'Move to Default', body: 'Transfer all transactions to your default vault.' },
+  { action: 'delete_transactions', icon: 'Trash', title: 'Delete All', body: 'Permanently delete all related transactions.' },
 ];
 
 // Ported from packages/ui/src/components/DeleteVaultModal.tsx. Mount to open.
@@ -28,7 +29,7 @@ export function DeleteVaultSheet({ vaultName, onDelete, onClose }: DeleteVaultSh
     <BottomSheetModal onClose={onClose}>
       {(close) => (
         <>
-          <SheetHeader glyph="⚠" title="Delete Vault" danger onClose={close} />
+          <SheetHeader icon="TriangleAlert" title="Delete Vault" danger onClose={close} />
           <Text style={styles.message}>
             You are about to delete the vault <Text style={styles.name}>&quot;{vaultName}&quot;</Text>. What would you like to do with its related transactions?
           </Text>
@@ -46,9 +47,10 @@ export function DeleteVaultSheet({ vaultName, onDelete, onClose }: DeleteVaultSh
                 >
                   <View style={[styles.radio, isSelected && (isDelete ? styles.radioDelete : styles.radioMove)]}>{isSelected && <View style={styles.dot} />}</View>
                   <View style={styles.optionText}>
-                    <Text style={[styles.optionTitle, isSelected && (isDelete ? styles.onDelete : styles.onMove)]}>
-                      {option.glyph} {option.title}
-                    </Text>
+                    <View style={styles.optionTitleRow}>
+                      <PixelIcon name={option.icon} size={ms(18)} />
+                      <Text style={[styles.optionTitle, isSelected && (isDelete ? styles.onDelete : styles.onMove)]}>{option.title}</Text>
+                    </View>
                     <Text style={[styles.optionBody, isSelected && (isDelete ? styles.onDelete : styles.onMove)]}>{option.body}</Text>
                   </View>
                 </Pressable>
@@ -84,6 +86,7 @@ const styles = StyleSheet.create({
   radioDelete: { backgroundColor: color.error },
   dot: { width: ms(10), height: ms(10), backgroundColor: color.border },
   optionText: { flex: 1 },
+  optionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: ms(space[2]) },
   optionTitle: { fontFamily: font.heading, fontSize: ms(text.bodyLg.fontSize), lineHeight: ms(text.bodyLg.lineHeight), color: color.onSurface },
   optionBody: { fontFamily: font.body, fontSize: ms(text.bodySm.fontSize), lineHeight: ms(text.bodySm.lineHeight), color: color.onSurface, opacity: 0.8 },
   onMove: { color: color.onSecondaryContainer },

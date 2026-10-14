@@ -2,10 +2,11 @@ import type { VaultDto } from '@expense-tracker/shared';
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ms } from 'react-native-size-matters';
-import { iconGlyph } from '../../lib/iconMapper';
+import { toPixelIcon } from '../../lib/iconMapper';
 import { color, font, space, text } from '../../theme';
 import { Badge } from '../Badge';
 import { Card } from '../Card';
+import { PixelIcon } from '../PixelIcon';
 import { safeColor } from './ColorPicker';
 import { IconButton } from './IconButton';
 
@@ -18,14 +19,14 @@ export interface VaultCardProps {
 
 // One vault tile of the profile Vaults grid.
 export const VaultCard = memo(function VaultCard({ vault, onEdit, onDelete, onSetDefault }: VaultCardProps) {
-  const edit = <IconButton glyph="✎" label={`Edit ${vault.name}`} onPress={() => onEdit(vault)} />;
+  const edit = <IconButton icon="Pencil" label={`Edit ${vault.name}`} onPress={() => onEdit(vault)} />;
 
   return (
     <Card style={[styles.card, vault.isDefault && styles.cardDefault]}>
       <View style={styles.top}>
         <View style={styles.nameRow}>
           <View style={[styles.iconBox, { backgroundColor: safeColor(vault.backgroundColor) }]}>
-            <Text style={styles.iconGlyph}>{iconGlyph(vault.icon || 'Briefcase')}</Text>
+            <PixelIcon name={toPixelIcon(vault.icon || 'Briefcase')} size={ms(20)} />
           </View>
           <Text style={styles.name} numberOfLines={2}>
             {vault.name}
@@ -40,11 +41,11 @@ export const VaultCard = memo(function VaultCard({ vault, onEdit, onDelete, onSe
       ) : (
         <View style={styles.actionsBetween}>
           <Pressable accessibilityRole="button" accessibilityLabel={`Set ${vault.name} as default`} hitSlop={10} onPress={() => onSetDefault(vault.id)}>
-            <Text style={styles.star}>☆</Text>
+            <PixelIcon name="Star" size={ms(22)} />
           </Pressable>
           <View style={styles.buttons}>
             {edit}
-            <IconButton glyph="🗑" label={`Delete ${vault.name}`} variant="danger" onPress={() => onDelete(vault)} />
+            <IconButton icon="Trash" label={`Delete ${vault.name}`} variant="danger" onPress={() => onDelete(vault)} />
           </View>
         </View>
       )}
@@ -58,11 +59,9 @@ const styles = StyleSheet.create({
   top: { gap: ms(space[2]) },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: ms(space[2]) },
   iconBox: { width: ms(32), height: ms(32), alignItems: 'center', justifyContent: 'center', borderWidth: ms(2), borderColor: color.border },
-  iconGlyph: { fontSize: ms(16) },
   name: { flex: 1, fontFamily: font.heading, fontSize: ms(18), lineHeight: ms(22), color: color.onSurface },
   description: { fontFamily: font.body, fontSize: ms(text.bodySm.fontSize), lineHeight: ms(text.bodySm.lineHeight), color: color.onSurfaceVariant, marginBottom: ms(space[2]) },
   actionsEnd: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: ms(space[2]) },
   actionsBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: ms(space[2]) },
-  star: { fontSize: ms(18), color: color.secondary },
   buttons: { flexDirection: 'row', gap: ms(space[2]) },
 });

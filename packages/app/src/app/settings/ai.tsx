@@ -51,13 +51,13 @@ export default function AiSettingsScreen() {
     >
       <BackButton />
 
-      <SettingsWindow glyph="✨" title="OpenRouter AI">
+      <SettingsWindow icon="Sparkles" title="OpenRouter AI">
         <View style={settingsStyles.section}>
           <Text style={settingsStyles.hint}>
             Bring your own OpenRouter API key to power expense parsing and the wizard. Your key is encrypted on this device before it ever leaves it. Our server only ever stores ciphertext.
           </Text>
 
-          <StatusNote tone={STUB_HAS_KEY ? 'success' : 'muted'} glyph={STUB_HAS_KEY ? '✔' : '🔑'} label={STUB_HAS_KEY ? 'Key saved' : 'No key saved yet'} />
+          <StatusNote tone={STUB_HAS_KEY ? 'success' : 'muted'} icon={STUB_HAS_KEY ? 'Check' : 'Key'} label={STUB_HAS_KEY ? 'Key saved' : 'No key saved yet'} />
 
           <Input
             label="OpenRouter API Key"

@@ -31,7 +31,7 @@ export function VaultFormSheet({ vault, onSave, onClose }: VaultFormSheetProps) 
     <BottomSheetModal onClose={onClose}>
       {(close) => (
         <>
-          <SheetHeader glyph={isEditing ? '✎' : '+'} title={isEditing ? 'Edit Vault' : 'Create New Vault'} onClose={close} />
+          <SheetHeader icon={isEditing ? 'Pencil' : 'Plus'} title={isEditing ? 'Edit Vault' : 'Create New Vault'} onClose={close} />
           <SheetBody>
             <Input label="Name" placeholder="e.g. Secret Stash" value={name} onChangeText={setName} />
             <ColorPicker value={hex} onChange={setHex} />

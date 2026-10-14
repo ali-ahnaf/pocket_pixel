@@ -43,7 +43,7 @@ export default function ResetPasswordScreen() {
   return (
     <AuthScreen>
       <BackButton />
-      <AuthCard title="Reset Password" glyph="🔒">
+      <AuthCard title="Reset Password" icon="Lock">
         <Input
           label="New Password"
           value={password}

@@ -1,7 +1,7 @@
 import { AVATARS } from '@expense-tracker/shared';
 import type { ImageSourcePropType } from 'react-native';
 
-// Ported from packages/ui/src/lib/helpers/static.ts. Icon names are lucide names, stored as vault/tag data; see iconGlyph().
+// Ported from packages/ui/src/lib/helpers/static.ts. Icon names are lucide names, stored as vault/tag data; see toPixelIcon().
 export const AVAILABLE_ICONS = [
   'Briefcase',
   'Wallet',

@@ -6,6 +6,7 @@ import { formatCurrency } from '../../lib/formatters';
 import { color, font, space, text } from '../../theme';
 import { Card } from '../Card';
 import { ProgressBar } from '../ProgressBar';
+import { PixelIcon } from '../PixelIcon';
 
 // Hidden by the "show income/expense" display settings until the eye toggle reveals it.
 function MaskedValue({ show, positive, value }: { show: boolean; positive: boolean; value: string }) {
@@ -16,7 +17,7 @@ function MaskedValue({ show, positive, value }: { show: boolean; positive: boole
     <View style={styles.masked}>
       <Text style={valueStyle}>{revealed ? value : '*****'}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel={revealed ? 'Hide value' : 'Reveal value'} hitSlop={14} onPress={() => setRevealed((r) => !r)}>
-        <Text style={styles.eye}>{revealed ? '🙈' : '👁'}</Text>
+        <PixelIcon name={revealed ? 'EyeOff' : 'Eye'} size={ms(20)} />
       </Pressable>
     </View>
   );
@@ -116,7 +117,6 @@ const styles = StyleSheet.create({
   income: { color: color.primary },
   expense: { color: color.error },
   masked: { flexDirection: 'row', alignItems: 'center', gap: ms(6) },
-  eye: { fontSize: ms(14) },
   skeletonLine: { height: ms(20), width: '75%', backgroundColor: color.surfaceHighest },
   skeletonYield: { height: ms(28), width: ms(96), backgroundColor: color.surfaceHighest },
   footer: { borderTopWidth: ms(4), borderColor: color.border, paddingTop: ms(space[4]) },

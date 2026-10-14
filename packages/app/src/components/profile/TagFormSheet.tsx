@@ -27,7 +27,7 @@ export function TagFormSheet({ tag, onSave, onClose }: TagFormSheetProps) {
     <BottomSheetModal onClose={onClose}>
       {(close) => (
         <>
-          <SheetHeader glyph={isEditing ? '✎' : '+'} title={isEditing ? 'Edit Tag' : 'Create New Tag'} onClose={close} />
+          <SheetHeader icon={isEditing ? 'Pencil' : 'Plus'} title={isEditing ? 'Edit Tag' : 'Create New Tag'} onClose={close} />
           <SheetBody>
             <Input label="Name" placeholder="e.g. Groceries" value={name} onChangeText={setName} />
             <ColorPicker value={hex} onChange={setHex} />

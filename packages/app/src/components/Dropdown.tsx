@@ -1,8 +1,9 @@
 import { ReactNode, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { ms } from 'react-native-size-matters';
 import { color, space } from '../theme';
 import { BottomSheetModal } from './BottomSheetModal';
+import { PixelIcon } from './PixelIcon';
 
 export interface DropdownProps<T> {
   options: T[];
@@ -29,7 +30,7 @@ export function Dropdown<T>({ options, value, onChange, renderValue, renderOptio
         style={({ pressed }) => [styles.trigger, pressed && styles.triggerPressed]}
       >
         <View style={styles.row}>{renderValue(value)}</View>
-        <Text style={styles.chevron}>▾</Text>
+        <PixelIcon name="ChevronDown" size={ms(16)} />
       </Pressable>
 
       {isOpen ? (
@@ -75,7 +76,6 @@ const styles = StyleSheet.create({
   },
   triggerPressed: { backgroundColor: color.surfaceLow, transform: [{ translateY: 2 }] },
   row: { flexDirection: 'row', alignItems: 'center', gap: ms(space[3]) },
-  chevron: { fontSize: ms(20), color: color.outline },
   list: { maxHeight: ms(360), borderWidth: ms(4), borderColor: color.border },
   option: {
     height: ms(56),
