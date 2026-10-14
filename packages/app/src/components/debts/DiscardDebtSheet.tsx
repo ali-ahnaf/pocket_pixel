@@ -17,7 +17,7 @@ export function DiscardDebtSheet({ debtTitle, onDiscard, onClose }: DiscardDebtS
     <BottomSheetModal onClose={onClose}>
       {(close) => (
         <>
-          <SheetHeader title="Discard Due" glyph="⚠" danger onClose={close} />
+          <SheetHeader title="Discard Due" icon="TriangleAlert" danger onClose={close} />
 
           <Text style={styles.body}>
             Are you sure you want to discard the due <Text style={styles.strong}>&quot;{debtTitle}&quot;</Text>? This template will be removed and can no longer be applied.

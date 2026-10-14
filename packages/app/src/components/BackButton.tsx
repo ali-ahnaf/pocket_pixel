@@ -2,6 +2,7 @@ import { Href, useRouter } from 'expo-router';
 import { Pressable, StyleProp, StyleSheet, Text, ViewStyle } from 'react-native';
 import { ms } from 'react-native-size-matters';
 import { color, font, space, text } from '../theme';
+import { PixelIcon } from './PixelIcon';
 
 export type BackButtonVariant = 'default' | 'subtle';
 
@@ -24,7 +25,12 @@ export function BackButton({ label = 'Back', href, variant = 'default', style }:
       onPress={() => (href ? router.push(href) : router.back())}
       style={[styles.button, variant === 'subtle' && styles.subtleButton, style]}
     >
-      {({ pressed }) => <Text style={[styles.label, variant === 'subtle' ? styles.subtleLabel : styles.defaultLabel, pressed && styles.pressedLabel]}>← {label}</Text>}
+      {({ pressed }) => (
+        <>
+          <PixelIcon name="ChevronLeft" size={ms(16)} />
+          <Text style={[styles.label, variant === 'subtle' ? styles.subtleLabel : styles.defaultLabel, pressed && styles.pressedLabel]}>{label}</Text>
+        </>
+      )}
     </Pressable>
   );
 }

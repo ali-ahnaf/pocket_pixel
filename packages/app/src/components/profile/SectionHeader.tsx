@@ -2,9 +2,10 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ms } from 'react-native-size-matters';
 import { color, font, space, text } from '../../theme';
 import { Button } from '../Button';
+import { PixelIcon, PixelIconName } from '../PixelIcon';
 
 export interface SectionHeaderProps {
-  glyph: string;
+  icon: PixelIconName;
   title: string;
   tone?: 'primary' | 'secondary' | 'tertiary';
   open: boolean;
@@ -14,16 +15,19 @@ export interface SectionHeaderProps {
 }
 
 // Collapsible section title of the profile page.
-export function SectionHeader({ glyph, title, tone = 'primary', open, onToggle, onAdd }: SectionHeaderProps) {
+export function SectionHeader({ icon, title, tone = 'primary', open, onToggle, onAdd }: SectionHeaderProps) {
   return (
     <View style={[styles.row, onAdd && styles.underlined]}>
       <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={onToggle} style={styles.toggle}>
+        <PixelIcon name={icon} size={ms(24)} />
         <Text style={[styles.title, toneStyles[tone]]} accessibilityRole="header">
-          {glyph} {title}
+          {title}
         </Text>
-        <Text style={[styles.chevron, toneStyles[tone], open && styles.chevronOpen]}>▾</Text>
+        <View style={open && styles.chevronOpen}>
+          <PixelIcon name="ChevronDown" size={ms(20)} />
+        </View>
       </Pressable>
-      {onAdd && <Button label="+ Add" size="sm" onPress={onAdd} />}
+      {onAdd && <Button label="Add" icon="Plus" size="sm" onPress={onAdd} />}
     </View>
   );
 }
@@ -33,7 +37,6 @@ const styles = StyleSheet.create({
   underlined: { borderBottomWidth: ms(4), borderColor: color.outlineVariant },
   toggle: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: ms(space[2]), minHeight: ms(44) },
   title: { flexShrink: 1, fontFamily: font.heading, fontSize: ms(text.headlineMd.fontSize), lineHeight: ms(text.headlineMd.lineHeight) },
-  chevron: { fontSize: ms(20) },
   chevronOpen: { transform: [{ rotate: '180deg' }] },
 });
 

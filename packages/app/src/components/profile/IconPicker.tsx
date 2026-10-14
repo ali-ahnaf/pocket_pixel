@@ -1,8 +1,9 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ms } from 'react-native-size-matters';
-import { iconGlyph } from '../../lib/iconMapper';
+import { toPixelIcon } from '../../lib/iconMapper';
 import { AVAILABLE_ICONS } from '../../lib/static';
 import { color, font, shadow, space, text } from '../../theme';
+import { PixelIcon } from '../PixelIcon';
 
 // Two rows that scroll sideways, like the web grid-rows-2 grid-flow-col.
 const COLUMNS: string[][] = [];
@@ -31,7 +32,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                   onPress={() => onChange(name)}
                   style={[styles.cell, isSelected ? styles.selected : styles.idle]}
                 >
-                  <Text style={styles.glyph}>{iconGlyph(name)}</Text>
+                  <PixelIcon name={toPixelIcon(name)} size={ms(28)} />
                 </Pressable>
               );
             })}
@@ -50,5 +51,4 @@ const styles = StyleSheet.create({
   cell: { width: ms(48), height: ms(48), alignItems: 'center', justifyContent: 'center', borderWidth: ms(4) },
   idle: { borderColor: color.border, backgroundColor: color.surfaceLowest, boxShadow: shadow.card },
   selected: { borderColor: color.primary, backgroundColor: color.primaryContainer, boxShadow: shadow.toggleActive, transform: [{ scale: 1.1 }] },
-  glyph: { fontSize: ms(22) },
 });

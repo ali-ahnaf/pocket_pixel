@@ -4,6 +4,7 @@ import { ms } from 'react-native-size-matters';
 import { color, font, space, text } from '../../theme';
 import { Input } from '../Input';
 import { StatusNote } from './StatusNote';
+import { PixelIcon } from '../PixelIcon';
 
 /** Shape of an OpenRouter model as the web's lib/ai/openrouter.ts returns it. Not an API DTO. */
 export interface OpenRouterModel {
@@ -35,7 +36,7 @@ export function ModelPicker({ models, loading, error, selectedModel, saving, onS
 
   return (
     <View style={styles.wrapper}>
-      <Input placeholder="🔍 Search curated models…" value={search} onChangeText={setSearch} autoComplete="off" autoCapitalize="none" autoCorrect={false} accessibilityLabel="Search curated models" />
+      <Input placeholder="Search curated models…" value={search} onChangeText={setSearch} autoComplete="off" autoCapitalize="none" autoCorrect={false} accessibilityLabel="Search curated models" />
 
       {visibleModels.length === 0 ? (
         <Text style={styles.hint}>No curated models match your search.</Text>
@@ -60,7 +61,7 @@ export function ModelPicker({ models, loading, error, selectedModel, saving, onS
                     {model.id}
                   </Text>
                 </View>
-                {isSelected && <Text style={[styles.check, styles.selectedText]}>✔</Text>}
+                {isSelected && <PixelIcon name="Check" size={ms(18)} />}
               </Pressable>
             );
           })}
@@ -91,5 +92,4 @@ const styles = StyleSheet.create({
   name: { fontFamily: font.bodyBold, fontSize: ms(text.bodySm.fontSize), lineHeight: ms(text.bodySm.lineHeight), color: color.onSurface },
   id: { fontFamily: font.mono, fontSize: ms(11), lineHeight: ms(14), color: color.onSurface, opacity: 0.8 },
   selectedText: { color: color.onPrimary },
-  check: { fontSize: ms(18) },
 });

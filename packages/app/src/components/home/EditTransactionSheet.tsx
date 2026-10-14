@@ -77,7 +77,7 @@ export function EditTransactionSheet({ transaction, vaults, tags, onSuccess, onC
     <BottomSheetModal onClose={onClose}>
       {(close) => (
         <>
-          <SheetHeader title="Edit Transaction" glyph="✎" onClose={close} />
+          <SheetHeader title="Edit Transaction" icon="Pencil" onClose={close} />
           <ScrollView style={{ maxHeight: height * 0.75 }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             <Input accessibilityLabel="Title" placeholder="e.g. Grocery run" value={title} onChangeText={setTitle} style={styles.titleInput} />
 
@@ -94,9 +94,9 @@ export function EditTransactionSheet({ transaction, vaults, tags, onSuccess, onC
             <TagPicker tags={tags} selected={selectedTags} onChange={setSelectedTags} />
 
             <View style={styles.actions}>
-              <Button label={isSubmitting ? 'SAVING...' : '✎ SAVE CHANGES'} size="lg" disabled={!amount || isSubmitting} onPress={() => save(close)} />
+              <Button label={isSubmitting ? 'SAVING...' : 'SAVE CHANGES'} icon="Pencil" size="lg" disabled={!amount || isSubmitting} onPress={() => save(close)} />
               {!showDeleteConfirm ? (
-                <Button label="🗑 DELETE TRANSACTION" variant="ghost" onPress={() => setShowDeleteConfirm(true)} />
+                <Button label="DELETE TRANSACTION" icon="Trash" variant="ghost" onPress={() => setShowDeleteConfirm(true)} />
               ) : (
                 <View style={styles.confirmRow}>
                   <Button label="CANCEL" variant="ghost" onPress={() => setShowDeleteConfirm(false)} style={styles.flex} />

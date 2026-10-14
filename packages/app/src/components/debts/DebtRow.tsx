@@ -6,6 +6,8 @@ import { formatCurrency } from '../../lib/formatters';
 import { color, font, space, text } from '../../theme';
 import { Button } from '../Button';
 import { Card } from '../Card';
+import { PixelIcon } from '../PixelIcon';
+import { IconText } from '../IconText';
 
 /** YYYY-MM-DD to DD/MM/YYYY, as the web debts page shows due dates. */
 export function formatDueDate(dueDate: string): string {
@@ -28,20 +30,32 @@ export const DebtRow = memo(function DebtRow({ debt, onEdit, onApply, onDiscard 
     <Card style={styles.card}>
       <Pressable accessibilityRole="button" accessibilityLabel={`Edit ${debt.title}`} onPress={() => onEdit(debt)} style={({ pressed }) => [styles.main, pressed && styles.pressed]}>
         <View style={[styles.iconBox, isIncome ? styles.iconIncome : styles.iconExpense]}>
-          <Text style={[styles.iconGlyph, isIncome ? styles.onIncome : styles.onExpense]}>{isIncome ? '↗' : '↘'}</Text>
+          <PixelIcon name={isIncome ? 'ArrowUpRight' : 'ArrowDownRight'} size={ms(28)} />
         </View>
         <View style={styles.info}>
           <View style={styles.titleRow}>
             <Text numberOfLines={1} style={styles.title}>
               {debt.title}
             </Text>
-            {debt.completed ? <Text style={[styles.mark, styles.markDone]}>✓</Text> : null}
-            {debt.discarded ? <Text style={[styles.mark, styles.markDiscarded]}>✕</Text> : null}
+            {debt.completed ? (
+              <View style={[styles.mark, styles.markDone]}>
+                <PixelIcon name="Check" size={ms(14)} />
+              </View>
+            ) : null}
+            {debt.discarded ? (
+              <View style={[styles.mark, styles.markDiscarded]}>
+                <PixelIcon name="X" size={ms(14)} />
+              </View>
+            ) : null}
           </View>
           <Text style={[styles.caps, isIncome ? styles.amountIncome : styles.amountExpense]}>
             {formatCurrency(debt.amount)} · {debt.type}
           </Text>
-          {debt.dueDate ? <Text style={[styles.caps, styles.due]}>🗓 Due {formatDueDate(debt.dueDate)}</Text> : null}
+          {debt.dueDate ? (
+            <IconText icon="Calendar" iconSize={14} style={[styles.caps, styles.due]}>
+              Due {formatDueDate(debt.dueDate)}
+            </IconText>
+          ) : null}
           {debt.notes ? (
             <Text numberOfLines={1} style={styles.notes}>
               {debt.notes}
@@ -51,7 +65,7 @@ export const DebtRow = memo(function DebtRow({ debt, onEdit, onApply, onDiscard 
       </Pressable>
       {!debt.completed && !debt.discarded ? (
         <View style={styles.actions}>
-          <Button label="✓ Apply" size="sm" onPress={() => onApply(debt)} />
+          <Button label="Apply" icon="Check" size="sm" onPress={() => onApply(debt)} />
           <Button label="Discard" variant="danger" size="sm" onPress={() => onDiscard(debt)} />
         </View>
       ) : null}
@@ -66,15 +80,12 @@ const styles = StyleSheet.create({
   iconBox: { width: ms(48), height: ms(48), alignItems: 'center', justifyContent: 'center', borderWidth: ms(4), borderColor: color.border },
   iconIncome: { backgroundColor: color.primaryContainer },
   iconExpense: { backgroundColor: color.errorContainer },
-  iconGlyph: { fontFamily: font.bodyBold, fontSize: ms(22) },
-  onIncome: { color: color.onPrimaryContainer },
-  onExpense: { color: color.onErrorContainer },
   info: { flex: 1, minWidth: 0 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: ms(space[2]) },
   title: { flexShrink: 1, fontFamily: font.heading, fontSize: ms(20), lineHeight: ms(26), color: color.onSurface },
-  mark: { fontFamily: font.bodyBold, fontSize: ms(12), borderWidth: ms(2), paddingHorizontal: ms(space[2]), paddingVertical: ms(2) },
-  markDone: { color: color.primary, borderColor: color.primary },
-  markDiscarded: { color: color.error, borderColor: color.error },
+  mark: { borderWidth: ms(2), paddingHorizontal: ms(space[1]), paddingVertical: ms(2) },
+  markDone: { borderColor: color.primary },
+  markDiscarded: { borderColor: color.error },
   caps: { fontFamily: font.mono, fontSize: ms(11), lineHeight: ms(16), textTransform: 'uppercase' },
   amountIncome: { color: color.primary },
   amountExpense: { color: color.error },

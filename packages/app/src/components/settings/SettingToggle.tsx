@@ -1,23 +1,24 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ms } from 'react-native-size-matters';
 import { color, font, shadow, space, text } from '../../theme';
+import { PixelIcon, PixelIconName } from '../PixelIcon';
 
 export interface SettingToggleProps {
   label: string;
   description: string;
-  /** Emoji or unicode glyph shown in the icon box. */
-  glyph: string;
+  /** Sprite shown in the icon box. */
+  icon: PixelIconName;
   checked: boolean;
   onChange: (value: boolean) => void;
 }
 
 // Pixel switch ported from the web settings page instead of the native Switch, to keep the web look.
-export function SettingToggle({ label, description, glyph, checked, onChange }: SettingToggleProps) {
+export function SettingToggle({ label, description, icon, checked, onChange }: SettingToggleProps) {
   return (
     <View style={styles.row}>
       <View style={styles.info}>
         <View style={styles.iconBox}>
-          <Text style={styles.glyph}>{glyph}</Text>
+          <PixelIcon name={icon} size={ms(24)} />
         </View>
         <View style={styles.texts}>
           <Text numberOfLines={1} style={styles.label}>
@@ -65,7 +66,6 @@ export const settingRowStyles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: color.secondaryContainer,
   },
-  glyph: { fontSize: ms(18) },
   texts: { flex: 1, minWidth: 0 },
   label: { fontFamily: font.bodyBold, fontSize: ms(text.bodySm.fontSize), lineHeight: ms(text.bodySm.lineHeight), color: color.onSurface },
   description: { fontFamily: font.body, fontSize: ms(12), lineHeight: ms(16), color: color.onSurfaceVariant },

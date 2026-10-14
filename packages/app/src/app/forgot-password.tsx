@@ -42,7 +42,7 @@ export default function ForgotPasswordScreen() {
 
   return (
     <AuthScreen>
-      <AuthCard title="Forgot Password" glyph="✉">
+      <AuthCard title="Forgot Password" icon="Mail">
         <Input
           label="Email Address"
           placeholder="hero@guild.com"

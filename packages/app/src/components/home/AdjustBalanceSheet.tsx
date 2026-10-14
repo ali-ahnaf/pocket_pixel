@@ -60,7 +60,7 @@ export function AdjustBalanceSheet({ currentNetYield, selectedMonth, selectedYea
     <BottomSheetModal onClose={onClose}>
       {(close) => (
         <>
-          <SheetHeader title="ADJUST BALANCE" glyph="⚖" onClose={close} />
+          <SheetHeader title="ADJUST BALANCE" icon="Scale" onClose={close} />
           <View style={styles.box}>
             <Text style={styles.caps}>Current Net Yield</Text>
             <Text style={[styles.yield, currentNetYield >= 0 ? styles.income : styles.expense]}>

@@ -56,7 +56,7 @@ export default function SignInScreen() {
     <AuthScreen>
       <AuthLogo />
 
-      <AuthCard title="Player Login" glyph="➜" footerTag="AUTH_V1">
+      <AuthCard title="Player Login" icon="ArrowRight" footerTag="AUTH_V1">
         <Input
           label="Email Address"
           placeholder="hero@guild.com"

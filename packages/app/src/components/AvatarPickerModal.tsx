@@ -5,6 +5,7 @@ import { AVATARS, avatarSource } from '../lib/static';
 import { color, font, shadow, space, text } from '../theme';
 import { BottomSheetModal } from './BottomSheetModal';
 import { Button } from './Button';
+import { PixelIcon } from './PixelIcon';
 
 export interface AvatarPickerModalProps {
   currentAvatar: string;
@@ -59,7 +60,7 @@ export function AvatarPickerModal({ currentAvatar, onSelect, onClose }: AvatarPi
               onPress={() => setPage(page - 1)}
               style={[styles.pageButton, page === 0 && styles.disabled]}
             >
-              <Text style={styles.pageGlyph}>‹</Text>
+              <PixelIcon name="ChevronLeft" size={ms(20)} />
             </Pressable>
             <View style={styles.dots}>
               {Array.from({ length: TOTAL_PAGES }, (_, i) => (
@@ -74,7 +75,7 @@ export function AvatarPickerModal({ currentAvatar, onSelect, onClose }: AvatarPi
               onPress={() => setPage(page + 1)}
               style={[styles.pageButton, page === TOTAL_PAGES - 1 && styles.disabled]}
             >
-              <Text style={styles.pageGlyph}>›</Text>
+              <PixelIcon name="ChevronRight" size={ms(20)} />
             </Pressable>
           </View>
 
@@ -102,7 +103,6 @@ const styles = StyleSheet.create({
   image: { width: '100%', height: '100%' },
   pager: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   pageButton: { width: ms(36), height: ms(36), alignItems: 'center', justifyContent: 'center', borderWidth: ms(4), borderColor: color.border },
-  pageGlyph: { fontFamily: font.bodyBold, fontSize: ms(18), color: color.onSurface },
   disabled: { opacity: 0.3 },
   dots: { flexDirection: 'row', gap: ms(space[2]) },
   dot: { width: ms(12), height: ms(12), borderWidth: ms(2), borderColor: color.border, backgroundColor: color.surfaceHighest },

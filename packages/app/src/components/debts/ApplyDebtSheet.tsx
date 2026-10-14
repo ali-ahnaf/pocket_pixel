@@ -3,12 +3,13 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ms } from 'react-native-size-matters';
 import { formatCurrency } from '../../lib/formatters';
-import { iconGlyph } from '../../lib/iconMapper';
+import { toPixelIcon } from '../../lib/iconMapper';
 import { color, font, space, text } from '../../theme';
 import { BottomSheetModal } from '../BottomSheetModal';
 import { Button } from '../Button';
 import { Dropdown } from '../Dropdown';
 import { SheetHeader } from '../SheetHeader';
+import { PixelIcon } from '../PixelIcon';
 
 export interface ApplyDebtSheetProps {
   debt: DebtDto;
@@ -40,7 +41,7 @@ export function ApplyDebtSheet({ debt, vaults, onConfirm, onClose }: ApplyDebtSh
 
         return (
           <>
-            <SheetHeader title="Apply Due" glyph="✓" onClose={handleClose} />
+            <SheetHeader title="Apply Due" icon="Check" onClose={handleClose} />
 
             <Text style={styles.body}>
               Confirm will create a {debt.type} of <Text style={styles.strong}>{formatCurrency(debt.amount)}</Text> for <Text style={styles.strong}>{debt.title}</Text> in the current month and remove
@@ -58,14 +59,14 @@ export function ApplyDebtSheet({ debt, vaults, onConfirm, onClose }: ApplyDebtSh
                   keyExtractor={(vault) => vault.id}
                   renderValue={(vault) => (
                     <>
-                      <Text style={styles.vaultGlyph}>{iconGlyph(vault.icon || 'Briefcase')}</Text>
+                      <PixelIcon name={toPixelIcon(vault.icon || 'Briefcase')} size={ms(20)} />
                       <Text style={styles.vaultSelected}>{vault.name}</Text>
                     </>
                   )}
                   renderOption={(vault, isSelected) => (
                     <>
                       <View style={styles.optionRow}>
-                        <Text style={styles.vaultGlyph}>{iconGlyph(vault.icon || 'Briefcase')}</Text>
+                        <PixelIcon name={toPixelIcon(vault.icon || 'Briefcase')} size={ms(20)} />
                         <Text style={isSelected ? styles.vaultSelected : styles.vaultName}>{vault.name}</Text>
                       </View>
                       {isSelected ? <View style={styles.selectedMark} /> : null}
@@ -84,12 +85,12 @@ export function ApplyDebtSheet({ debt, vaults, onConfirm, onClose }: ApplyDebtSh
               onPress={() => setSkipTransaction((s) => !s)}
               style={({ pressed }) => [styles.skipRow, pressed && styles.pressed, applying && styles.disabled]}
             >
-              <View style={[styles.checkbox, skipTransaction && styles.checkboxOn]}>{skipTransaction ? <Text style={styles.checkGlyph}>✓</Text> : null}</View>
+              <View style={[styles.checkbox, skipTransaction && styles.checkboxOn]}>{skipTransaction ? <PixelIcon name="Check" size={ms(14)} /> : null}</View>
               <Text style={styles.skipText}>Skip transaction — clear the due without creating an {debt.type}.</Text>
             </Pressable>
 
             <View style={styles.actions}>
-              <Button label={applying ? 'Applying...' : '✓ Confirm'} onPress={handleConfirm} disabled={applying} style={styles.action} />
+              <Button label={applying ? 'Applying...' : 'Confirm'} icon="Check" onPress={handleConfirm} disabled={applying} style={styles.action} />
               <Button label="Cancel" variant="ghost" onPress={handleClose} disabled={applying} style={styles.action} />
             </View>
           </>
@@ -111,7 +112,6 @@ const styles = StyleSheet.create({
     marginBottom: ms(space[1]),
   },
   optionRow: { flexDirection: 'row', alignItems: 'center', gap: ms(space[3]) },
-  vaultGlyph: { fontSize: ms(18) },
   vaultSelected: { fontFamily: font.bodyBold, fontSize: ms(text.bodyLg.fontSize), color: color.primary },
   vaultName: { fontFamily: font.body, fontSize: ms(text.bodyLg.fontSize), color: color.onSurface },
   selectedMark: { width: ms(16), height: ms(16), backgroundColor: color.primary, borderWidth: ms(2), borderColor: color.border },
@@ -120,7 +120,6 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.6 },
   checkbox: { width: ms(24), height: ms(24), alignItems: 'center', justifyContent: 'center', borderWidth: ms(4), borderColor: color.border, backgroundColor: color.surfaceLowest },
   checkboxOn: { backgroundColor: color.primary },
-  checkGlyph: { fontFamily: font.bodyBold, fontSize: ms(12), lineHeight: ms(14), color: color.onPrimary },
   skipText: { flex: 1, fontFamily: font.body, fontSize: ms(text.bodySm.fontSize), lineHeight: ms(text.bodySm.lineHeight), color: color.onSurface },
   actions: { flexDirection: 'row', gap: ms(space[2]), paddingTop: ms(space[2]) },
   action: { flex: 1 },

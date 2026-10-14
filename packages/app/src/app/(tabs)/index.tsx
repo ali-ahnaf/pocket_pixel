@@ -17,6 +17,7 @@ import { StatusCard } from '../../components/home/StatusCard';
 import { useLocalUserId } from '../../hooks/DatabaseProvider';
 import { logger, recurringService, tagsService, transactionsService, vaultsService } from '../../services';
 import { color, font, shadow, gutter, space, text } from '../../theme';
+import { PixelIcon } from '../../components/PixelIcon';
 
 type DropItem = { kind: 'tx'; tx: TransactionDto } | { kind: 'occ'; occ: OccurrenceDto };
 type Searchable = Pick<TransactionDto, 'title' | 'vault' | 'tags'>;
@@ -212,13 +213,15 @@ export default function Home() {
               onPress={() => setSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'))}
               style={({ pressed }) => [styles.sortButton, styles.orderButton, pressed && styles.pressed]}
             >
-              <Text style={styles.orderGlyph}>{sortOrder === 'desc' ? '↓' : '↑'}</Text>
+              <View style={sortOrder === 'asc' && styles.flipped}>
+                <PixelIcon name="ChevronDown" size={ms(16)} />
+              </View>
             </Pressable>
           </View>
         </View>
 
         <View style={styles.search}>
-          <Text style={styles.searchGlyph}>⌕</Text>
+          <PixelIcon name="Search" size={ms(16)} />
           <TextInput
             accessibilityLabel="Search transactions"
             placeholder="SEARCH DROPS..."
@@ -231,7 +234,7 @@ export default function Home() {
           />
           {searchQuery ? (
             <Pressable accessibilityRole="button" accessibilityLabel="Clear search" hitSlop={12} onPress={() => setSearchQuery('')}>
-              <Text style={styles.searchGlyph}>✕</Text>
+              <PixelIcon name="X" size={ms(16)} />
             </Pressable>
           ) : null}
         </View>
@@ -300,7 +303,9 @@ export default function Home() {
     </View>
   ) : (
     <View style={styles.empty}>
-      <Text style={styles.emptyGlyph}>📦</Text>
+      <View style={styles.emptyGlyph}>
+        <PixelIcon name="Package" size={ms(56)} />
+      </View>
       <Text style={styles.emptyTitle}>{normalizedSearch ? 'No matching drops' : 'No drops this month'}</Text>
       <Text style={styles.emptyBody}>{normalizedSearch ? 'Try a different search term' : 'Log a transaction to get started'}</Text>
     </View>
@@ -356,9 +361,8 @@ const styles = StyleSheet.create({
   sortRow: { flexDirection: 'row', gap: ms(space[2]) },
   sortButton: { width: ms(80), minHeight: ms(28) },
   orderButton: { alignItems: 'center', justifyContent: 'center', backgroundColor: color.bg, borderWidth: ms(2), borderColor: color.border },
-  orderGlyph: { fontSize: ms(12), color: color.onSurface },
+  flipped: { transform: [{ rotate: '180deg' }] },
   search: { flexDirection: 'row', alignItems: 'center', gap: ms(space[2]), paddingHorizontal: ms(space[2]), backgroundColor: color.bg, borderWidth: ms(2), borderColor: color.border },
-  searchGlyph: { fontSize: ms(12), color: color.outline },
   searchInput: { flex: 1, minHeight: ms(36), fontFamily: font.mono, fontSize: ms(10), color: color.onSurface },
   filters: { flexDirection: 'row', gap: ms(space[2]) },
   skeletonList: { gap: ms(space[3]) },
@@ -369,7 +373,7 @@ const styles = StyleSheet.create({
   skeletonWide: { width: '66%' },
   skeletonNarrow: { width: '33%' },
   empty: { alignItems: 'center', justifyContent: 'center', paddingVertical: ms(48), gap: ms(space[3]) },
-  emptyGlyph: { fontSize: ms(48), opacity: 0.4 },
+  emptyGlyph: { opacity: 0.6 },
   emptyTitle: { fontFamily: font.mono, fontSize: ms(text.labelCaps.fontSize), color: color.outline, textTransform: 'uppercase' },
   emptyBody: { fontFamily: font.body, fontSize: ms(text.bodySm.fontSize), color: color.onSurfaceVariant, textAlign: 'center' },
   fab: {
