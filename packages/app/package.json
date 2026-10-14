@@ -43,7 +43,8 @@
     "ios": "expo run:ios",
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
-    "test": "jest"
+    "test": "jest",
+    "eas-build-post-install": "npm run build --prefix ../shared"
   },
   "private": true
 }
