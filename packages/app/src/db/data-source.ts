@@ -8,7 +8,10 @@ import { TransactionTag } from '../entities/TransactionTag.entity';
 import { RecurringOccurrenceSkip } from '../entities/RecurringOccurrenceSkip.entity';
 import { Debt } from '../entities/Debt.entity';
 import { UserPreference } from '../entities/UserPreference.entity';
+import { VaultGmailWatcher } from '../entities/VaultGmailWatcher.entity';
+import { PendingGmailExpense } from '../entities/PendingGmailExpense.entity';
 import { InitialSchema1791849600000 } from '../migrations/1791849600000-InitialSchema';
+import { AddGmailWatchers1791936000000 } from '../migrations/1791936000000-AddGmailWatchers';
 import { getRandomValues } from 'expo-crypto';
 
 // TypeORM generates uuid primary keys with `uuid`, which needs crypto.getRandomValues. Hermes does not provide it.
@@ -18,8 +21,8 @@ export const AppDataSource = new DataSource({
   type: 'expo',
   driver: SQLite,
   database: 'pocket_pixel.db',
-  entities: [User, Expense, Vault, Tag, TransactionTag, RecurringOccurrenceSkip, Debt, UserPreference],
-  migrations: [InitialSchema1791849600000],
+  entities: [User, Expense, Vault, Tag, TransactionTag, RecurringOccurrenceSkip, Debt, UserPreference, VaultGmailWatcher, PendingGmailExpense],
+  migrations: [InitialSchema1791849600000, AddGmailWatchers1791936000000],
   migrationsRun: true,
   synchronize: false,
   logging: false,

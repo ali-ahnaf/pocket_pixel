@@ -1,4 +1,3 @@
-// STUB: Gmail reconnect banner, pending Gmail expenses and AI transaction entry (see the components in src/components/home). Transactions, vaults, tags and recurring items use the real local services.
 import type { OccurrenceDto, TagDto, TransactionDto, VaultDto } from '@expense-tracker/shared';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
@@ -9,7 +8,6 @@ import { AdjustBalanceSheet } from '../../components/home/AdjustBalanceSheet';
 import { OccurrenceRow, TransactionRow } from '../../components/home/DropRow';
 import { EditTransactionSheet } from '../../components/home/EditTransactionSheet';
 import { FilterButton, FilterOption } from '../../components/home/FilterButton';
-import { GmailReconnectBanner } from '../../components/home/GmailReconnectBanner';
 import { LogResourceSheet } from '../../components/home/LogResourceSheet';
 import { MonthSelector } from '../../components/home/MonthSelector';
 import { PendingExpensesPanel } from '../../components/home/PendingExpensesPanel';
@@ -171,8 +169,7 @@ export default function Home() {
           setSelectedYear(y);
         }}
       />
-      <GmailReconnectBanner />
-      <PendingExpensesPanel />
+      <PendingExpensesPanel onTransactionCreated={refetch} />
       <StatusCard
         isLoading={!loaded}
         totalIncome={totalIncome}
