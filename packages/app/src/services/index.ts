@@ -12,6 +12,7 @@ import { AuthService } from './auth.service';
 import { GmailService } from './gmail.service';
 import { VaultWatchersService } from './vault-watchers.service';
 import { PendingGmailExpenseService } from './pending-gmail-expense.service';
+import { BackupService } from './backup.service';
 
 export const logger = new Logger();
 export const transactionsService = new TransactionsService();
@@ -28,6 +29,7 @@ export const gmailService = new GmailService();
 export const vaultWatchersService = new VaultWatchersService();
 // Built last: its defaults read gmailService, aiService and transactionsService above.
 export const pendingGmailExpenseService = new PendingGmailExpenseService();
+export const backupService = new BackupService();
 
 export {
   Logger,
@@ -44,4 +46,5 @@ export {
   GmailService,
   VaultWatchersService,
   PendingGmailExpenseService,
+  BackupService,
 };

@@ -18,12 +18,14 @@ export interface PendingExpensesPanelProps {
   onTransactionCreated: () => void;
 }
 
-// Port of packages/ui/src/components/pending-expenses/PendingExpensesPanel.tsx. Hidden when the queue is empty.
-// The phone gets no Gmail push, so this panel also polls Gmail: on focus and whenever the app returns to the foreground.
+// Port of packages/ui/src/components/pending-expenses/PendingExpensesPanel.tsx. Hidden when the queue is empty and Gmail is not connected.
+// The phone gets no Gmail push, so this panel also polls Gmail: on focus, whenever the app returns to the foreground, and from the refresh button.
 export function PendingExpensesPanel({ onTransactionCreated }: PendingExpensesPanelProps) {
   const userId = useLocalUserId();
   const [items, setItems] = useState<PendingGmailExpenseDto[]>([]);
   const [reconnectRequired, setReconnectRequired] = useState(false);
+  const [connected, setConnected] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [selected, setSelected] = useState<PendingGmailExpenseDto | null>(null);
 
   // Shows the local queue at once, then syncs in the background and shows anything new. A failed sync keeps the app usable.
@@ -34,13 +36,16 @@ export function PendingExpensesPanel({ onTransactionCreated }: PendingExpensesPa
         if (!active) return;
         setItems(list);
         setReconnectRequired(status.reconnectRequired);
+        setConnected(status.connected);
       });
 
+    setSyncing(true);
     show()
       .then(() => gmailService.sync(userId))
       .catch((err) => logger.warn('Gmail sync failed', { err }))
       .then(show)
-      .catch((err) => logger.error('Load pending expenses failed', { err }));
+      .catch((err) => logger.error('Load pending expenses failed', { err }))
+      .finally(() => setSyncing(false));
     return () => {
       active = false;
     };
@@ -64,14 +69,30 @@ export function PendingExpensesPanel({ onTransactionCreated }: PendingExpensesPa
     <>
       {reconnectRequired && <GmailReconnectBanner />}
 
-      {items.length > 0 && (
+      {(connected || items.length > 0) && (
         <Card style={styles.card}>
           <View style={styles.header}>
             <IconText icon="Mail" iconSize={20} style={styles.title} accessibilityRole="header">
               Pending Expenses
             </IconText>
-            <Badge label={String(items.length)} variant="secondary" />
+            <View style={styles.headerActions}>
+              {items.length > 0 && <Badge label={String(items.length)} variant="secondary" />}
+              {connected && (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Sync new emails"
+                  accessibilityState={{ busy: syncing, disabled: syncing }}
+                  disabled={syncing}
+                  hitSlop={8}
+                  onPress={refresh}
+                  style={({ pressed }) => [styles.refresh, syncing && styles.syncing, pressed && styles.pressed]}
+                >
+                  <PixelIcon name="Repeat" size={ms(20)} />
+                </Pressable>
+              )}
+            </View>
           </View>
+          {items.length === 0 && <Text style={styles.hint}>{syncing ? 'Checking Gmail...' : 'No new emails'}</Text>}
           {items.map((item) => (
             <Pressable key={item.id} accessibilityRole="button" onPress={() => setSelected(item)} style={({ pressed }) => [styles.item, pressed && styles.pressed]}>
               <View style={styles.itemBody}>
@@ -111,6 +132,9 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderColor: color.secondary,
   },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: ms(space[2]) },
+  refresh: { width: ms(36), height: ms(36), alignItems: 'center', justifyContent: 'center', borderWidth: ms(2), borderColor: color.border },
+  syncing: { opacity: 0.5 },
   pressed: { transform: [{ translateY: 2 }] },
   itemBody: { flex: 1, gap: ms(space[1]) },
   subject: { fontFamily: font.bodyBold, fontSize: ms(text.bodySm.fontSize), color: color.onSurface },
