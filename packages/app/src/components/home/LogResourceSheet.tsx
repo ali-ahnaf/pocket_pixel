@@ -1,4 +1,3 @@
-// STUB: OpenRouter AI prompt parsing (SEND always reports that AI is not set up). No local data layer for this in packages/app yet, so it uses hardcoded stub data.
 import type { TagDto, VaultDto } from '@expense-tracker/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -6,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions
 import { ms } from 'react-native-size-matters';
 import { useLocalUserId } from '../../hooks/DatabaseProvider';
 import { useDisplaySettings } from '../../hooks/useDisplaySettings';
-import { logger, transactionsService } from '../../services';
+import { aiService, logger, transactionsService } from '../../services';
 import { color, font, shadow, space, text } from '../../theme';
 import { BottomSheetModal } from '../BottomSheetModal';
 import { Button } from '../Button';
@@ -29,8 +28,6 @@ export interface LogResourceSheetProps {
   onClose: () => void;
 }
 
-const AI_SETUP_MESSAGE = 'Set up your OpenRouter API key and pick a model in Settings before parsing prompts.';
-
 // Port of packages/ui/src/components/LogResourceModal.tsx.
 export function LogResourceSheet({ vaults, tags, selectedMonth, selectedYear, onSuccess, onClose }: LogResourceSheetProps) {
   const userId = useLocalUserId();
@@ -42,6 +39,8 @@ export function LogResourceSheet({ vaults, tags, selectedMonth, selectedYear, on
   const manualEntry = aiTransactionEntryEnabled ? (manualEntryOverride ?? false) : true;
   const [promptText, setPromptText] = useState('');
   const [promptResult, setPromptResult] = useState<string | null>(null);
+  const [isPrompting, setIsPrompting] = useState(false);
+  const [promptNeedsAiSetup, setPromptNeedsAiSetup] = useState(false);
 
   const [isExpense, setIsExpense] = useState(true);
   const [amount, setAmount] = useState('');
@@ -49,6 +48,37 @@ export function LogResourceSheet({ vaults, tags, selectedMonth, selectedYear, on
   const [selectedTags, setSelectedTags] = useState<TagDto[]>([]);
   const [selectedVaultId, setSelectedVaultId] = useState<string | null>((vaults.find((v) => v.isDefault) ?? vaults[0])?.id ?? null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const sendPrompt = async (): Promise<void> => {
+    if (!promptText.trim() || isPrompting) return;
+    setIsPrompting(true);
+    setPromptResult(null);
+    setPromptNeedsAiSetup(false);
+
+    try {
+      const outcome = await aiService.parseTransactionPrompt(promptText, tags, vaults);
+
+      if (outcome.status !== 'success') {
+        setPromptResult(outcome.message);
+        setPromptNeedsAiSetup(outcome.status === 'needs-ai-setup');
+        return;
+      }
+
+      const parsed = outcome.transaction;
+      setTitle(parsed.title);
+      setAmount(String(parsed.amount));
+      setIsExpense(parsed.type === 'expense');
+      setSelectedTags(tags.filter((tag) => parsed.tagIds.includes(tag.id)));
+      setSelectedVaultId(parsed.vaultId ?? null);
+      setManualEntryOverride(true);
+    } catch (err) {
+      logger.error('Parse transaction prompt failed', { err });
+      setPromptResult(err instanceof Error ? err.message : 'Could not parse your prompt. Please try again.');
+      setManualEntryOverride(true);
+    } finally {
+      setIsPrompting(false);
+    }
+  };
 
   const submit = async (close: () => void): Promise<void> => {
     if (!amount || isSubmitting) return;
@@ -91,20 +121,22 @@ export function LogResourceSheet({ vaults, tags, selectedMonth, selectedYear, on
                   onChangeText={setPromptText}
                   style={styles.prompt}
                 />
-                <Button label="SEND" icon="Send" size="lg" disabled={!promptText.trim()} onPress={() => setPromptResult(AI_SETUP_MESSAGE)} />
+                <Button label={isPrompting ? 'SENDING...' : 'SEND'} icon="Send" size="lg" disabled={!promptText.trim() || isPrompting} onPress={sendPrompt} />
                 {promptResult && (
                   <View style={styles.result}>
                     <Text style={styles.resultText}>{promptResult}</Text>
-                    <Pressable
-                      accessibilityRole="link"
-                      hitSlop={10}
-                      onPress={() => {
-                        close();
-                        router.push('/settings/ai');
-                      }}
-                    >
-                      <Text style={styles.link}>GO TO SETTINGS</Text>
-                    </Pressable>
+                    {promptNeedsAiSetup && (
+                      <Pressable
+                        accessibilityRole="link"
+                        hitSlop={10}
+                        onPress={() => {
+                          close();
+                          router.push('/settings/ai');
+                        }}
+                      >
+                        <Text style={styles.link}>GO TO SETTINGS</Text>
+                      </Pressable>
+                    )}
                   </View>
                 )}
               </View>

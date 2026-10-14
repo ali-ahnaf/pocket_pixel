@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ms } from 'react-native-size-matters';
+import { useAuth } from '../hooks/AuthProvider';
 import { useUser } from '../hooks/useUser';
 import { avatarSource } from '../lib/static';
 import { color, font, shadow, gutter, space, text } from '../theme';
@@ -21,6 +22,7 @@ const MENU: { label: string; icon: PixelIconName; href: Href }[] = [
 export function AppBar() {
   const insets = useSafeAreaInsets();
   const { user } = useUser();
+  const { signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -58,8 +60,8 @@ export function AppBar() {
                 accessibilityRole="button"
                 onPress={() => {
                   close();
-                  // Stub: no accounts in the offline app, so this only shows the sign-in screen like the web logout does.
-                  router.replace('/signin');
+                  // Clearing the session flips the root layout's route guard, which moves the user to the sign-in screen.
+                  signOut();
                 }}
                 style={({ pressed }) => [styles.menuItem, styles.logout, pressed && styles.pressed]}
               >

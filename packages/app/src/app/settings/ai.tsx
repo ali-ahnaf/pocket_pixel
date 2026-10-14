@@ -1,43 +1,115 @@
-// STUB: OpenRouter key status, save key, model list, model selection and usage. No local data layer for this in packages/app yet, so it uses hardcoded stub data.
-import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ms } from 'react-native-size-matters';
 import { BackButton } from '../../components/BackButton';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
-import { ModelPicker, type OpenRouterModel } from '../../components/settings/ModelPicker';
+import { ModelPicker } from '../../components/settings/ModelPicker';
 import { StatusNote } from '../../components/settings/StatusNote';
 import { SettingsWindow, settingsStyles } from '../../components/settings/SettingsWindow';
-import { UsagePanel, type OpenRouterUsage } from '../../components/settings/UsagePanel';
-import { color, font, gutter, space } from '../../theme';
+import { UsagePanel } from '../../components/settings/UsagePanel';
+import type { OpenRouterModel, OpenRouterUsage } from '../../lib/ai/openrouter';
+import { aiService, logger } from '../../services';
+import type { AiStatus } from '../../services/ai.service';
+import { color, gutter, space } from '../../theme';
 
-const STUB_HAS_KEY = true;
-
-// The curated ids from the web ModelPicker, standing in for OpenRouter's live model list.
-const STUB_MODELS: readonly OpenRouterModel[] = [
-  { id: 'openai/gpt-4o', name: 'OpenAI: GPT-4o' },
-  { id: 'openai/gpt-4o-mini', name: 'OpenAI: GPT-4o-mini' },
-  { id: 'openai/gpt-5-mini', name: 'OpenAI: GPT-5 Mini' },
-  { id: 'anthropic/claude-3.5-sonnet', name: 'Anthropic: Claude 3.5 Sonnet' },
-  { id: 'google/gemini-2.0-flash', name: 'Google: Gemini 2.0 Flash' },
-];
-
-const STUB_USAGE: OpenRouterUsage = { label: 'sk-or-v1-...stub', keyUsage: 0, keyLimit: null, keyLimitRemaining: null, isFreeTier: false, totalCredits: null, totalUsage: null };
+const errorMessage = (err: unknown, fallback: string): string => (err instanceof Error ? err.message : fallback);
 
 export default function AiSettingsScreen() {
   const insets = useSafeAreaInsets();
-  const [apiKeyInput, setApiKeyInput] = useState('');
-  const [saveError, setSaveError] = useState<string | null>(null);
-  // Kept in component state only; nothing is persisted.
-  const [selectedModel, setSelectedModel] = useState<string | null>(STUB_MODELS[1].id);
+  const [status, setStatus] = useState<AiStatus | null>(null);
 
-  const handleSaveKey = (): void => {
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  const [models, setModels] = useState<OpenRouterModel[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(true);
+  const [modelsError, setModelsError] = useState<string | null>(null);
+  const [modelSaving, setModelSaving] = useState(false);
+  const [modelError, setModelError] = useState<string | null>(null);
+
+  const [usage, setUsage] = useState<OpenRouterUsage | null>(null);
+  const [usageLoading, setUsageLoading] = useState(true);
+  const [usageError, setUsageError] = useState<string | null>(null);
+
+  const hasKey = status?.hasKey ?? false;
+
+  useEffect(() => {
+    aiService.getStatus().then(setStatus, (err) => logger.error('Load AI status failed', { err }));
+  }, []);
+
+  useEffect(() => {
+    aiService.listCuratedModels().then(
+      (result) => {
+        setModels(result);
+        setModelsLoading(false);
+      },
+      (err) => {
+        setModelsError(errorMessage(err, 'Failed to load OpenRouter models'));
+        setModelsLoading(false);
+      },
+    );
+  }, []);
+
+  // Usage is read straight from OpenRouter with the saved key. Every setState here runs in a promise callback, so it is safe to start from an effect.
+  const showUsage = (request: Promise<OpenRouterUsage | null>): void => {
+    request
+      .then(setUsage, (err) => {
+        setUsage(null);
+        setUsageError(errorMessage(err, 'Failed to load OpenRouter usage'));
+      })
+      .finally(() => setUsageLoading(false));
+  };
+
+  const refreshUsage = (): void => {
+    setUsageError(null);
+    setUsageLoading(true);
+    showUsage(aiService.getUsage());
+  };
+
+  useEffect(() => {
+    if (hasKey) showUsage(aiService.getUsage());
+  }, [hasKey]);
+
+  const handleSaveKey = async (): Promise<void> => {
     if (!apiKeyInput.trim()) {
       setSaveError('Enter your OpenRouter API key.');
       return;
     }
-    Alert.alert('Not available yet', 'Saving an OpenRouter key is not supported in the offline app yet.');
+
+    setSaveError(null);
+    setSaveSuccess(false);
+    setSaving(true);
+    try {
+      await aiService.saveApiKey(apiKeyInput);
+      setStatus((prev) => ({ selectedModel: prev?.selectedModel ?? null, hasKey: true }));
+      setApiKeyInput('');
+      setSaveSuccess(true);
+      // First save flips hasKey, whose effect loads usage; a replaced key needs an explicit refresh.
+      if (hasKey) refreshUsage();
+    } catch (err) {
+      logger.error('Save OpenRouter key failed', { err });
+      setSaveError(errorMessage(err, 'Could not save the key on this device.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSelectModel = async (modelId: string): Promise<void> => {
+    setModelError(null);
+    setModelSaving(true);
+    try {
+      await aiService.setModel(modelId);
+      setStatus((prev) => ({ hasKey: prev?.hasKey ?? false, selectedModel: modelId }));
+    } catch (err) {
+      logger.error('Save AI model failed', { err });
+      setModelError(errorMessage(err, 'Could not save the model.'));
+    } finally {
+      setModelSaving(false);
+    }
   };
 
   return (
@@ -54,19 +126,20 @@ export default function AiSettingsScreen() {
       <SettingsWindow icon="Sparkles" title="OpenRouter AI">
         <View style={settingsStyles.section}>
           <Text style={settingsStyles.hint}>
-            Bring your own OpenRouter API key to power expense parsing and the wizard. Your key is encrypted on this device before it ever leaves it. Our server only ever stores ciphertext.
+            Bring your own OpenRouter API key to power expense parsing. Your key is kept in this phone&apos;s secure storage (Keychain on iOS, Keystore on Android) and is only ever sent to OpenRouter.
           </Text>
 
-          <StatusNote tone={STUB_HAS_KEY ? 'success' : 'muted'} icon={STUB_HAS_KEY ? 'Check' : 'Key'} label={STUB_HAS_KEY ? 'Key saved' : 'No key saved yet'} />
+          {status && <StatusNote tone={hasKey ? 'success' : 'muted'} icon={hasKey ? 'Check' : 'Key'} label={hasKey ? 'Key saved' : 'No key saved yet'} />}
 
           <Input
             label="OpenRouter API Key"
             secureTextEntry
             value={apiKeyInput}
-            placeholder={STUB_HAS_KEY ? '••••••••••••••••' : 'sk-or-...'}
+            placeholder={hasKey ? '••••••••••••••••' : 'sk-or-...'}
             onChangeText={(value) => {
               setApiKeyInput(value);
               setSaveError(null);
+              setSaveSuccess(false);
             }}
             autoComplete="off"
             autoCapitalize="none"
@@ -74,22 +147,23 @@ export default function AiSettingsScreen() {
             error={saveError ?? undefined}
           />
 
-          <Text style={styles.warning}>If you reset your password, your saved key cannot be recovered and you&apos;ll need to re-enter it.</Text>
+          {saveSuccess && <StatusNote tone="success" icon="Check" label="OpenRouter key saved" />}
 
-          <Button label="Save Key" variant="primary" size="lg" onPress={handleSaveKey} />
+          <Button label={saving ? 'Saving…' : 'Save Key'} variant="primary" size="lg" disabled={saving} onPress={handleSaveKey} />
         </View>
 
         <View style={[settingsStyles.section, settingsStyles.dividerTop]}>
           <Text accessibilityRole="header" style={settingsStyles.sectionTitle}>
             Model
           </Text>
-          <Text style={settingsStyles.hint}>Pick which OpenRouter model to use. This choice is not secret and is stored as plain text.</Text>
-          <ModelPicker models={STUB_MODELS} loading={false} error={null} selectedModel={selectedModel} saving={false} onSelect={setSelectedModel} />
+          <Text style={settingsStyles.hint}>Pick which OpenRouter model to use. This choice is not secret.</Text>
+          {modelError && <StatusNote tone="error" label={modelError} />}
+          <ModelPicker models={models} loading={modelsLoading} error={modelsError} selectedModel={status?.selectedModel ?? null} saving={modelSaving} onSelect={handleSelectModel} />
         </View>
 
-        {STUB_HAS_KEY && (
+        {hasKey && (
           <View style={[settingsStyles.section, settingsStyles.dividerTop]}>
-            <UsagePanel usage={STUB_USAGE} loading={false} error={null} onRefresh={() => undefined} />
+            <UsagePanel usage={usage} loading={usageLoading} error={usageError} onRefresh={refreshUsage} />
           </View>
         )}
       </SettingsWindow>
@@ -100,14 +174,4 @@ export default function AiSettingsScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.bg },
   content: { paddingHorizontal: ms(gutter), gap: ms(space[4]) },
-  warning: {
-    fontFamily: font.mono,
-    fontSize: ms(11),
-    lineHeight: ms(15),
-    color: color.onSurfaceVariant,
-    textTransform: 'uppercase',
-    borderLeftWidth: ms(4),
-    borderColor: color.error,
-    paddingLeft: ms(space[3]),
-  },
 });
