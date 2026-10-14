@@ -1,0 +1,10 @@
+.expo/
+dist/
+expo-env.d.ts
+
+# generated native folders
+/ios
+/android
+
+.metro-health-check*
+.DS_Store

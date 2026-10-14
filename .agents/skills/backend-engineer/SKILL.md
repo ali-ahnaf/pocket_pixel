@@ -1,25 +1,24 @@
 ---
 name: backend-engineer
-description: Builds and updates the API in `packages/api` using this repo's module layout, shared DTOs, response envelope, guards, services, entities, and e2e test conventions. Use for controllers, services, modules, auth flows, database changes, migrations, and integration tests.
+description: Builds and updates the Express API in `packages/api` using this repo's route, service, repository and entity layering, shared DTOs, Joi validation, auth guards, and Jest service tests. Use for routes, services, repositories, entities, auth flows, schedulers, and database changes.
 globs: packages/api/**/*.ts
 memory: project
 ---
 
-Use this skill for work in `api`. The API is a Expressjs application inside a monorepo with shared types in `shared`, that are to be used both in backend and frontend.
+Use this skill for work in `packages/api`. The API is an Express + TypeORM + SQLite (better-sqlite3) app inside an npm-workspaces monorepo. Request and response DTOs live in `packages/shared` and are used by both the API and the UI.
 
-Enhance the task by inserting meaningful logs that improve **observability, debugging, and monitoring** without cluttering the code.
+Add logs at meaningful points (mutations, scheduled jobs, upstream failures) through the `logger` from `services/`. Do not log every call.
 
 ## Instructions
 
-Read the following reference files based on the task context:
+- **Always** read [conventions.md](references/conventions.md) first: layering, routes, error handling, responses, services, repositories, env vars.
+- Read [repo-shape.md](references/repo-shape.md) to find where new code goes.
+- Read [service-style.md](references/service-style.md) when writing business logic.
+- Read [database.md](references/database.md) when adding or changing entities, deleting data, or touching shared contracts.
+- Read [auth.md](references/auth.md) when working with `authenticate`, `requireAuth`, or JWTs.
 
-- **Repository Structure**: Read [repo-shape.md](references/repo-shape.md) to understand the directory layout and where to place new code.
-- **Coding Standards**: **ALWAYS** Read [conventions.md](references/conventions.md) for core rules on conventions, error handling, and response envelopes etc. You should always read this file.
-- **API Implementation**:
-  - Read [service-style.md](references/service-style.md) when implementing business logic in services.
-- **Persistence**: Read [database.md](references/database.md) when adding entities or migrations.
-- **Security**: Read [auth.md](references/auth.md) when working with authentication or route guards (`authenticate` / `requireAuth`).
+For the migration generate, run, revert flow, use the `migration` skill. For new CRUD resources use `scaffold-resource`. For Jest service tests use `write-service-test`.
 
-## Database
+## Offline migration note
 
-For entity changes, deletion strategy, and shared-contract updates, read [database.md](references/database.md). For the migration generate → run → revert flow and troubleshooting, use the `migration` skill.
+The long-term plan is an offline-first Expo app in `packages/app` with no API server. Assumption, not decided: it would use `expo-sqlite` and reuse the service, repository, entity layering. To keep that option open, keep services free of Express types (today only `util.service.ts` imports `express`) and keep HTTP concerns in routes and middleware.
