@@ -11,19 +11,15 @@
       "bundleIdentifier": "com.pocketpixel.app"
     },
     "android": {
-      "package": "com.pocketpixel.app"
+      "package": "com.pocketpixel.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#141315"
+      }
     },
-    "plugins": [
-      "expo-router",
-      "expo-font",
-      "expo-sqlite",
-      "expo-secure-store"
-    ],
+    "plugins": ["expo-router", "expo-font", "expo-sqlite", "expo-secure-store"],
     "scheme": "expense-tracker",
-    "platforms": [
-      "ios",
-      "android"
-    ],
+    "platforms": ["ios", "android"],
     "backgroundColor": "#141315",
     "experiments": {
       "typedRoutes": true

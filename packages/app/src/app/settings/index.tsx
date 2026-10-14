@@ -1,13 +1,16 @@
 // STUB: push notifications toggle (local state only). No local data layer for this in packages/app yet, so it uses hardcoded stub data.
+import { getDocumentAsync } from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { type ReactNode, useState } from 'react';
-import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ms } from 'react-native-size-matters';
 import { BackButton } from '../../components/BackButton';
 import { SettingLink } from '../../components/settings/SettingLink';
 import { SettingToggle } from '../../components/settings/SettingToggle';
+import { useLocalUserId } from '../../hooks/DatabaseProvider';
 import { useDisplaySettings } from '../../hooks/useDisplaySettings';
+import { backupService, logger } from '../../services';
 import { color, font, shadow, gutter, space, text } from '../../theme';
 import { PixelIcon } from '../../components/PixelIcon';
 
@@ -30,6 +33,29 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { showIncome, showExpense, aiTransactionEntryEnabled, setShowIncome, setShowExpense, setAiTransactionEntryEnabled } = useDisplaySettings();
   const [pushSubscribed, setPushSubscribed] = useState(false);
+  const userId = useLocalUserId();
+
+  const restoreBackup = async (): Promise<void> => {
+    // The backup is a SQLite file with no fixed extension or MIME type, so any file can be picked.
+    const picked = await getDocumentAsync({ type: '*/*', copyToCacheDirectory: true });
+    if (picked.canceled) return;
+
+    Alert.alert('Restore backup?', `All data on this device for your account will be replaced with "${picked.assets[0].name}". This cannot be undone.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Restore',
+        style: 'destructive',
+        onPress: () =>
+          backupService.restore(userId, picked.assets[0].uri).then(
+            (counts) => Alert.alert('Backup restored', `${counts.expenses} transactions, ${counts.vaults} vaults, ${counts.tags} tags and ${counts.debts} debts restored.`),
+            (err: unknown) => {
+              logger.error('Backup restore failed', { err });
+              Alert.alert('Restore failed', err instanceof Error ? err.message : 'Something went wrong');
+            },
+          ),
+      },
+    ]);
+  };
 
   return (
     <ScrollView
@@ -66,6 +92,10 @@ export default function SettingsScreen() {
       <Section title="Account">
         <SettingToggle label="Push Notifications" description="Get notified when a Gmail watcher logs a transaction" icon="Bell" checked={pushSubscribed} onChange={setPushSubscribed} />
         <SettingLink label="Change Password" description="Update your secret passphrase" icon="Key" onPress={() => router.push('/change-password')} />
+      </Section>
+
+      <Section title="Data">
+        <SettingLink label="Restore Backup" description="Replace your data with a SQLite backup file" icon="Folder" onPress={restoreBackup} />
       </Section>
 
       <Section title="Community">
