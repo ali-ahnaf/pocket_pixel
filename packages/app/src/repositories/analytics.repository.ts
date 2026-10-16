@@ -2,6 +2,7 @@ import { DataSource, Repository, SelectQueryBuilder } from 'typeorm';
 import { AppDataSource } from '../db/data-source';
 import { Expense, TransactionType } from '../entities/Expense.entity';
 import { Vault } from '../entities/Vault.entity';
+import { Debt } from '../entities/Debt.entity';
 
 export interface AnalyticsRow {
   type: string;
@@ -128,6 +129,22 @@ export class AnalyticsRepository {
       .where('v.userId = :userId', { userId })
       .groupBy('v.id')
       .orderBy('spent', 'DESC')
+      .getRawMany();
+  }
+
+  /** Unsettled debts, soonest due first. Applied and discarded debts are soft-deleted, so they drop out. */
+  openDebts(userId: string, limit: number): Promise<{ title: string; amount: number; type: string; dueDate: string | null }[]> {
+    return this.dataSource
+      .getRepository(Debt)
+      .createQueryBuilder('d')
+      .select('d.title', 'title')
+      .addSelect('d.amount', 'amount')
+      .addSelect('d.type', 'type')
+      .addSelect('d.dueDate', 'dueDate')
+      .where('d.userId = :userId', { userId })
+      .orderBy('d.dueDate IS NULL')
+      .addOrderBy('d.dueDate', 'ASC')
+      .limit(limit)
       .getRawMany();
   }
 

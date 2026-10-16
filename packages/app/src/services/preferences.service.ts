@@ -29,9 +29,17 @@ export class PreferencesService {
     if (input.showExpense !== undefined) preference.showExpense = input.showExpense;
     if (input.pushEnabled !== undefined) preference.pushEnabled = input.pushEnabled;
     if (input.aiTransactionEntryEnabled !== undefined) preference.aiTransactionEntryEnabled = input.aiTransactionEntryEnabled;
+    if (input.monthlyRecapDay !== undefined) preference.monthlyRecapDay = input.monthlyRecapDay;
 
     const saved = await this.preferences.save(preference);
     logger.info('Updated user preferences', { userId });
     return saved;
+  }
+
+  /** Records that the recap for `month` (`YYYY-MM`) was delivered, so it is not generated again. */
+  async markRecapDelivered(userId: string, month: string): Promise<void> {
+    const preference = await this.getOrCreate(userId);
+    preference.lastRecapMonth = month;
+    await this.preferences.save(preference);
   }
 }

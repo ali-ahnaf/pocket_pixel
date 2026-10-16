@@ -2,6 +2,7 @@ import type { TagDto, VaultDto } from '@expense-tracker/shared';
 import type { AiCredentialStore } from '../lib/ai/credential-store';
 import type { AnalyticsRepository } from '../repositories/analytics.repository';
 import { applyTransactionDay, matchTagKeywords } from '../lib/ai/gmail-extractor';
+import { recapMonthDue } from '../lib/ai/wizard';
 import { AI_SETUP_MESSAGE, AiService, type OpenRouterClient } from '../services/ai.service';
 
 // Keeps expo-secure-store (a native module) out of the Jest run; the service gets an in-memory store below.
@@ -19,13 +20,13 @@ const vaults = [
 describe('AiService', () => {
   let store: jest.Mocked<AiCredentialStore>;
   let client: jest.Mocked<OpenRouterClient>;
-  let analytics: jest.Mocked<Pick<AnalyticsRepository, 'tagTotals' | 'monthTotals' | 'vaultSpend' | 'findTransactions'>>;
+  let analytics: jest.Mocked<Pick<AnalyticsRepository, 'tagTotals' | 'monthTotals' | 'vaultSpend' | 'findTransactions' | 'openDebts'>>;
   let service: AiService;
 
   beforeEach(() => {
     store = { getApiKey: jest.fn(), setApiKey: jest.fn(), getModel: jest.fn(), setModel: jest.fn() };
     client = { chat: jest.fn(), complete: jest.fn(), listModels: jest.fn(), fetchUsage: jest.fn() };
-    analytics = { tagTotals: jest.fn(), monthTotals: jest.fn(), vaultSpend: jest.fn(), findTransactions: jest.fn() };
+    analytics = { tagTotals: jest.fn(), monthTotals: jest.fn(), vaultSpend: jest.fn(), findTransactions: jest.fn(), openDebts: jest.fn() };
     service = new AiService(store, client, analytics as unknown as AnalyticsRepository);
   });
 
@@ -261,5 +262,45 @@ describe('AiService', () => {
 
       await expect(service.askWizard('user-1', 'spending_patterns')).rejects.toThrow('The wizard could not conjure a response');
     });
+  });
+
+  describe('monthlyRecap', () => {
+    it('asks for the given month with explicit ranges and answers from the debt tool', async () => {
+      store.getApiKey.mockResolvedValue('sk-or-secret');
+      store.getModel.mockResolvedValue('openai/gpt-4o-mini');
+      analytics.openDebts.mockResolvedValue([{ title: 'Owe Sam', amount: 25, type: 'expense', dueDate: null }]);
+      client.complete
+        .mockResolvedValueOnce({ content: null, toolCalls: [{ id: 'c1', type: 'function', function: { name: 'open_debts', arguments: '{}' } }] })
+        .mockResolvedValueOnce({ content: 'Thou owest Sam 25 gold.', toolCalls: [] });
+
+      expect(await service.monthlyRecap('user-1', '2026-01')).toEqual({ status: 'success', answer: 'Thou owest Sam 25 gold.' });
+
+      const task = client.complete.mock.calls[0][0].messages[1].content;
+      expect(task).toContain('January 2026');
+      expect(task).toContain('from 2026-01-01 to 2026-01-31');
+      expect(task).toContain('from 2025-12-01 to 2026-01-31');
+      expect(analytics.openDebts).toHaveBeenCalledWith('user-1', 25);
+    });
+
+    it('returns needs-ai-setup without calling OpenRouter when no model is picked', async () => {
+      store.getApiKey.mockResolvedValue('sk-or-secret');
+      store.getModel.mockResolvedValue(null);
+
+      expect(await service.monthlyRecap('user-1', '2026-01')).toEqual({ status: 'needs-ai-setup', message: AI_SETUP_MESSAGE });
+      expect(client.complete).not.toHaveBeenCalled();
+    });
+  });
+});
+
+describe('recapMonthDue', () => {
+  it.each([
+    ['off', null, null, new Date(2026, 9, 16), null],
+    ['before the day', 20, null, new Date(2026, 9, 16), null],
+    ['on the day', 16, null, new Date(2026, 9, 16), '2026-09'],
+    ['after the day', 1, '2026-08', new Date(2026, 9, 16), '2026-09'],
+    ['already delivered', 1, '2026-09', new Date(2026, 9, 16), null],
+    ['January recaps December', 1, '2025-11', new Date(2026, 0, 3), '2025-12'],
+  ])('%s', (_name, day, last, today, expected) => {
+    expect(recapMonthDue(day, last, today)).toBe(expected);
   });
 });

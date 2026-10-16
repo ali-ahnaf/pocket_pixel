@@ -62,6 +62,14 @@ export const WIZARD_TOOLS: ToolDefinition[] = [
   {
     type: 'function',
     function: {
+      name: 'open_debts',
+      description: 'Unsettled debts, soonest due first. type expense means the adventurer owes it, income means it is owed to them. dueDate is null when unset.',
+      parameters: { type: 'object', properties: {} },
+    },
+  },
+  {
+    type: 'function',
+    function: {
       name: 'find_transactions',
       description: 'Individual transactions in a date range, filtered and sorted. Use for drilling into a tag, vault, or merchant, not for totals.',
       parameters: {
@@ -121,6 +129,8 @@ export async function runWizardTool(analytics: AnalyticsRepository, userId: stri
       return JSON.stringify(await analytics.monthTotals(userId, range));
     case 'vault_budgets':
       return JSON.stringify(await analytics.vaultSpend(userId, range));
+    case 'open_debts':
+      return JSON.stringify(await analytics.openDebts(userId, MAX_ROWS));
     case 'find_transactions':
       return JSON.stringify(
         await analytics.findTransactions(userId, {
@@ -138,21 +148,46 @@ export async function runWizardTool(analytics: AnalyticsRepository, userId: stri
   }
 }
 
+const monthStart = (month: string): Date => new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1, 1);
+
 /**
- * Asks the wizard `promptKey`. Loops: the model calls tools, we run them and send the
+ * The month a recap is due for, or null. A recap covers the previous calendar month and
+ * arrives once `today` reaches `recapDay`; `lastRecapMonth` stops it repeating.
+ */
+export function recapMonthDue(recapDay: number | null, lastRecapMonth: string | null, today: Date): string | null {
+  if (!recapDay || today.getDate() < recapDay) return null;
+  const month = toIsoDate(new Date(today.getFullYear(), today.getMonth() - 1, 1)).slice(0, 7);
+  return month === lastRecapMonth ? null : month;
+}
+
+/** `YYYY-MM` as "January 2026". */
+export const monthLabel = (month: string): string => monthStart(month).toLocaleString('en-US', { month: 'long', year: 'numeric' });
+
+/** The monthly recap request for `month` (`YYYY-MM`), with the date ranges spelled out so the model needs no date math. */
+export function recapTask(month: string): string {
+  const start = monthStart(month);
+  const from = toIsoDate(start);
+  const to = toIsoDate(new Date(start.getFullYear(), start.getMonth() + 1, 0));
+  const previousFrom = toIsoDate(new Date(start.getFullYear(), start.getMonth() - 1, 1));
+  const label = monthLabel(month);
+  return `Give me my monthly recap for ${label}. Cover three things: my top 3 spending guilds in ${label} (spending_by_tag from ${from} to ${to}), how my total spending changed from the month before (totals_by_month from ${previousFrom} to ${to}), and the state of my debts (open_debts). Answer in 3-5 short sentences, under 150 words.`;
+}
+
+/**
+ * Sends `task` to the wizard. Loops: the model calls tools, we run them and send the
  * results back, until it answers or runs out of tool rounds (then tools are switched off
  * so it must answer). Throws if OpenRouter fails or the final answer is empty.
  */
 export async function getWizardResponse(
   complete: (params: ChatParams) => Promise<Completion>,
   runTool: (name: string, args: string) => Promise<string>,
-  promptKey: WizardPromptKey,
+  task: string,
   apiKey: string,
   model: string,
 ): Promise<string> {
   const messages: ChatMessage[] = [
     { role: 'system', content: `${WIZARD_PERSONA}\nToday is ${toIsoDate(new Date())}.` },
-    { role: 'user', content: TASKS[promptKey] },
+    { role: 'user', content: task },
   ];
 
   for (let round = 0; ; round += 1) {
