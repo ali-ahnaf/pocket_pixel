@@ -3,10 +3,12 @@ import { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { ms } from 'react-native-size-matters';
 import { BottomSheetModal } from '../BottomSheetModal';
+import { Input } from '../Input';
 import { IconText } from '../IconText';
 import { PixelIcon, PixelIconName } from '../PixelIcon';
 import { useLocalUserId } from '../../hooks/DatabaseProvider';
 import { aiService, logger } from '../../services';
+import type { WizardOutcome } from '../../services/ai.service';
 import { color, font, shadow, space, text } from '../../theme';
 
 interface ChatMessage {
@@ -15,8 +17,10 @@ interface ChatMessage {
   text: string;
 }
 
+// Keeps typed questions short so they stay cheap and on topic.
+const MAX_QUESTION_LENGTH = 300;
 const WIZARD_NAME = 'Aldric the Wise';
-const GREETING = 'Greetings, adventurer! I am Aldric the Wise, keeper of thy coin. Choose a query and I shall divine thy fortunes.';
+const GREETING = 'Greetings, adventurer! I am Aldric the Wise, keeper of thy coin. Choose a query or ask thine own, and I shall divine thy fortunes.';
 
 const PROMPTS: Record<WizardPromptKey, { icon: PixelIconName; label: string }> = {
   spending_breakdown: { icon: 'WandSparkles', label: 'Where is my gold going?' },
@@ -32,25 +36,33 @@ export function WizardChatSheet({ onClose, intro = GREETING }: { onClose: () => 
   const [messages, setMessages] = useState<ChatMessage[]>([{ id: 0, role: 'wizard', text: intro }]);
   const userId = useLocalUserId();
   const [isLoading, setIsLoading] = useState(false);
+  const [question, setQuestion] = useState('');
   const nextId = useRef(1);
   const scrollRef = useRef<ScrollView>(null);
 
   const addWizardMessage = (text: string): void => setMessages((prev) => [...prev, { id: nextId.current++, role: 'wizard', text }]);
 
-  const askWizard = async (promptKey: WizardPromptKey): Promise<void> => {
+  const askWizard = async (label: string, ask: () => Promise<WizardOutcome>): Promise<void> => {
     if (isLoading) return;
-    setMessages((prev) => [...prev, { id: nextId.current++, role: 'user', text: PROMPTS[promptKey].label }]);
+    setMessages((prev) => [...prev, { id: nextId.current++, role: 'user', text: label }]);
     setIsLoading(true);
 
     try {
-      const outcome = await aiService.askWizard(userId, promptKey);
+      const outcome = await ask();
       addWizardMessage(outcome.status === 'success' ? outcome.answer : outcome.message);
     } catch (err) {
-      logger.error('Wizard chat failed', { err, promptKey });
+      logger.error('Wizard chat failed', { err });
       addWizardMessage(err instanceof Error ? err.message : 'The wizard could not conjure a response. Please try again.');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const sendQuestion = (): void => {
+    const trimmed = question.trim();
+    if (!trimmed || isLoading) return;
+    setQuestion('');
+    askWizard(trimmed, () => aiService.askWizardQuestion(userId, trimmed));
   };
 
   return (
@@ -112,7 +124,7 @@ export function WizardChatSheet({ onClose, intro = GREETING }: { onClose: () => 
                 accessibilityRole="button"
                 accessibilityState={{ disabled: isLoading }}
                 disabled={isLoading}
-                onPress={() => askWizard(key)}
+                onPress={() => askWizard(PROMPTS[key].label, () => aiService.askWizard(userId, key))}
                 style={({ pressed }) => [styles.prompt, pressed && styles.promptPressed, isLoading && styles.disabled]}
               >
                 <IconText icon={PROMPTS[key].icon} style={styles.promptText}>
@@ -120,6 +132,31 @@ export function WizardChatSheet({ onClose, intro = GREETING }: { onClose: () => 
                 </IconText>
               </Pressable>
             ))}
+          </View>
+
+          <View style={styles.composer}>
+            <View style={styles.composerInput}>
+              <Input
+                value={question}
+                onChangeText={setQuestion}
+                onSubmitEditing={sendQuestion}
+                placeholder="Ask the wizard..."
+                accessibilityLabel="Ask the wizard a question"
+                returnKeyType="send"
+                maxLength={MAX_QUESTION_LENGTH}
+                editable={!isLoading}
+              />
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Send question"
+              accessibilityState={{ disabled: isLoading || !question.trim() }}
+              disabled={isLoading || !question.trim()}
+              onPress={sendQuestion}
+              style={({ pressed }) => [styles.sendButton, pressed && styles.promptPressed, (isLoading || !question.trim()) && styles.disabled]}
+            >
+              <PixelIcon name="WandSparkles" size={ms(20)} />
+            </Pressable>
           </View>
         </>
       )}
@@ -159,4 +196,7 @@ const styles = StyleSheet.create({
   promptPressed: { backgroundColor: color.surfaceHighest, transform: [{ translateY: 2 }] },
   disabled: { opacity: 0.5 },
   promptText: { ...bodySm, color: color.onSurface },
+  composer: { flexDirection: 'row', alignItems: 'center', gap: ms(space[2]) },
+  composerInput: { flex: 1 },
+  sendButton: { width: ms(44), height: ms(44), alignItems: 'center', justifyContent: 'center', backgroundColor: color.primary, borderWidth: ms(4), borderColor: color.border, boxShadow: shadow.card },
 });

@@ -1,7 +1,9 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { ScrollView, StyleProp, StyleSheet, Text, TextStyle, View } from 'react-native';
 import { ms } from 'react-native-size-matters';
 import { toPixelIcon } from '../../lib/iconMapper';
-import { IconText } from '../IconText';
+import { PixelIcon } from '../PixelIcon';
+import { showToast } from '../Toast';
 import { color, font, space, text } from '../../theme';
 import type { MonthRow, TableCell, TagColumn, YearlyTableModel } from './build-yearly-table';
 
@@ -22,6 +24,34 @@ const cellText = (cell: TableCell, signed = false): string => {
   const value = signed ? formatSigned(cell.amount) : formatAmount(cell.amount);
   return cell.source === 'actual' ? value : `~${value}`;
 };
+
+/** One-line text. When the ellipsis cuts it off, tapping it shows the full value in a toast at the bottom. */
+function TruncatedText({ children, style }: { children: string; style: StyleProp<TextStyle> }) {
+  const [boxWidth, setBoxWidth] = useState(0);
+  const [fullWidth, setFullWidth] = useState(0);
+  const isTruncated = fullWidth > boxWidth + 1;
+  return (
+    <>
+      <Text
+        numberOfLines={1}
+        style={style}
+        onLayout={(e) => setBoxWidth(e.nativeEvent.layout.width)}
+        onPress={isTruncated ? () => showToast(children, 'bottom') : undefined}
+        accessibilityRole={isTruncated ? 'button' : undefined}
+        accessibilityHint={isTruncated ? 'Shows the full value' : undefined}
+        suppressHighlighting
+      >
+        {children}
+      </Text>
+      {/* Unconstrained hidden copy, measured to tell whether the visible one is cut off. pointerEvents keeps it from eating taps. */}
+      <View pointerEvents="none" style={styles.measure} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        <Text style={style} onTextLayout={(e) => setFullWidth(e.nativeEvent.lines[0]?.width ?? 0)}>
+          {children}
+        </Text>
+      </View>
+    </>
+  );
+}
 
 const LOADING_ROWS = Array.from({ length: 8 }, (_, i) => i);
 
@@ -52,26 +82,20 @@ function RowCells({ row, tagColumns, isTotals = false, isCurrent = false }: RowP
         const cell = row.byTagId[column.id];
         return (
           <View key={column.id} style={styles.cell}>
-            <Text numberOfLines={1} style={[styles.cellText, emphasis, cell.source !== 'actual' && styles.projected]}>
-              {cellText(cell)}
-            </Text>
+            <TruncatedText style={[styles.cellText, emphasis, cell.source !== 'actual' && styles.projected]}>{cellText(cell)}</TruncatedText>
           </View>
         );
       })}
       <View style={[styles.cell, styles.dividerLeft]}>
-        <Text numberOfLines={1} style={[styles.cellText, styles.bold, styles.spent, emphasis, row.spent.source !== 'actual' && styles.projected]}>
-          {cellText(row.spent)}
-        </Text>
+        <TruncatedText style={[styles.cellText, styles.bold, styles.spent, emphasis, row.spent.source !== 'actual' && styles.projected]}>{cellText(row.spent)}</TruncatedText>
       </View>
       <View style={styles.cell}>
-        <Text numberOfLines={1} style={[styles.cellText, styles.bold, styles.income, emphasis, row.income.source !== 'actual' && styles.projected]}>
-          {cellText(row.income)}
-        </Text>
+        <TruncatedText style={[styles.cellText, styles.bold, styles.income, emphasis, row.income.source !== 'actual' && styles.projected]}>{cellText(row.income)}</TruncatedText>
       </View>
       <View style={[styles.cell, styles.dividerLeft]}>
-        <Text numberOfLines={1} style={[styles.cellText, styles.bold, row.net.amount >= 0 ? styles.netPositive : styles.spent, emphasis, row.net.source !== 'actual' && styles.projected]}>
+        <TruncatedText style={[styles.cellText, styles.bold, row.net.amount >= 0 ? styles.netPositive : styles.spent, emphasis, row.net.source !== 'actual' && styles.projected]}>
           {row.net.amount === 0 ? '—' : cellText(row.net, true)}
-        </Text>
+        </TruncatedText>
       </View>
     </View>
   );
@@ -111,13 +135,12 @@ export function YearlyTagTable({ model, isLoading = false, currentMonth }: Yearl
               {model.tagColumns.map((column) => (
                 <View key={column.id} style={styles.headerCell}>
                   {column.icon ? (
-                    <IconText icon={toPixelIcon(column.icon)} iconSize={14} numberOfLines={1} style={styles.headerText}>
-                      {column.name}
-                    </IconText>
+                    <View style={styles.headerRow}>
+                      <PixelIcon name={toPixelIcon(column.icon)} size={ms(14)} />
+                      <TruncatedText style={[styles.headerText, styles.shrink]}>{column.name}</TruncatedText>
+                    </View>
                   ) : (
-                    <Text numberOfLines={1} style={styles.headerText}>
-                      {column.name}
-                    </Text>
+                    <TruncatedText style={styles.headerText}>{column.name}</TruncatedText>
                   )}
                 </View>
               ))}
@@ -173,6 +196,10 @@ const styles = StyleSheet.create({
     borderColor: color.border,
   },
   labelHeader: { width: 'auto' },
+  // Mirrors IconText's row, inlined so the name can be a TruncatedText.
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: ms(space[1]) },
+  shrink: { flexShrink: 1 },
+  measure: { position: 'absolute', top: 0, left: 0, width: 10000, opacity: 0 },
   headerText: { fontFamily: font.mono, fontSize: ms(11), color: color.onSurface, textTransform: 'uppercase', letterSpacing: 0.6, textAlign: 'right' },
   labelCell: { height: ROW_H, justifyContent: 'center', paddingHorizontal: ms(space[3]), borderBottomWidth: 2, borderColor: color.border },
   labelText: { fontFamily: font.mono, fontSize: ms(text.labelCaps.fontSize), color: color.onSurface, textTransform: 'uppercase', letterSpacing: 0.6 },

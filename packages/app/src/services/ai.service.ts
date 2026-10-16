@@ -192,6 +192,11 @@ prompt: ${prompt.trim()}`;
     return this.runWizard(userId, TASKS[promptKey]);
   }
 
+  /** Same as `askWizard`, for a question the user typed. */
+  askWizardQuestion(userId: string, question: string): Promise<WizardOutcome> {
+    return this.runWizard(userId, question.trim());
+  }
+
   /** The wizard's recap of `month` (`YYYY-MM`): top spending tags, change from the month before, and open debts. Same tools as the chat. */
   monthlyRecap(userId: string, month: string): Promise<WizardOutcome> {
     return this.runWizard(userId, recapTask(month));

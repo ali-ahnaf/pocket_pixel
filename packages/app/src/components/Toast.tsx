@@ -6,22 +6,26 @@ import { color, font, gutter, shadow, space, text } from '../theme';
 
 const VISIBLE_MS = 3000;
 
+export type ToastPosition = 'top' | 'bottom';
+
 // Module-level so any screen or sheet can call showToast without a context provider. One toast at a time; a new one replaces the current one.
-let show: ((message: string) => void) | null = null;
+let show: ((message: string, position: ToastPosition) => void) | null = null;
 
-export const showToast = (message: string): void => show?.(message);
+export const showToast = (message: string, position: ToastPosition = 'top'): void => show?.(message, position);
 
-/** Mount once at the app root. Renders the latest `showToast` message near the top of the screen. */
+/** Mount once at the app root. Renders the latest `showToast` message near the top (default) or bottom of the screen. */
 export function ToastHost() {
   const insets = useSafeAreaInsets();
   const [message, setMessage] = useState<string | null>(null);
+  const [position, setPosition] = useState<ToastPosition>('top');
   const [opacity] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
-    show = (next) => {
+    show = (next, nextPosition) => {
       clearTimeout(timer);
       setMessage(next);
+      setPosition(nextPosition);
       Animated.timing(opacity, { toValue: 1, duration: 150, useNativeDriver: true }).start();
       timer = setTimeout(() => Animated.timing(opacity, { toValue: 0, duration: 200, useNativeDriver: true }).start(({ finished }) => finished && setMessage(null)), VISIBLE_MS);
     };
@@ -33,7 +37,11 @@ export function ToastHost() {
 
   if (!message) return null;
   return (
-    <Animated.View pointerEvents="none" accessibilityLiveRegion="polite" style={[styles.toast, { top: insets.top + ms(space[2]), opacity }]}>
+    <Animated.View
+      pointerEvents="none"
+      accessibilityLiveRegion="polite"
+      style={[styles.toast, position === 'top' ? { top: insets.top + ms(space[2]) } : { bottom: insets.bottom + ms(space[2]) }, { opacity }]}
+    >
       <Text style={styles.text}>{message}</Text>
     </Animated.View>
   );

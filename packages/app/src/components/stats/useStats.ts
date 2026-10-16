@@ -75,10 +75,11 @@ function monthRange(keys: string[]): string[] {
   return range;
 }
 
-async function loadAllTime(userId: string): Promise<AllTimeTotals> {
-  const yearly = await analyticsService.yearly(userId);
+/** `vaultId` undefined means every vault. */
+async function loadAllTime(userId: string, vaultId?: string): Promise<AllTimeTotals> {
+  const yearly = await analyticsService.yearly(userId, vaultId);
   const years = [...new Set(yearly.map((r) => Number(r.year)))].filter(Boolean);
-  const perYear = await Promise.all(years.map((y) => Promise.all([y, analyticsService.monthly(userId, y), analyticsService.tags(userId, y)])));
+  const perYear = await Promise.all(years.map((y) => Promise.all([y, analyticsService.monthly(userId, y, vaultId), analyticsService.tags(userId, y, vaultId)])));
 
   const totals: AllTimeTotals = { income: 0, expense: 0, netByMonth: {}, tagTotals: {} };
   yearly.forEach((r) => {
@@ -102,12 +103,14 @@ async function loadAllTime(userId: string): Promise<AllTimeTotals> {
 
 /**
  * Stats for one month or all time. A month loads that month's transactions and derives the sections in JS (bounded to one
- * month). All time uses SQL aggregates only, so the per-vault sections (vault savings, expense chart, top drains) and
- * the vault filter are unavailable there. ponytail: add a per-vault aggregate to the analytics repository to fill them.
+ * month). All time uses SQL aggregates only (filtered by vault in SQL), so the per-vault sections (vault savings, expense
+ * chart, top drains) are unavailable there. ponytail: add a per-vault aggregate to the analytics repository to fill them.
  */
 export function useStats(period: string, vaultId: string, lineVaultId: string): StatsData {
   const userId = useLocalUserId();
   const isAllTime = period === ALL_TIME_PERIOD;
+  // A month filters by vault in memory, so only all time reloads when the vault changes.
+  const allTimeVaultId = isAllTime && vaultId !== 'all' ? vaultId : undefined;
   const [loading, setLoading] = useState(true);
   const [vaults, setVaults] = useState<VaultDto[]>([]);
   const [monthTxs, setMonthTxs] = useState<TransactionDto[]>([]);
@@ -118,7 +121,7 @@ export function useStats(period: string, vaultId: string, lineVaultId: string): 
       let cancelled = false;
       const [year, month] = period.split('-').map(Number);
       // loading stays false on later reloads, so refocusing the tab does not flash skeletons over data.
-      Promise.all([vaultsService.list(userId), isAllTime ? Promise.resolve([]) : transactionsService.list(userId, { month, year }), isAllTime ? loadAllTime(userId) : null])
+      Promise.all([vaultsService.list(userId), isAllTime ? Promise.resolve([]) : transactionsService.list(userId, { month, year }), isAllTime ? loadAllTime(userId, allTimeVaultId) : null])
         .then(([vaultList, txs, totals]) => {
           if (cancelled) return;
           setVaults(vaultList);
@@ -130,7 +133,7 @@ export function useStats(period: string, vaultId: string, lineVaultId: string): 
       return () => {
         cancelled = true;
       };
-    }, [userId, period, isAllTime]),
+    }, [userId, period, isAllTime, allTimeVaultId]),
   );
 
   return useMemo<StatsData>(() => {
