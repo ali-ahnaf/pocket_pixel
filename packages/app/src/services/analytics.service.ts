@@ -8,15 +8,15 @@ import { analyticsRepository } from '../repositories';
 export class AnalyticsService {
   constructor(private readonly analytics: AnalyticsRepository = analyticsRepository) {}
 
-  monthly(userId: string, year: number): Promise<AnalyticsRow[]> {
-    return this.analytics.monthlyByYear(userId, year);
+  monthly(userId: string, year: number, vaultId?: string): Promise<AnalyticsRow[]> {
+    return this.analytics.monthlyByYear(userId, year, vaultId);
   }
 
-  yearly(userId: string): Promise<AnalyticsRow[]> {
-    return this.analytics.yearly(userId);
+  yearly(userId: string, vaultId?: string): Promise<AnalyticsRow[]> {
+    return this.analytics.yearly(userId, vaultId);
   }
 
-  tags(userId: string, year: number): Promise<AnalyticsRow[]> {
-    return this.analytics.tagsByYear(userId, year);
+  tags(userId: string, year: number, vaultId?: string): Promise<AnalyticsRow[]> {
+    return this.analytics.tagsByYear(userId, year, vaultId);
   }
 }

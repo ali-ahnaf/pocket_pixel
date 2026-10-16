@@ -264,6 +264,17 @@ describe('AiService', () => {
     });
   });
 
+  describe('askWizardQuestion', () => {
+    it('sends the trimmed question as the user message', async () => {
+      store.getApiKey.mockResolvedValue('sk-or-secret');
+      store.getModel.mockResolvedValue('openai/gpt-4o-mini');
+      client.complete.mockResolvedValue({ content: 'Thy coffers are full.', toolCalls: [] });
+
+      expect(await service.askWizardQuestion('user-1', '  How much did I spend on food?  ')).toEqual({ status: 'success', answer: 'Thy coffers are full.' });
+      expect(client.complete.mock.calls[0][0].messages[1]).toEqual({ role: 'user', content: 'How much did I spend on food?' });
+    });
+  });
+
   describe('monthlyRecap', () => {
     it('asks for the given month with explicit ranges and answers from the debt tool', async () => {
       store.getApiKey.mockResolvedValue('sk-or-secret');

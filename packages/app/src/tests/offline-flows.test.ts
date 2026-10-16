@@ -205,6 +205,21 @@ describe('offline flows', () => {
     expect(tags).toEqual(expect.arrayContaining([expect.objectContaining({ tagId: travel.id, tag: 'Travel', type: 'expense' })]));
   });
 
+  it('scopes yearly, monthly and tag analytics to one vault when a vault id is given', async () => {
+    const vaultUserId = await authService.signUp({ name: 'Vee', email: 'vee@example.com', password: 's3cret-pass' });
+    const [main] = await vaultsService.list(vaultUserId);
+    const side = await vaultsService.create(vaultUserId, { name: 'Side' });
+    const food = await tagsService.create(vaultUserId, { name: 'Food' });
+    await transactionsService.create(vaultUserId, { amount: 10, type: 'expense', tagIds: [food.id], vaultId: main.id, date: today });
+    await transactionsService.create(vaultUserId, { amount: 25, type: 'expense', tagIds: [food.id], vaultId: side.id, date: today });
+
+    const totalOf = (rows: { total: string }[]): number => rows.reduce((sum, r) => sum + Number(r.total), 0);
+    expect(totalOf(await analyticsService.yearly(vaultUserId))).toBe(35);
+    expect(totalOf(await analyticsService.yearly(vaultUserId, side.id))).toBe(25);
+    expect(totalOf(await analyticsService.monthly(vaultUserId, year, side.id))).toBe(25);
+    expect(totalOf(await analyticsService.tags(vaultUserId, year, main.id))).toBe(10);
+  });
+
   describe('Recurring', () => {
     it('catches up missed occurrences once, honouring skips, and never recreates a deleted one', async () => {
       const quest = (await recurringService.create(userId, { title: 'Gym', amount: 5, type: 'expense', interval: 'daily', startDate: today }))!;

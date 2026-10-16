@@ -40,14 +40,15 @@ export class AnalyticsRepository {
   /**
    * Base query shared by every aggregation: scope to the owning user. App copy
    * also drops recurring templates (`interval` set, `date` NULL); the API's
-   * yearly() leaks them as a NULL-year group.
+   * yearly() leaks them as a NULL-year group. `vaultId` narrows to one vault.
    */
-  private baseQuery(userId: string): SelectQueryBuilder<Expense> {
-    return this.repo.createQueryBuilder('e').where('e.userId = :userId', { userId }).andWhere('e.interval IS NULL');
+  private baseQuery(userId: string, vaultId?: string): SelectQueryBuilder<Expense> {
+    const query = this.repo.createQueryBuilder('e').where('e.userId = :userId', { userId }).andWhere('e.interval IS NULL');
+    return vaultId ? query.andWhere('e.vaultId = :vaultId', { vaultId }) : query;
   }
 
-  monthlyByYear(userId: string, year: number): Promise<AnalyticsRow[]> {
-    return this.baseQuery(userId)
+  monthlyByYear(userId: string, year: number, vaultId?: string): Promise<AnalyticsRow[]> {
+    return this.baseQuery(userId, vaultId)
       .select("strftime('%m', e.date)", 'month')
       .addSelect('e.type', 'type')
       .addSelect('SUM(e.amount)', 'total')
@@ -59,8 +60,8 @@ export class AnalyticsRepository {
       .getRawMany();
   }
 
-  yearly(userId: string): Promise<AnalyticsRow[]> {
-    return this.baseQuery(userId)
+  yearly(userId: string, vaultId?: string): Promise<AnalyticsRow[]> {
+    return this.baseQuery(userId, vaultId)
       .select("strftime('%Y', e.date)", 'year')
       .addSelect('e.type', 'type')
       .addSelect('SUM(e.amount)', 'total')
@@ -72,8 +73,8 @@ export class AnalyticsRepository {
   }
 
   /** App copy: joins through transaction_tags. The API version reads a non-existent `e.tag` column and fails. */
-  tagsByYear(userId: string, year: number): Promise<AnalyticsRow[]> {
-    return this.baseQuery(userId)
+  tagsByYear(userId: string, year: number, vaultId?: string): Promise<AnalyticsRow[]> {
+    return this.baseQuery(userId, vaultId)
       .innerJoin('e.transactionTags', 'tt')
       .innerJoin('tt.tag', 't')
       .select('t.id', 'tagId')
