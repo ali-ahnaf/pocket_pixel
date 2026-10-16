@@ -47,6 +47,7 @@ export default function Home() {
   const [sortField, setSortField] = useState<'date' | 'amount'>('date');
   const [applyingKey, setApplyingKey] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [gmailRefreshKey, setGmailRefreshKey] = useState(0);
 
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [isAdjustOpen, setIsAdjustOpen] = useState(false);
@@ -86,9 +87,10 @@ export default function Home() {
     };
   }, [load]);
 
-  // Pull to refresh re-reads local data only. Gmail sync stays on the Pending Expenses refresh button.
+  // Pull to refresh re-reads local data and asks the Pending Expenses panel to sync Gmail in the background.
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
+    setGmailRefreshKey((k) => k + 1);
     load().finally(() => setRefreshing(false));
   }, [load]);
 
@@ -183,7 +185,7 @@ export default function Home() {
           setSelectedYear(y);
         }}
       />
-      <PendingExpensesPanel onTransactionCreated={refetch} />
+      <PendingExpensesPanel onTransactionCreated={refetch} refreshKey={gmailRefreshKey} />
       <StatusCard
         isLoading={!loaded}
         totalIncome={totalIncome}

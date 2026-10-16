@@ -1,10 +1,12 @@
 /**
  * Per-vault Gmail bank-alert watcher. Each vault may attach exactly one Gmail
- * label plus an optional subject filter and guidance hint; a matching email is
+ * label (several watchers per vault in the mobile app) plus an optional subject filter and guidance hint; a matching email is
  * turned into a transaction by an AI extractor (not a user-supplied script).
  * Replaces the old hardcoded bank parsers and, later, the `node:vm` script path.
  */
 export interface VaultGmailWatcherDto {
+  /** Watcher row id; a vault may hold several watchers. Mobile app only. */
+  id?: string;
   vaultId: string;
   vaultName: string;
   gmailLabelId: string;

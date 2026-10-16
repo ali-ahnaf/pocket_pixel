@@ -6,18 +6,19 @@ import { BaseEntity } from './BaseEntity';
 
 /**
  * Per-vault Gmail bank-alert watcher. Attaches one Gmail label (plus an optional
- * subject substring and free-text guidance hint) to one vault; a matching email
+ * subject substring and free-text guidance hint) to one vault; a vault may hold
+ * several watchers, each with its own settings; a matching email
  * is enqueued as a `PendingGmailExpense` for the user to parse with AI. The set
  * of labels `GmailService.sync` polls is the union of `gmailLabelId` across the
  * user's (non-deleted) rows.
  *
  * Indexes:
- *  - `(userId, vaultId)` unique: at most one watcher per vault.
+ *  - `(userId, vaultId)` non-unique: lists a vault's watchers.
  *  - `(userId, gmailLabelId)` non-unique: a label may be shared across vaults and
  *    disambiguated by `subjectFilter` at match time; the index just speeds lookup.
  */
 @Entity('vault_gmail_watchers')
-@Index('IDX_vault_gmail_watcher_user_vault', ['userId', 'vaultId'], { unique: true })
+@Index('IDX_vault_gmail_watcher_user_vault', ['userId', 'vaultId'])
 @Index('IDX_vault_gmail_watcher_user_label', ['userId', 'gmailLabelId'])
 export class VaultGmailWatcher extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')

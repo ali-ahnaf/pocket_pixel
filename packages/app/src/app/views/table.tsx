@@ -135,7 +135,7 @@ export default function TabularViewScreen() {
             >
               <PixelIcon name="ChevronLeft" size={ms(20)} />
             </Pressable>
-            <IconText icon="Calendar" style={styles.yearText}>
+            <IconText icon="Calendar" style={styles.yearText} rowStyle={styles.yearRow}>
               {year}
             </IconText>
             <Pressable
@@ -182,6 +182,7 @@ const styles = StyleSheet.create({
   yearButton: { width: ms(36), alignItems: 'center', justifyContent: 'center' },
   yearButtonPressed: { backgroundColor: color.primary },
   disabled: { opacity: 0.4 },
-  yearText: { flex: 1, alignSelf: 'center', textAlign: 'center', fontFamily: font.heading, fontSize: ms(18), color: color.onSurface },
+  yearRow: { flex: 1, justifyContent: 'center' },
+  yearText: { fontFamily: font.heading, fontSize: ms(18), color: color.onSurface },
   card: { padding: ms(space[3]) },
 });

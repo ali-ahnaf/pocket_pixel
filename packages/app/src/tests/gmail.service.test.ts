@@ -4,6 +4,7 @@ import { Expense } from '../entities/Expense.entity';
 import { Tag } from '../entities/Tag.entity';
 import { User } from '../entities/User.entity';
 import { Vault } from '../entities/Vault.entity';
+import { VaultGmailWatcher } from '../entities/VaultGmailWatcher.entity';
 import { AppError } from '../errors/app-error';
 import type { AiCredentialStore } from '../lib/ai/credential-store';
 import type { GmailConnection, GmailConnectionStore } from '../lib/gmail/connection-store';
@@ -102,6 +103,11 @@ describe('Gmail on device', () => {
     pending = new PendingGmailExpenseService(pendingRepo, new TagsRepository(), gmail, new AiService(aiStore, client), new TransactionsService(new TransactionsRepository(), new VaultsRepository()));
   });
 
+  // `upsert` without a watcher id adds a listener, so start every test with none.
+  beforeEach(async () => {
+    await AppDataSource.getRepository(VaultGmailWatcher).clear();
+  });
+
   const connectAndBaseline = async (): Promise<void> => {
     await gmail.connect(userId);
     await gmail.sync(userId);
@@ -150,6 +156,32 @@ describe('Gmail on device', () => {
       { gmailMessageId: 'm-debit', vaultName: 'Card', subject: 'Card DEBIT Alert', guidanceHint: null },
       { gmailMessageId: 'm-other', vaultName: 'Main', subject: 'Statement ready', guidanceHint: 'groceries' },
     ]);
+  });
+
+  it('runs several listeners on one vault, each with its own settings, and edits or removes one by id', async () => {
+    await connectAndBaseline();
+    const debit = await watchers.upsert(userId, debitVault.id, { gmailLabelId: 'Label_1', subjectFilter: 'debit', transactionDay: 5 });
+    const card = await watchers.upsert(userId, debitVault.id, { gmailLabelId: 'Label_2', guidanceHint: 'card spend' });
+    expect((await watchers.listForUser(userId)).map(({ id, gmailLabelId, subjectFilter, transactionDay }) => ({ id, gmailLabelId, subjectFilter, transactionDay }))).toEqual([
+      { id: debit.id, gmailLabelId: 'Label_1', subjectFilter: 'debit', transactionDay: 5 },
+      { id: card.id, gmailLabelId: 'Label_2', subjectFilter: null, transactionDay: null },
+    ]);
+
+    mailbox = [
+      { id: 'm-multi-1', labelIds: ['Label_1'], subject: 'Debit alert', html: '<p>BDT 1</p>' },
+      { id: 'm-multi-2', labelIds: ['Label_2'], subject: 'Card alert', html: '<p>BDT 2</p>' },
+    ];
+    await gmail.sync(userId);
+    const items = (await pending.list(userId)).filter((i) => i.gmailMessageId.startsWith('m-multi-'));
+    expect(items.map(({ gmailMessageId, vaultName, guidanceHint }) => ({ gmailMessageId, vaultName, guidanceHint }))).toEqual([
+      { gmailMessageId: 'm-multi-1', vaultName: 'Card', guidanceHint: null },
+      { gmailMessageId: 'm-multi-2', vaultName: 'Card', guidanceHint: 'card spend' },
+    ]);
+
+    await watchers.upsert(userId, debitVault.id, { gmailLabelId: 'Label_2', subjectFilter: 'card' }, card.id);
+    await watchers.remove(userId, debit.id ?? '');
+    expect((await watchers.listForUser(userId)).map(({ id, subjectFilter }) => ({ id, subjectFilter }))).toEqual([{ id: card.id, subjectFilter: 'card' }]);
+    await expect(watchers.upsert(userId, catchAllVault.id, { gmailLabelId: 'Label_2' }, card.id)).rejects.toMatchObject({ constructor: AppError, statusCode: 404 });
   });
 
   it('never re-enqueues a dismissed email', async () => {
