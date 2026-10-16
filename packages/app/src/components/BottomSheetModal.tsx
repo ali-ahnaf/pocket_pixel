@@ -24,7 +24,7 @@ export function BottomSheetModal({ onClose, children }: { onClose: () => void; c
 
   return (
     <Modal transparent animationType="none" visible onRequestClose={close}>
-      <KeyboardAvoidingView behavior="padding" style={styles.root}>
+      <KeyboardAvoidingView behavior="padding" style={[styles.root, { paddingTop: insets.top }]}>
         <Animated.View style={[StyleSheet.absoluteFill, styles.scrim, { opacity: progress }]}>
           <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={close} style={StyleSheet.absoluteFill} />
         </Animated.View>
@@ -40,6 +40,6 @@ export function BottomSheetModal({ onClose, children }: { onClose: () => void; c
 const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
   scrim: { backgroundColor: color.overlay },
-  sheet: { backgroundColor: color.surfaceHigh, borderTopWidth: ms(4), borderColor: color.border, paddingHorizontal: ms(space[6]), paddingTop: ms(space[3]), gap: ms(space[3]) },
+  sheet: { maxHeight: '100%', backgroundColor: color.surfaceHigh, borderTopWidth: ms(4), borderColor: color.border, paddingHorizontal: ms(space[6]), paddingTop: ms(space[3]), gap: ms(space[3]) },
   grabber: { alignSelf: 'center', width: ms(36), height: ms(4), backgroundColor: color.outline, marginBottom: ms(space[1]) },
 });

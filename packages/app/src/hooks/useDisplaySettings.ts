@@ -7,10 +7,11 @@ export interface DisplaySettings {
   showExpense: boolean;
   aiTransactionEntryEnabled: boolean;
   monthlyRecapDay: number | null;
+  requireAiParseApproval: boolean;
 }
 
 // Module-level so every mounted hook shares the last-known value, as the web hook does.
-let current: DisplaySettings = { showIncome: false, showExpense: false, aiTransactionEntryEnabled: false, monthlyRecapDay: null };
+let current: DisplaySettings = { showIncome: false, showExpense: false, aiTransactionEntryEnabled: false, monthlyRecapDay: null, requireAiParseApproval: false };
 let loaded = false;
 const listeners = new Set<() => void>();
 
@@ -27,6 +28,7 @@ export function useDisplaySettings(): DisplaySettings & {
   setShowExpense: (value: boolean) => void;
   setAiTransactionEntryEnabled: (value: boolean) => void;
   setMonthlyRecapDay: (value: number | null) => void;
+  setRequireAiParseApproval: (value: boolean) => void;
 } {
   const userId = useLocalUserId();
   const [, rerender] = useState(0);
@@ -36,7 +38,14 @@ export function useDisplaySettings(): DisplaySettings & {
     listeners.add(listener);
     if (!loaded) {
       preferencesService.getOrCreate(userId).then(
-        (p) => broadcast({ showIncome: p.showIncome, showExpense: p.showExpense, aiTransactionEntryEnabled: p.aiTransactionEntryEnabled, monthlyRecapDay: p.monthlyRecapDay }),
+        (p) =>
+          broadcast({
+            showIncome: p.showIncome,
+            showExpense: p.showExpense,
+            aiTransactionEntryEnabled: p.aiTransactionEntryEnabled,
+            monthlyRecapDay: p.monthlyRecapDay,
+            requireAiParseApproval: p.requireAiParseApproval,
+          }),
         (err) => logger.error('Load preferences failed', { err }),
       );
     }
@@ -60,5 +69,6 @@ export function useDisplaySettings(): DisplaySettings & {
     setShowExpense: useCallback((value: boolean) => persist({ showExpense: value }), [persist]),
     setAiTransactionEntryEnabled: useCallback((value: boolean) => persist({ aiTransactionEntryEnabled: value }), [persist]),
     setMonthlyRecapDay: useCallback((value: number | null) => persist({ monthlyRecapDay: value }), [persist]),
+    setRequireAiParseApproval: useCallback((value: boolean) => persist({ requireAiParseApproval: value }), [persist]),
   };
 }

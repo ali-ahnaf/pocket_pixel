@@ -1,27 +1,33 @@
-import type { PendingExpenseEmailDto, PendingGmailExpenseDto } from '@expense-tracker/shared';
+import type { ParsedEmailDto, PendingExpenseEmailDto, PendingGmailExpenseDto } from '@expense-tracker/shared';
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ms } from 'react-native-size-matters';
 import { useLocalUserId } from '../../hooks/DatabaseProvider';
+import { useDisplaySettings } from '../../hooks/useDisplaySettings';
+import { formatCurrency } from '../../lib/formatters';
 import { pendingGmailExpenseService } from '../../services';
 import { color, font, space, text } from '../../theme';
 import { AiSetupLink } from '../AiSetupLink';
 import { BottomSheetModal } from '../BottomSheetModal';
 import { Button } from '../Button';
 import { SheetHeader } from '../SheetHeader';
+import { showToast } from '../Toast';
 
 export interface PendingExpenseDetailSheetProps {
   item: PendingGmailExpenseDto;
   /** The item left the queue; `transactionCreated` is true when it was parsed into a transaction. */
   onResolved: (id: string, transactionCreated: boolean) => void;
+  /** With "Review AI-parsed emails" on: the AI's result, for the user to approve in the log form. Nothing is saved yet. */
+  onParsedForReview: (item: PendingGmailExpenseDto, parsed: ParsedEmailDto) => void;
   onClose: () => void;
 }
 
 const errorMessage = (err: unknown): string => (err instanceof Error ? err.message : 'Something went wrong');
 
 // Port of packages/ui/src/components/pending-expenses/PendingExpenseDetailModal.tsx. Re-fetches the email from Gmail on open.
-export function PendingExpenseDetailSheet({ item, onResolved, onClose }: PendingExpenseDetailSheetProps) {
+export function PendingExpenseDetailSheet({ item, onResolved, onParsedForReview, onClose }: PendingExpenseDetailSheetProps) {
   const userId = useLocalUserId();
+  const { requireAiParseApproval } = useDisplaySettings();
   const [email, setEmail] = useState<PendingExpenseEmailDto | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [busy, setBusy] = useState<'parsing' | 'dismissing' | null>(null);
@@ -47,8 +53,12 @@ export function PendingExpenseDetailSheet({ item, onResolved, onClose }: Pending
     setNeedsAiSetup(false);
     setUnmatched(false);
     try {
-      const outcome = await pendingGmailExpenseService.parse(userId, item.id, email);
-      if (outcome.status === 'success') {
+      const outcome = requireAiParseApproval ? await pendingGmailExpenseService.extract(userId, item.id, email) : await pendingGmailExpenseService.parse(userId, item.id, email);
+      if (outcome.status === 'success' && requireAiParseApproval) {
+        onParsedForReview(item, outcome.parsed);
+        close();
+      } else if (outcome.status === 'success') {
+        showToast(`Logged ${outcome.parsed.title}: ${formatCurrency(outcome.parsed.amount)}`);
         onResolved(item.id, true);
         close();
       } else if (outcome.status === 'needs-ai-setup') {

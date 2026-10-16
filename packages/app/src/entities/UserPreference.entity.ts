@@ -30,6 +30,10 @@ export class UserPreference extends BaseEntity {
   @Column({ type: 'varchar', nullable: true })
   lastRecapMonth: string | null;
 
+  // When on, an AI-parsed Gmail email is shown in the add-transaction form for the user to approve before it is logged.
+  @Column({ type: 'boolean', default: false })
+  requireAiParseApproval: boolean;
+
   @OneToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;

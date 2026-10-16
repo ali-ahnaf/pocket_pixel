@@ -79,6 +79,17 @@ describe('PreferencesService', () => {
       expect(preferences.save).toHaveBeenCalledTimes(1);
     });
 
+    it('updates the require AI parse approval flag when provided', async () => {
+      const pref = buildPreference({ requireAiParseApproval: false });
+      preferences.findByUserId.mockResolvedValue(pref);
+      preferences.save.mockImplementation((p) => Promise.resolve(p));
+
+      await service.update('user-1', { requireAiParseApproval: true });
+
+      expect(pref.requireAiParseApproval).toBe(true);
+      expect(preferences.save).toHaveBeenCalledTimes(1);
+    });
+
     it('sets and clears the monthly recap day', async () => {
       const pref = buildPreference({ monthlyRecapDay: 5 });
       preferences.findByUserId.mockResolvedValue(pref);
