@@ -2,6 +2,7 @@ import type { TransactionDto } from '@expense-tracker/shared';
 import { useState } from 'react';
 import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { ms } from 'react-native-size-matters';
+import Svg, { Polyline } from 'react-native-svg';
 import { AppBar } from '../../components/AppBar';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
@@ -59,18 +60,18 @@ function Empty({ label }: { label: string }) {
   return <Text style={styles.empty}>{label}</Text>;
 }
 
-/** Cumulative net as a row of pixel dots, standing in for the web SVG polyline. */
+/** Cumulative net as a hard-edged line with a drop shadow, matching the web SVG polyline. */
 function Sparkline({ values }: { values: number[] }) {
   const max = Math.max(...values);
   const min = Math.min(...values);
   const range = max - min || 1;
+  const points = values.length === 1 ? '0,50 100,50' : values.map((v, i) => `${((i / (values.length - 1)) * 100).toFixed(1)},${(100 - ((v - min) / range) * 100).toFixed(1)}`).join(' ');
   return (
     <View style={styles.sparkline}>
-      {values.map((v, i) => (
-        <View key={i} style={styles.sparkColumn}>
-          <View style={[styles.sparkDot, { bottom: `${((v - min) / range) * 100}%` }]} />
-        </View>
-      ))}
+      <Svg width="100%" height="100%" viewBox="0 -5 100 110" preserveAspectRatio="none">
+        <Polyline points={points} fill="none" stroke={color.border} strokeWidth={6} strokeLinejoin="miter" strokeLinecap="square" vectorEffect="non-scaling-stroke" transform="translate(0, 4)" />
+        <Polyline points={points} fill="none" stroke={color.secondary} strokeWidth={4} strokeLinejoin="miter" strokeLinecap="square" vectorEffect="non-scaling-stroke" />
+      </Svg>
     </View>
   );
 }
@@ -360,8 +361,6 @@ const styles = StyleSheet.create({
   error: { color: color.error },
   skeleton: { width: ms(96), backgroundColor: color.surfaceHighest },
   sparkline: { flexDirection: 'row', height: ms(64), width: '100%', maxWidth: ms(200), marginTop: ms(space[2]) },
-  sparkColumn: { flex: 1 },
-  sparkDot: { position: 'absolute', left: 0, right: 0, height: ms(4), backgroundColor: color.secondary, boxShadow: shadow.coin },
   sectionTitle: { fontFamily: font.heading, fontSize: ms(text.headlineMd.fontSize), lineHeight: ms(text.headlineMd.lineHeight), color: color.onSurface },
   empty: { ...bodySm, color: color.onSurfaceVariant, textAlign: 'center', paddingVertical: ms(space[4]) },
   allocation: { gap: ms(space[1]) },

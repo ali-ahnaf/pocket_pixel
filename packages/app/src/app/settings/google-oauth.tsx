@@ -116,7 +116,9 @@ export default function GoogleOAuthSettingsScreen() {
               </Text>
             </View>
 
-            <Text style={settingsStyles.hint}>Attach a Gmail label to a vault. AI reads each matching email and fills in the transaction (amount, title, type and tags) automatically.</Text>
+            <Text style={settingsStyles.hint}>
+              Attach one or more Gmail listeners to a vault. AI reads each matching email and fills in the transaction (amount, title, type and tags) automatically.
+            </Text>
 
             <StatusNote label="Checks for new mail each time you open the app" />
 
@@ -127,7 +129,7 @@ export default function GoogleOAuthSettingsScreen() {
             ) : (
               <View style={styles.cards}>
                 {vaults.map((vault) => (
-                  <VaultWatcherCard key={vault.id} vault={vault} watcher={watchers.find((w) => w.vaultId === vault.id)} labels={labels} tags={tags} onChanged={reload} onError={setError} />
+                  <VaultWatcherCard key={vault.id} vault={vault} watchers={watchers.filter((w) => w.vaultId === vault.id)} labels={labels} tags={tags} onChanged={reload} onError={setError} />
                 ))}
               </View>
             )}
