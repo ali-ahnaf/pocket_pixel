@@ -18,6 +18,27 @@ export interface VaultGmailWatcherDto {
   subjectFilter: string | null;
   /** Optional free-text nudge appended to the AI extraction prompt. `null` = none. */
   guidanceHint: string | null;
+  /**
+   * Optional fixed day of month (1-31) that replaces the email's date: the
+   * transaction books on this day of the month after the email's month.
+   * `null`/absent = use the email's date.
+   * Mobile app only.
+   */
+  transactionDay?: number | null;
+  /**
+   * Keyword-to-tag rules. A tag is applied when any of its keywords appears in
+   * the email subject or body (case-insensitive substring). When any rule
+   * matches, these tags replace the AI's tag pick. `null`/absent = AI picks tags.
+   * Mobile app only.
+   */
+  tagKeywords?: TagKeywordRuleDto[] | null;
+}
+
+/** One tag and the keywords that apply it to a parsed email. */
+export interface TagKeywordRuleDto {
+  tagId: string;
+  /** Lowercase, trimmed, non-empty. */
+  keywords: string[];
 }
 
 /** Upsert payload for a vault's watcher. The vault id rides in the route path. */
@@ -28,6 +49,10 @@ export interface SetVaultGmailWatcherInput {
   subjectFilter?: string;
   /** Optional free-text nudge appended to the AI extraction prompt. */
   guidanceHint?: string;
+  /** Optional fixed booking day of month (1-31); omit to use the email's date. */
+  transactionDay?: number;
+  /** Optional keyword-to-tag rules; omit or empty to let the AI pick tags. */
+  tagKeywords?: TagKeywordRuleDto[];
 }
 
 /** The shape a matching email resolves to once the AI extractor accepts it. */

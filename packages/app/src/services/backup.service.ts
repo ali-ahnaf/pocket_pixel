@@ -17,6 +17,12 @@ export class BackupService {
     private readonly users: UsersRepository = usersRepository,
   ) {}
 
+  /** Writes a copy of the device DB to `fileUri`, a local `file://` URI that must not exist yet. */
+  async export(fileUri: string): Promise<void> {
+    await this.backups.exportTo(toFilePath(fileUri));
+    logger.info('Exported database');
+  }
+
   /** `fileUri` is a local `file://` URI, as returned by the document picker. */
   async restore(userId: string, fileUri: string): Promise<RestoreCounts> {
     const user = await this.users.findById(userId);
@@ -24,9 +30,7 @@ export class BackupService {
       throw new AppError('User not found', 404);
     }
 
-    // SQLite wants a plain path, not a URI.
-    const filePath = decodeURIComponent(fileUri.replace(/^file:\/\//, ''));
-    const counts = await this.backups.restoreUser(filePath, user.email.toLowerCase(), userId);
+    const counts = await this.backups.restoreUser(toFilePath(fileUri), user.email.toLowerCase(), userId);
     if (!counts) {
       throw new AppError(`This backup has no account for ${user.email}`, 404);
     }
@@ -35,3 +39,6 @@ export class BackupService {
     return counts;
   }
 }
+
+// SQLite wants a plain path, not a URI.
+const toFilePath = (fileUri: string): string => decodeURIComponent(fileUri.replace(/^file:\/\//, ''));

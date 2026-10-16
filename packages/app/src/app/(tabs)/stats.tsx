@@ -1,4 +1,3 @@
-// STUB: AI wizard answers (see WizardChatSheet). No local data layer for this in packages/app yet, so it uses hardcoded stub data.
 import type { TransactionDto } from '@expense-tracker/shared';
 import { useState } from 'react';
 import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';

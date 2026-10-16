@@ -2,6 +2,8 @@ import { AppDataSource } from '../db/data-source';
 import { initDatabase } from '../db/init';
 import { User } from '../entities/User.entity';
 import { AppError } from '../errors/app-error';
+import { runWizardTool } from '../lib/ai/wizard';
+import { analyticsRepository } from '../repositories';
 import { analyticsService, authService, debtsService, preferencesService, recurringService, tagsService, transactionsService, vaultsService } from '../services';
 
 // ../services builds AiService, whose store imports expo-secure-store (a native module Jest cannot load).
@@ -119,6 +121,39 @@ describe('offline flows', () => {
     expect(await preferencesService.getOrCreate(userId)).toMatchObject({ userId, showIncome: false, showExpense: false });
     await preferencesService.update(userId, { showIncome: true });
     expect(await preferencesService.getOrCreate(userId)).toMatchObject({ showIncome: true, showExpense: false });
+  });
+
+  it('answers the wizard tools with aggregated rows scoped to the user', async () => {
+    const wizUserId = await authService.signUp({ name: 'Wiz', email: 'wiz@example.com', password: 's3cret-pass' });
+    const [main] = await vaultsService.list(wizUserId);
+    const fun = await vaultsService.create(wizUserId, { name: 'Fun', monthlyBudget: 50 });
+    const food = await tagsService.create(wizUserId, { name: 'Food' });
+    const bills = await tagsService.create(wizUserId, { name: 'Bills' });
+    await transactionsService.create(wizUserId, { amount: 20, type: 'expense', title: 'Lunch', tagIds: [food.id], vaultId: main.id, date: today });
+    await transactionsService.create(wizUserId, { amount: 30, type: 'expense', title: 'Groceries', tagIds: [food.id, bills.id], vaultId: fun.id, date: today });
+    await transactionsService.create(wizUserId, { amount: 100, type: 'income', title: 'Gift', tagIds: [], vaultId: main.id, date: today });
+    await transactionsService.create(wizUserId, { amount: 999, type: 'expense', title: 'Old', tagIds: [food.id], vaultId: main.id, date: '2000-01-15' });
+
+    const range = { from: `${today.slice(0, 7)}-01`, to: today };
+    const tool = async (name: string, args: object): Promise<unknown> => JSON.parse(await runWizardTool(analyticsRepository, wizUserId, name, JSON.stringify(args)));
+
+    expect(await tool('spending_by_tag', range)).toEqual([
+      { tag: 'Food', total: 50, count: 2 },
+      { tag: 'Bills', total: 30, count: 1 },
+    ]);
+    expect(await tool('totals_by_month', range)).toEqual([{ month: today.slice(0, 7), expense: 50, income: 100, count: 3 }]);
+    expect(await tool('vault_budgets', range)).toEqual([
+      { vault: 'Fun', monthlyBudget: 50, spent: 30 },
+      { vault: 'Main Stash', monthlyBudget: null, spent: 20 },
+    ]);
+    const found = (await tool('find_transactions', { ...range, tag: 'food' })) as { title: string; tags: string }[];
+    expect(found.map((row) => row.title)).toEqual(['Groceries', 'Lunch']);
+    expect(found[0].tags.split(', ').sort()).toEqual(['Bills', 'Food']);
+    expect(await tool('find_transactions', { from: '2000-01-01', to: '2000-12-31', search: 'ol', limit: 99 })).toEqual([
+      { date: '2000-01-15', title: 'Old', amount: 999, type: 'expense', vault: 'Main Stash', tags: 'Food' },
+    ]);
+    expect(await tool('drop_tables', {})).toEqual({ error: 'Unknown tool drop_tables.' });
+    expect(JSON.parse(await runWizardTool(analyticsRepository, wizUserId, 'totals_by_month', 'not json'))).toEqual({ error: 'Arguments were not valid JSON.' });
   });
 
   it('keeps recurring templates out of monthly and yearly analytics, and groups tag analytics by tag', async () => {

@@ -1,11 +1,15 @@
-import type { ParsedEmailDto, ParsedTransaction, TagDto, VaultDto } from '@expense-tracker/shared';
+import type { ParsedEmailDto, ParsedTransaction, TagDto, TagKeywordRuleDto, VaultDto, WizardPromptKey } from '@expense-tracker/shared';
 import { aiCredentialStore, type AiCredentialStore } from '../lib/ai/credential-store';
-import { chat, fetchUsage, listModels, type JsonSchemaResponseFormat, type OpenRouterModel, type OpenRouterUsage } from '../lib/ai/openrouter';
+import { chat, complete, fetchUsage, listModels, type JsonSchemaResponseFormat, type OpenRouterModel, type OpenRouterUsage } from '../lib/ai/openrouter';
 import { extractTransactionFromEmail, type ExtractorEmailInput } from '../lib/ai/gmail-extractor';
+import { getWizardResponse, runWizardTool } from '../lib/ai/wizard';
+import { analyticsRepository } from '../repositories';
+import type { AnalyticsRepository } from '../repositories/analytics.repository';
 
 /** The OpenRouter calls AiService makes, injectable so tests do not hit the network. */
 export interface OpenRouterClient {
   chat: typeof chat;
+  complete: typeof complete;
   listModels: typeof listModels;
   fetchUsage: typeof fetchUsage;
 }
@@ -16,6 +20,8 @@ export interface AiStatus {
 }
 
 export type EmailExtractOutcome = { status: 'success'; parsed: ParsedEmailDto } | { status: 'needs-ai-setup'; message: string } | { status: 'unmatched' };
+
+export type WizardOutcome = { status: 'success'; answer: string } | { status: 'needs-ai-setup'; message: string };
 
 export type TransactionPromptOutcome = { status: 'success'; transaction: ParsedTransaction } | { status: 'needs-ai-setup'; message: string } | { status: 'unparseable'; message: string };
 
@@ -46,7 +52,8 @@ export const AI_SETUP_MESSAGE = 'Set up your OpenRouter API key and pick a model
 export class AiService {
   constructor(
     private readonly store: AiCredentialStore = aiCredentialStore,
-    private readonly client: OpenRouterClient = { chat, listModels, fetchUsage },
+    private readonly client: OpenRouterClient = { chat, complete, listModels, fetchUsage },
+    private readonly analytics: AnalyticsRepository = analyticsRepository,
   ) {}
 
   async getStatus(): Promise<AiStatus> {
@@ -151,13 +158,44 @@ prompt: ${prompt.trim()}`;
    * sample). `unmatched` covers a non-transaction email and an unusable model answer.
    * Throws on network/OpenRouter failures; the caller shows `err.message`.
    */
-  async extractTransactionFromEmail(email: ExtractorEmailInput, tags: Pick<TagDto, 'id' | 'name'>[], guidanceHint: string | null): Promise<EmailExtractOutcome> {
+  async extractTransactionFromEmail(
+    email: ExtractorEmailInput,
+    tags: Pick<TagDto, 'id' | 'name'>[],
+    guidanceHint: string | null,
+    transactionDay: number | null = null,
+    tagKeywords: TagKeywordRuleDto[] | null = null,
+  ): Promise<EmailExtractOutcome> {
     const [apiKey, model] = await Promise.all([this.store.getApiKey(), this.store.getModel()]);
     if (!apiKey || !model) {
       return { status: 'needs-ai-setup', message: AI_SETUP_MESSAGE };
     }
 
-    const parsed = await extractTransactionFromEmail({ chat: this.client.chat, apiKey, model, email, tags: tags.map((tag) => ({ id: tag.id, name: tag.name })), guidanceHint });
+    const parsed = await extractTransactionFromEmail({
+      chat: this.client.chat,
+      apiKey,
+      model,
+      email,
+      tags: tags.map((tag) => ({ id: tag.id, name: tag.name })),
+      guidanceHint,
+      transactionDay,
+      tagKeywords,
+    });
     return parsed ? { status: 'success', parsed } : { status: 'unmatched' };
+  }
+
+  /**
+   * Answers a wizard chat prompt. The model reads `userId`'s data through read-only
+   * analytics tools (see lib/ai/wizard.ts). Throws on network/OpenRouter failures;
+   * the caller shows `err.message`.
+   */
+  async askWizard(userId: string, promptKey: WizardPromptKey): Promise<WizardOutcome> {
+    const [apiKey, model] = await Promise.all([this.store.getApiKey(), this.store.getModel()]);
+    if (!apiKey || !model) {
+      return { status: 'needs-ai-setup', message: AI_SETUP_MESSAGE };
+    }
+
+    const runTool = (name: string, args: string): Promise<string> => runWizardTool(this.analytics, userId, name, args);
+    const answer = await getWizardResponse(this.client.complete, runTool, promptKey, apiKey, model);
+    return { status: 'success', answer };
   }
 }

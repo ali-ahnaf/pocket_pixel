@@ -21,6 +21,11 @@ interface ColumnInfo {
 export class BackupRepository {
   constructor(private readonly dataSource: DataSource = AppDataSource) {}
 
+  /** Writes a consistent copy of the whole device DB to `filePath`, which must not exist yet. */
+  async exportTo(filePath: string): Promise<void> {
+    await this.dataSource.query(`VACUUM INTO ?`, [filePath]);
+  }
+
   /** Returns null when the backup has no user with this email. */
   async restoreUser(filePath: string, email: string, userId: string): Promise<RestoreCounts | null> {
     const runner = this.dataSource.createQueryRunner();
