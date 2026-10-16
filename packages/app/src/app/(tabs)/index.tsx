@@ -185,7 +185,7 @@ export default function Home() {
           setSelectedYear(y);
         }}
       />
-      <PendingExpensesPanel onTransactionCreated={refetch} refreshKey={gmailRefreshKey} />
+      <PendingExpensesPanel vaults={vaults} tags={tags} selectedMonth={selectedMonth} selectedYear={selectedYear} onTransactionCreated={refetch} refreshKey={gmailRefreshKey} />
       <StatusCard
         isLoading={!loaded}
         totalIncome={totalIncome}

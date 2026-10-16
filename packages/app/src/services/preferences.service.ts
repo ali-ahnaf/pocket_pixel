@@ -30,6 +30,7 @@ export class PreferencesService {
     if (input.pushEnabled !== undefined) preference.pushEnabled = input.pushEnabled;
     if (input.aiTransactionEntryEnabled !== undefined) preference.aiTransactionEntryEnabled = input.aiTransactionEntryEnabled;
     if (input.monthlyRecapDay !== undefined) preference.monthlyRecapDay = input.monthlyRecapDay;
+    if (input.requireAiParseApproval !== undefined) preference.requireAiParseApproval = input.requireAiParseApproval;
 
     const saved = await this.preferences.save(preference);
     logger.info('Updated user preferences', { userId });

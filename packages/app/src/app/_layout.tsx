@@ -4,6 +4,7 @@ import { JetBrainsMono_700Bold } from '@expo-google-fonts/jetbrains-mono';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { ToastHost } from '../components/Toast';
 import { AuthProvider, useAuth } from '../hooks/AuthProvider';
 import { DatabaseProvider } from '../hooks/DatabaseProvider';
 import { color } from '../theme';
@@ -47,6 +48,7 @@ export default function RootLayout() {
           <RootStack />
         </AuthProvider>
       </DatabaseProvider>
+      <ToastHost />
     </>
   );
 }

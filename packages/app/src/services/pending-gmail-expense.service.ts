@@ -1,5 +1,6 @@
 import { PendingExpenseEmailDto, PendingGmailExpenseDto } from '@expense-tracker/shared';
 import { AppError } from '../errors/app-error';
+import type { PendingGmailExpense } from '../entities/PendingGmailExpense.entity';
 import { extractMessageContent } from '../lib/gmail/message';
 import { PendingGmailExpenseRepository } from '../repositories/pending-gmail-expense.repository';
 import { TagsRepository } from '../repositories/tags.repository';
@@ -54,22 +55,38 @@ export class PendingGmailExpenseService {
   }
 
   /**
-   * Runs the AI extractor on the reviewed email and, on a match, creates the
-   * transaction in the item's vault and resolves the item. Any other outcome
-   * leaves the item in the queue.
+   * Runs the AI extractor on the reviewed email. Persists nothing, so the
+   * result can be shown to the user for approval before it is logged.
+   */
+  async extract(userId: string, id: string, email: PendingExpenseEmailDto): Promise<EmailExtractOutcome> {
+    return this.extractFor(userId, await this.findRow(userId, id), email);
+  }
+
+  /**
+   * Runs the AI extractor and, on a match, creates the transaction in the
+   * item's vault and resolves the item. Any other outcome leaves the item in
+   * the queue.
    */
   async parse(userId: string, id: string, email: PendingExpenseEmailDto): Promise<EmailExtractOutcome> {
-    const row = await this.pending.findByIdForUser(userId, id);
-    if (!row) throw new AppError('Pending expense not found', 404);
-
-    const tags = await this.tags.findManyForUser(userId);
-    const outcome = await this.ai.extractTransactionFromEmail(email, tags, row.guidanceHint, row.transactionDay, row.tagKeywords);
+    const row = await this.findRow(userId, id);
+    const outcome = await this.extractFor(userId, row, email);
     if (outcome.status !== 'success') return outcome;
 
     const { title, amount, type, date, tagIds } = outcome.parsed;
     await this.transactions.create(userId, { title, amount, type, date, tagIds, vaultId: row.vaultId });
     await this.resolve(userId, id);
     return outcome;
+  }
+
+  private async findRow(userId: string, id: string): Promise<PendingGmailExpense> {
+    const row = await this.pending.findByIdForUser(userId, id);
+    if (!row) throw new AppError('Pending expense not found', 404);
+    return row;
+  }
+
+  private async extractFor(userId: string, row: PendingGmailExpense, email: PendingExpenseEmailDto): Promise<EmailExtractOutcome> {
+    const tags = await this.tags.findManyForUser(userId);
+    return this.ai.extractTransactionFromEmail(email, tags, row.guidanceHint, row.transactionDay, row.tagKeywords);
   }
 
   /** Soft-deletes the pending row, scoped to `userId`. Used both on successful parse and on dismiss. */
