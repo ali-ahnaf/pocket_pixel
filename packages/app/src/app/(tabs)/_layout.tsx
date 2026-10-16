@@ -1,12 +1,14 @@
 import { Tabs } from 'expo-router/js-tabs';
 import { BottomNavBar } from '../../components/BottomNavBar';
 import { WizardChatSheet } from '../../components/stats/WizardChatSheet';
+import { useDebtNudgeShare } from '../../hooks/useDebtNudgeShare';
 import { useMonthlyRecap } from '../../hooks/useMonthlyRecap';
 import { color } from '../../theme';
 
 // Home, Stats, Debts and Profile, matching the web BottomNavBar. Every other web page is a stack route on top.
 export default function TabsLayout() {
   const { recap, dismiss } = useMonthlyRecap();
+  useDebtNudgeShare();
 
   return (
     <>
