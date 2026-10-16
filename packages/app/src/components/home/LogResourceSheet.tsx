@@ -1,4 +1,4 @@
-import type { TagDto, VaultDto } from '@expense-tracker/shared';
+import type { ParsedEmailDto, TagDto, VaultDto } from '@expense-tracker/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
@@ -24,29 +24,31 @@ export interface LogResourceSheetProps {
   /** 0-based month on screen. A month other than the current one logs the transaction on its 1st. */
   selectedMonth: number;
   selectedYear: number;
+  /** An AI-parsed email to review: fills the form, skips the AI prompt, and logs on the parsed date. */
+  prefill?: ParsedEmailDto & { vaultId: string };
   onSuccess: () => void;
   onClose: () => void;
 }
 
 // Port of packages/ui/src/components/LogResourceModal.tsx.
-export function LogResourceSheet({ vaults, tags, selectedMonth, selectedYear, onSuccess, onClose }: LogResourceSheetProps) {
+export function LogResourceSheet({ vaults, tags, selectedMonth, selectedYear, prefill, onSuccess, onClose }: LogResourceSheetProps) {
   const userId = useLocalUserId();
   const { height } = useWindowDimensions();
   const { aiTransactionEntryEnabled, loaded: preferencesLoaded } = useDisplaySettings();
 
   // null follows the preference: AI entry on opens on the prompt, otherwise on the form.
   const [manualEntryOverride, setManualEntryOverride] = useState<boolean | null>(null);
-  const manualEntry = aiTransactionEntryEnabled ? (manualEntryOverride ?? false) : true;
+  const manualEntry = aiTransactionEntryEnabled && !prefill ? (manualEntryOverride ?? false) : true;
   const [promptText, setPromptText] = useState('');
   const [promptResult, setPromptResult] = useState<string | null>(null);
   const [isPrompting, setIsPrompting] = useState(false);
   const [promptNeedsAiSetup, setPromptNeedsAiSetup] = useState(false);
 
-  const [isExpense, setIsExpense] = useState(true);
-  const [amount, setAmount] = useState('');
-  const [title, setTitle] = useState('');
-  const [selectedTags, setSelectedTags] = useState<TagDto[]>([]);
-  const [selectedVaultId, setSelectedVaultId] = useState<string | null>((vaults.find((v) => v.isDefault) ?? vaults[0])?.id ?? null);
+  const [isExpense, setIsExpense] = useState(prefill ? prefill.type === 'expense' : true);
+  const [amount, setAmount] = useState(prefill ? String(prefill.amount) : '');
+  const [title, setTitle] = useState(prefill?.title ?? '');
+  const [selectedTags, setSelectedTags] = useState<TagDto[]>(prefill ? tags.filter((tag) => prefill.tagIds.includes(tag.id)) : []);
+  const [selectedVaultId, setSelectedVaultId] = useState<string | null>(prefill?.vaultId ?? (vaults.find((v) => v.isDefault) ?? vaults[0])?.id ?? null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const sendPrompt = async (): Promise<void> => {
@@ -92,7 +94,7 @@ export function LogResourceSheet({ vaults, tags, selectedMonth, selectedYear, on
         tagIds: selectedTags.map((t) => t.id),
         title: title || undefined,
         vaultId: selectedVaultId,
-        date: isCurrentMonth ? undefined : `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-01`,
+        date: prefill?.date ?? (isCurrentMonth ? undefined : `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-01`),
       });
       onSuccess();
       close();
@@ -107,7 +109,7 @@ export function LogResourceSheet({ vaults, tags, selectedMonth, selectedYear, on
     <BottomSheetModal onClose={onClose}>
       {(close) => (
         <>
-          <SheetHeader title="LOG NEW RESOURCE" onClose={close} />
+          <SheetHeader title={prefill ? 'REVIEW PARSED EMAIL' : 'LOG NEW RESOURCE'} onClose={close} />
           <ScrollView style={{ maxHeight: height * 0.75 }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             {preferencesLoaded && !manualEntry && (
               <View style={styles.group}>
@@ -142,7 +144,7 @@ export function LogResourceSheet({ vaults, tags, selectedMonth, selectedYear, on
               </View>
             )}
 
-            {preferencesLoaded && aiTransactionEntryEnabled && (
+            {preferencesLoaded && aiTransactionEntryEnabled && !prefill && (
               <Pressable
                 accessibilityRole="switch"
                 accessibilityState={{ checked: manualEntry }}

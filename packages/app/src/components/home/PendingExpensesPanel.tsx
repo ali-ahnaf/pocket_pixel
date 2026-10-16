@@ -1,4 +1,4 @@
-import type { PendingGmailExpenseDto } from '@expense-tracker/shared';
+import type { ParsedEmailDto, PendingGmailExpenseDto, TagDto, VaultDto } from '@expense-tracker/shared';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { AppState, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -9,11 +9,17 @@ import { color, font, space, text } from '../../theme';
 import { Badge } from '../Badge';
 import { Card } from '../Card';
 import { GmailReconnectBanner } from './GmailReconnectBanner';
+import { LogResourceSheet } from './LogResourceSheet';
 import { PendingExpenseDetailSheet } from './PendingExpenseDetailSheet';
 import { PixelIcon } from '../PixelIcon';
 import { IconText } from '../IconText';
 
 export interface PendingExpensesPanelProps {
+  /** Feed the log form opened to review an AI-parsed email. */
+  vaults: VaultDto[];
+  tags: TagDto[];
+  selectedMonth: number;
+  selectedYear: number;
   /** Called after a pending email was parsed into a transaction, so the dashboard can reload. */
   onTransactionCreated: () => void;
   /** Bumped by the dashboard's pull to refresh to re-sync Gmail. */
@@ -22,11 +28,12 @@ export interface PendingExpensesPanelProps {
 
 // Port of packages/ui/src/components/pending-expenses/PendingExpensesPanel.tsx. Hidden while the queue is empty.
 // The phone gets no Gmail push, so this panel also polls Gmail: on focus, whenever the app returns to the foreground, and on the dashboard's pull to refresh.
-export function PendingExpensesPanel({ onTransactionCreated, refreshKey }: PendingExpensesPanelProps) {
+export function PendingExpensesPanel({ vaults, tags, selectedMonth, selectedYear, onTransactionCreated, refreshKey }: PendingExpensesPanelProps) {
   const userId = useLocalUserId();
   const [items, setItems] = useState<PendingGmailExpenseDto[]>([]);
   const [reconnectRequired, setReconnectRequired] = useState(false);
   const [selected, setSelected] = useState<PendingGmailExpenseDto | null>(null);
+  const [reviewing, setReviewing] = useState<{ item: PendingGmailExpenseDto; parsed: ParsedEmailDto } | null>(null);
 
   // Shows the local queue at once, then syncs in the background and shows anything new. A failed sync keeps the app usable.
   const refresh = useCallback(() => {
@@ -67,6 +74,14 @@ export function PendingExpensesPanel({ onTransactionCreated, refreshKey }: Pendi
     if (transactionCreated) onTransactionCreated();
   };
 
+  // The user approved the parsed email in the log form, which already created the transaction; take the item off the queue.
+  const handleReviewLogged = (id: string): void => {
+    pendingGmailExpenseService.resolve(userId, id).then(
+      () => handleResolved(id, true),
+      (err) => logger.error('Resolve pending expense failed', { err }),
+    );
+  };
+
   return (
     <>
       {reconnectRequired && <GmailReconnectBanner />}
@@ -98,7 +113,22 @@ export function PendingExpensesPanel({ onTransactionCreated, refreshKey }: Pendi
         </Card>
       )}
 
-      {selected ? <PendingExpenseDetailSheet item={selected} onResolved={handleResolved} onClose={() => setSelected(null)} /> : null}
+      {selected ? (
+        <PendingExpenseDetailSheet item={selected} onResolved={handleResolved} onParsedForReview={(item, parsed) => setReviewing({ item, parsed })} onClose={() => setSelected(null)} />
+      ) : null}
+
+      {/* Waits for the detail sheet to finish closing: iOS cannot present a modal while another is dismissing. */}
+      {reviewing && !selected ? (
+        <LogResourceSheet
+          vaults={vaults}
+          tags={tags}
+          selectedMonth={selectedMonth}
+          selectedYear={selectedYear}
+          prefill={{ ...reviewing.parsed, vaultId: reviewing.item.vaultId }}
+          onSuccess={() => handleReviewLogged(reviewing.item.id)}
+          onClose={() => setReviewing(null)}
+        />
+      ) : null}
     </>
   );
 }

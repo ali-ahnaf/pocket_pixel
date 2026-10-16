@@ -217,6 +217,21 @@ describe('Gmail on device', () => {
     expect((await pending.list(userId)).some((i) => i.id === item.id)).toBe(false);
   });
 
+  it('extracts for review without creating a transaction or resolving the item', async () => {
+    await connectAndBaseline();
+    await watchers.upsert(userId, debitVault.id, { gmailLabelId: 'Label_1', subjectFilter: 'purchase' });
+    mailbox = [{ id: 'm-review', labelIds: ['Label_1'], subject: 'Card purchase', html: '<p>Spent 80 at CAFE REVIEW</p>' }];
+    await gmail.sync(userId);
+    const item = (await pending.list(userId)).find((i) => i.gmailMessageId === 'm-review');
+    if (!item) throw new Error('expected a pending item');
+
+    chat.mockResolvedValue(JSON.stringify({ matched: true, title: 'Cafe Review', amount: 80, type: 'expense', tagIds: [], date: '2026-10-12' }));
+    expect(await pending.extract(userId, item.id, await pending.getEmail(userId, item.id))).toMatchObject({ status: 'success', parsed: { title: 'Cafe Review', amount: 80 } });
+
+    expect(await AppDataSource.getRepository(Expense).findOneBy({ userId, title: 'Cafe Review' })).toBeNull();
+    expect((await pending.list(userId)).some((i) => i.id === item.id)).toBe(true);
+  });
+
   it("books on the watcher's transaction day of the month after the email", async () => {
     await connectAndBaseline();
     await watchers.upsert(userId, debitVault.id, { gmailLabelId: 'Label_1', subjectFilter: 'purchase', transactionDay: 10 });

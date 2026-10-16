@@ -40,7 +40,18 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { showIncome, showExpense, aiTransactionEntryEnabled, monthlyRecapDay, setShowIncome, setShowExpense, setAiTransactionEntryEnabled, setMonthlyRecapDay } = useDisplaySettings();
+  const {
+    showIncome,
+    showExpense,
+    aiTransactionEntryEnabled,
+    monthlyRecapDay,
+    requireAiParseApproval,
+    setShowIncome,
+    setShowExpense,
+    setAiTransactionEntryEnabled,
+    setMonthlyRecapDay,
+    setRequireAiParseApproval,
+  } = useDisplaySettings();
   const [pushSubscribed, setPushSubscribed] = useState(false);
   const userId = useLocalUserId();
 
@@ -123,6 +134,13 @@ export default function SettingsScreen() {
           icon="Sparkles"
           checked={aiTransactionEntryEnabled}
           onChange={setAiTransactionEntryEnabled}
+        />
+        <SettingToggle
+          label="Review AI-parsed emails"
+          description="Open the log form with the AI's result from a Gmail email so you can check it before saving"
+          icon="Mail"
+          checked={requireAiParseApproval}
+          onChange={setRequireAiParseApproval}
         />
       </Section>
 
