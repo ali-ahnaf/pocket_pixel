@@ -10,6 +10,8 @@ import { analyticsService, authService, debtsService, preferencesService, recurr
 jest.mock('../lib/ai/credential-store', () => ({ aiCredentialStore: {} }));
 // MonthlyRecapService's default notifier loads expo-notifications.
 jest.mock('../lib/notifications/recap-notifier', () => ({ recapNotifier: {} }));
+// DebtsService's default notifier loads expo-notifications too; these flows only need it to resolve.
+jest.mock('../lib/notifications/debt-notifier', () => ({ debtNotifier: { schedule: async () => undefined, cancel: async () => undefined } }));
 // Same for AuthService's session store. An in-memory stand-in lets restoreSession run for real.
 jest.mock('../lib/auth/session-store', () => {
   let stored: string | null = null;

@@ -3,8 +3,12 @@ import type { Expense } from '../entities/Expense.entity';
 import { TransactionType } from '../entities/Expense.entity';
 import { AppError } from '../errors/app-error';
 import type { DebtsRepository } from '../repositories/debts.repository';
+import type { DebtNotifier } from '../lib/notifications/debt-notifier';
 import type { TransactionsRepository } from '../repositories/transactions.repository';
-import { DebtsService } from '../services/debts.service';
+import { DebtsService, draftDebtNudge } from '../services/debts.service';
+
+// The default notifier loads expo-notifications, a native module; the service gets a mock below.
+jest.mock('../lib/notifications/debt-notifier', () => ({ debtNotifier: {} }));
 
 // Mock logger just like auth.service.test.ts
 jest.mock('../services', () => ({
@@ -49,6 +53,7 @@ const buildExpense = (overrides: Partial<Expense> = {}): Expense =>
 describe('DebtsService', () => {
   let debts: DebtsRepositoryMock;
   let transactions: TransactionsRepositoryMock;
+  let notifier: jest.Mocked<DebtNotifier>;
   let service: DebtsService;
 
   beforeEach(() => {
@@ -65,7 +70,9 @@ describe('DebtsService', () => {
       save: jest.fn(),
     } as TransactionsRepositoryMock;
 
-    service = new DebtsService(debts as unknown as DebtsRepository, transactions as unknown as TransactionsRepository);
+    notifier = { schedule: jest.fn(), cancel: jest.fn().mockResolvedValue(undefined) };
+
+    service = new DebtsService(debts as unknown as DebtsRepository, transactions as unknown as TransactionsRepository, notifier);
   });
 
   describe('list', () => {
@@ -328,6 +335,53 @@ describe('DebtsService', () => {
       await expect(service.apply('user-1', 'debt-1', {})).rejects.toMatchObject({
         constructor: AppError,
         statusCode: 404,
+      });
+    });
+  });
+
+  describe('nudges', () => {
+    it('schedules a nudge with a drafted reminder at 9:00 on a future due date', async () => {
+      debts.save.mockResolvedValue(buildDebt({ title: 'Lent Kim', amount: 40, type: 'income' as TransactionType, dueDate: '2099-03-05' }));
+
+      await service.create('user-1', { title: 'Lent Kim', amount: 40, type: 'income', dueDate: '2099-03-05' });
+
+      const draft = 'Hi! Just a friendly reminder about Lent Kim (40.00), which is due today. Whenever it suits you is fine. Thank you!';
+      expect(notifier.schedule).toHaveBeenCalledWith('debt-1', new Date(2099, 2, 5, 9), 'Lent Kim is due today', `Tap to send a reminder: "${draft}"`, draft);
+    });
+
+    it('cancels the nudge when the due date is removed or already past', async () => {
+      debts.findOneForUser.mockResolvedValue(buildDebt({ dueDate: '2099-03-05' }));
+      debts.save.mockResolvedValueOnce(buildDebt({ dueDate: null })).mockResolvedValueOnce(buildDebt({ dueDate: '2020-01-01' }));
+
+      await service.update('user-1', 'debt-1', { dueDate: null });
+      await service.update('user-1', 'debt-1', { dueDate: '2020-01-01' });
+
+      expect(notifier.schedule).not.toHaveBeenCalled();
+      expect(notifier.cancel).toHaveBeenCalledTimes(2);
+    });
+
+    it('still saves the debt when the nudge cannot be scheduled', async () => {
+      debts.save.mockResolvedValue(buildDebt({ dueDate: '2099-03-05' }));
+      notifier.schedule.mockRejectedValue(new Error('Notifications are not allowed'));
+
+      await expect(service.create('user-1', { title: 'Internet Bill', amount: 1000, type: 'expense', dueDate: '2099-03-05' })).resolves.toMatchObject({ id: 'debt-1' });
+    });
+
+    it('cancels the nudge when a debt is discarded or applied', async () => {
+      debts.findOneForUser.mockResolvedValue(buildDebt());
+
+      await service.remove('user-1', 'debt-1');
+      await service.apply('user-1', 'debt-1', { skipTransaction: true });
+
+      expect(notifier.cancel).toHaveBeenNthCalledWith(1, 'debt-1');
+      expect(notifier.cancel).toHaveBeenNthCalledWith(2, 'debt-1');
+    });
+
+    it('reminds the user to pay, with no draft, for money they owe', () => {
+      expect(draftDebtNudge({ title: 'Rent', amount: 1200, type: 'expense' as TransactionType })).toEqual({
+        title: 'Rent is due today',
+        body: 'A gentle nudge: you planned to pay 1,200.00 today.',
+        draft: null,
       });
     });
   });
