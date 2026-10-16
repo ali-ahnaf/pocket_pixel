@@ -1,3 +1,4 @@
+import type { TagKeywordRuleDto } from '@expense-tracker/shared';
 import { Entity, PrimaryGeneratedColumn, Column, Index, ManyToOne, JoinColumn } from 'typeorm';
 import { User } from './User.entity';
 import { Vault } from './Vault.entity';
@@ -38,6 +39,12 @@ export class PendingGmailExpense extends BaseEntity {
 
   @Column({ type: 'varchar', nullable: true })
   guidanceHint: string | null;
+
+  @Column({ type: 'integer', nullable: true })
+  transactionDay: number | null;
+
+  @Column({ type: 'simple-json', nullable: true })
+  tagKeywords: TagKeywordRuleDto[] | null;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })

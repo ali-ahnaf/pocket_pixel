@@ -1,7 +1,7 @@
 import type { OccurrenceDto, TagDto, TransactionDto, VaultDto } from '@expense-tracker/shared';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, FlatList, type ListRenderItem, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, FlatList, type ListRenderItem, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ms } from 'react-native-size-matters';
 import { AppBar } from '../../components/AppBar';
 import { AdjustBalanceSheet } from '../../components/home/AdjustBalanceSheet';
@@ -46,6 +46,7 @@ export default function Home() {
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   const [sortField, setSortField] = useState<'date' | 'amount'>('date');
   const [applyingKey, setApplyingKey] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [isAdjustOpen, setIsAdjustOpen] = useState(false);
@@ -53,30 +54,43 @@ export default function Home() {
 
   const vaultFilter = useMemo(() => selectedVaultFilter ?? [], [selectedVaultFilter]);
 
+  // isActive lets the focus effect drop results that land after the screen lost focus.
+  const load = useCallback(
+    (isActive: () => boolean = () => true): Promise<void> =>
+      Promise.all([
+        transactionsService.list(userId, { month: selectedMonth + 1, year: selectedYear }),
+        vaultsService.list(userId),
+        recurringService.occurrences(userId, selectedYear, selectedMonth + 1),
+        tagsService.list(userId),
+      ]).then(
+        ([txs, vaultList, occs, tagList]) => {
+          if (!isActive()) return;
+          setTransactions(txs);
+          setVaults(vaultList);
+          setOccurrences(occs);
+          setTags(tagList);
+          setSelectedVaultFilter((prev) => prev ?? vaultList.filter((v) => v.isDefault).map((v) => v.id));
+          setLoaded(true);
+        },
+        (err) => logger.error('Load dashboard failed', { err }),
+      ),
+    [userId, selectedMonth, selectedYear],
+  );
+
   // Re-read on focus (other tabs can add transactions) and after every change made from this screen.
   const refetch = useCallback(() => {
     let active = true;
-    Promise.all([
-      transactionsService.list(userId, { month: selectedMonth + 1, year: selectedYear }),
-      vaultsService.list(userId),
-      recurringService.occurrences(userId, selectedYear, selectedMonth + 1),
-      tagsService.list(userId),
-    ]).then(
-      ([txs, vaultList, occs, tagList]) => {
-        if (!active) return;
-        setTransactions(txs);
-        setVaults(vaultList);
-        setOccurrences(occs);
-        setTags(tagList);
-        setSelectedVaultFilter((prev) => prev ?? vaultList.filter((v) => v.isDefault).map((v) => v.id));
-        setLoaded(true);
-      },
-      (err) => logger.error('Load dashboard failed', { err }),
-    );
+    load(() => active);
     return () => {
       active = false;
     };
-  }, [userId, selectedMonth, selectedYear]);
+  }, [load]);
+
+  // Pull to refresh re-reads local data only. Gmail sync stays on the Pending Expenses refresh button.
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true);
+    load().finally(() => setRefreshing(false));
+  }, [load]);
 
   useFocusEffect(refetch);
 
@@ -323,6 +337,7 @@ export default function Home() {
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={color.primary} colors={[color.primary]} progressBackgroundColor={color.surface} />}
       />
 
       <Pressable accessibilityRole="button" accessibilityLabel="Log new resource" onPress={() => setIsLogOpen(true)} style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}>

@@ -5,7 +5,7 @@
  * with the user's own OpenRouter key/model.
  */
 
-import type { AiExtractResultDto, ParsedEmailDto } from '@expense-tracker/shared';
+import type { AiExtractResultDto, ParsedEmailDto, TagKeywordRuleDto } from '@expense-tracker/shared';
 import type { ChatParams, JsonSchemaResponseFormat } from './openrouter';
 
 /** One alert email — either the live Gmail re-fetch or a pasted dry-run sample. */
@@ -24,6 +24,10 @@ export interface ExtractTransactionParams {
   email: ExtractorEmailInput;
   tags: { id: string; name: string }[];
   guidanceHint?: string | null;
+  /** Watcher's fixed booking day; replaces the email's date per `applyTransactionDay`. */
+  transactionDay?: number | null;
+  /** Watcher's keyword-to-tag rules; any hit replaces the model's tag pick per `matchTagKeywords`. */
+  tagKeywords?: TagKeywordRuleDto[] | null;
 }
 
 const RESPONSE_SCHEMA_NAME = 'gmail_transaction_extraction';
@@ -80,8 +84,30 @@ function isValidYmd(value: unknown): value is string {
 export function toReferenceDate(emailDate: string | null, now: Date = new Date()): string {
   if (emailDate && isValidYmd(emailDate)) return emailDate;
   const parsed = emailDate ? new Date(emailDate) : now;
-  const date = Number.isNaN(parsed.getTime()) ? now : parsed;
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  return formatYmd(Number.isNaN(parsed.getTime()) ? now : parsed);
+}
+
+const formatYmd = (date: Date): string => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+/**
+ * Overrides the email's date with a watcher's fixed day of month: the transaction
+ * always books on `day` of the month after the email's month, clamped to that
+ * month's last day (e.g. 31 in February is the 28th/29th).
+ */
+export function applyTransactionDay(referenceDate: string, day: number): string {
+  const [year, month] = referenceDate.split('-').map(Number);
+  const lastDayOfNextMonth = new Date(year, month + 1, 0).getDate();
+  return formatYmd(new Date(year, month, Math.min(day, lastDayOfNextMonth)));
+}
+
+/**
+ * Tag ids whose keywords appear in the email subject or body (case-insensitive
+ * substring), in rule order. Ids not in `tagIdSet` (tag deleted since the rule
+ * was saved) are dropped.
+ */
+export function matchTagKeywords(email: Pick<ExtractorEmailInput, 'subject' | 'bodyText'>, rules: TagKeywordRuleDto[], tagIdSet: Set<string>): string[] {
+  const haystack = `${email.subject}\n${email.bodyText}`.toLowerCase();
+  return rules.filter((rule) => tagIdSet.has(rule.tagId) && rule.keywords.some((keyword) => haystack.includes(keyword.toLowerCase()))).map((rule) => rule.tagId);
 }
 
 /** Validates and normalises the model's output into a `ParsedEmailDto`, or `null` to skip. An invalid model date falls back to `referenceDate`. */
@@ -107,12 +133,15 @@ function validate(raw: AiExtractorRawOutput, tagIdSet: Set<string>, referenceDat
  * the model reports `matched: false`, returns unparsable JSON, or fails
  * validation — callers treat all three as "skip".
  */
-export async function extractTransactionFromEmail({ chat, apiKey, model, email, tags, guidanceHint }: ExtractTransactionParams): Promise<ParsedEmailDto | null> {
+export async function extractTransactionFromEmail({ chat, apiKey, model, email, tags, guidanceHint, transactionDay, tagKeywords }: ExtractTransactionParams): Promise<ParsedEmailDto | null> {
   const referenceDate = toReferenceDate(email.emailDate);
+  const tagIdSet = new Set(tags.map((tag) => tag.id));
+  // A keyword hit decides the tags, so the model is not sent the tag list (smaller prompt, deterministic result).
+  const keywordTagIds = matchTagKeywords(email, tagKeywords ?? [], tagIdSet);
   const input = JSON.stringify({
     referenceDate,
     email: { from: email.from, subject: email.subject, bodyText: email.bodyText, emailDate: email.emailDate },
-    availableTags: tags,
+    availableTags: keywordTagIds.length > 0 ? [] : tags,
     guidance: guidanceHint ?? null,
   });
 
@@ -144,8 +173,10 @@ export async function extractTransactionFromEmail({ chat, apiKey, model, email, 
 
   if (!raw || raw.matched === false) return null;
 
-  const tagIdSet = new Set(tags.map((tag) => tag.id));
-  return validate(raw, tagIdSet, referenceDate);
+  const validated = validate(raw, tagIdSet, referenceDate);
+  const parsed = validated && keywordTagIds.length > 0 ? { ...validated, tagIds: keywordTagIds } : validated;
+  // The fixed day wins over both the email's date and any date the model or guidance picked.
+  return parsed && transactionDay ? { ...parsed, date: applyTransactionDay(referenceDate, transactionDay) } : parsed;
 }
 
 /** Converts an extraction result into the dry-run preview shape used by `TestExtractSheet`. */

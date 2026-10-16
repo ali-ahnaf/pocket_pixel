@@ -1,4 +1,4 @@
-import type { AiExtractResultDto, TagDto } from '@expense-tracker/shared';
+import type { AiExtractResultDto, TagDto, TagKeywordRuleDto } from '@expense-tracker/shared';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ms } from 'react-native-size-matters';
@@ -16,12 +16,16 @@ import { aiService } from '../../services';
 export interface TestExtractSheetProps {
   /** The guidance currently typed in the watcher editor, so the test matches what Save would store. */
   guidanceHint: string;
+  /** The transaction day currently typed in the watcher editor, or null when blank. */
+  transactionDay: number | null;
+  /** The keyword-to-tag rules currently typed in the watcher editor. */
+  tagKeywords: TagKeywordRuleDto[];
   tags: TagDto[];
   onClose: () => void;
 }
 
 /** Dry-run preview: paste a sample email and see what the AI extractor would resolve it to. Mount to open. */
-export function TestExtractSheet({ guidanceHint, tags, onClose }: TestExtractSheetProps) {
+export function TestExtractSheet({ guidanceHint, transactionDay, tagKeywords, tags, onClose }: TestExtractSheetProps) {
   const [from, setFrom] = useState('');
   const [subject, setSubject] = useState('');
   const [emailDate, setEmailDate] = useState('');
@@ -41,7 +45,7 @@ export function TestExtractSheet({ guidanceHint, tags, onClose }: TestExtractShe
     setResult(null);
     setNeedsAiSetup(false);
     try {
-      const outcome = await aiService.extractTransactionFromEmail({ from, subject, bodyText, emailDate: emailDate.trim() || null }, tags, guidanceHint.trim() || null);
+      const outcome = await aiService.extractTransactionFromEmail({ from, subject, bodyText, emailDate: emailDate.trim() || null }, tags, guidanceHint.trim() || null, transactionDay, tagKeywords);
       if (outcome.status === 'needs-ai-setup') {
         setNeedsAiSetup(true);
         setError(outcome.message);

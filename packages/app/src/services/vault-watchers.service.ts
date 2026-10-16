@@ -1,8 +1,9 @@
 import { SetVaultGmailWatcherInput, VaultGmailWatcherDto } from '@expense-tracker/shared';
 import { AppError } from '../errors/app-error';
 import { VaultGmailWatchersRepository } from '../repositories/vault-gmail-watchers.repository';
+import { TagsRepository } from '../repositories/tags.repository';
 import { VaultsRepository } from '../repositories/vaults.repository';
-import { vaultGmailWatchersRepository, vaultsRepository } from '../repositories';
+import { tagsRepository, vaultGmailWatchersRepository, vaultsRepository } from '../repositories';
 import { logger } from '.';
 
 /**
@@ -15,6 +16,7 @@ export class VaultWatchersService {
   constructor(
     private readonly watchers: VaultGmailWatchersRepository = vaultGmailWatchersRepository,
     private readonly vaults: VaultsRepository = vaultsRepository,
+    private readonly tags: TagsRepository = tagsRepository,
   ) {}
 
   /** Lists the user's watchers, joined to their vault names for the settings UI. */
@@ -29,6 +31,8 @@ export class VaultWatchersService {
       gmailLabelName: watcher.gmailLabelName,
       subjectFilter: watcher.subjectFilter,
       guidanceHint: watcher.guidanceHint,
+      transactionDay: watcher.transactionDay,
+      tagKeywords: watcher.tagKeywords,
     }));
   }
 
@@ -36,8 +40,12 @@ export class VaultWatchersService {
   async upsert(userId: string, vaultId: string, input: SetVaultGmailWatcherInput): Promise<VaultGmailWatcherDto> {
     const vault = await this.vaults.findOneForUser(userId, vaultId);
     if (!vault) throw new AppError('Vault not found', 404);
+    if (input.transactionDay !== undefined && !(Number.isInteger(input.transactionDay) && input.transactionDay >= 1 && input.transactionDay <= 31)) {
+      throw new AppError('Transaction day must be a whole number from 1 to 31', 400);
+    }
 
-    const existing = await this.watchers.findByVault(userId, vaultId);
+    const [existing, tags] = await Promise.all([this.watchers.findByVault(userId, vaultId), this.tags.findManyForUser(userId)]);
+    const tagIds = new Set(tags.map((tag) => tag.id));
     const watcher = existing ?? this.watchers.createEntity({ userId, vaultId });
     // Revive a previously soft-deleted watcher: the (userId, vaultId) unique index
     // still counts deleted rows, so re-adding a removed watcher must reuse and
@@ -47,6 +55,13 @@ export class VaultWatchersService {
     watcher.gmailLabelName = input.gmailLabelName ?? null;
     watcher.subjectFilter = input.subjectFilter?.trim() || null;
     watcher.guidanceHint = input.guidanceHint?.trim() || null;
+    watcher.transactionDay = input.transactionDay ?? null;
+    // Store only tags the user owns, with lowercased keywords, so matching at parse time is a plain substring check.
+    const tagKeywords = (input.tagKeywords ?? [])
+      .filter((rule) => tagIds.has(rule.tagId))
+      .map((rule) => ({ tagId: rule.tagId, keywords: [...new Set(rule.keywords.map((keyword) => keyword.trim().toLowerCase()).filter(Boolean))] }))
+      .filter((rule) => rule.keywords.length > 0);
+    watcher.tagKeywords = tagKeywords.length > 0 ? tagKeywords : null;
 
     await this.watchers.save(watcher);
     logger.info('Saved vault Gmail watcher', { userId, vaultId, gmailLabelId: input.gmailLabelId });
@@ -58,6 +73,8 @@ export class VaultWatchersService {
       gmailLabelName: watcher.gmailLabelName,
       subjectFilter: watcher.subjectFilter,
       guidanceHint: watcher.guidanceHint,
+      transactionDay: watcher.transactionDay,
+      tagKeywords: watcher.tagKeywords,
     };
   }
 

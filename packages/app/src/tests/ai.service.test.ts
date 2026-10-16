@@ -1,5 +1,7 @@
 import type { TagDto, VaultDto } from '@expense-tracker/shared';
 import type { AiCredentialStore } from '../lib/ai/credential-store';
+import type { AnalyticsRepository } from '../repositories/analytics.repository';
+import { applyTransactionDay, matchTagKeywords } from '../lib/ai/gmail-extractor';
 import { AI_SETUP_MESSAGE, AiService, type OpenRouterClient } from '../services/ai.service';
 
 // Keeps expo-secure-store (a native module) out of the Jest run; the service gets an in-memory store below.
@@ -17,12 +19,14 @@ const vaults = [
 describe('AiService', () => {
   let store: jest.Mocked<AiCredentialStore>;
   let client: jest.Mocked<OpenRouterClient>;
+  let analytics: jest.Mocked<Pick<AnalyticsRepository, 'tagTotals' | 'monthTotals' | 'vaultSpend' | 'findTransactions'>>;
   let service: AiService;
 
   beforeEach(() => {
     store = { getApiKey: jest.fn(), setApiKey: jest.fn(), getModel: jest.fn(), setModel: jest.fn() };
-    client = { chat: jest.fn(), listModels: jest.fn(), fetchUsage: jest.fn() };
-    service = new AiService(store, client);
+    client = { chat: jest.fn(), complete: jest.fn(), listModels: jest.fn(), fetchUsage: jest.fn() };
+    analytics = { tagTotals: jest.fn(), monthTotals: jest.fn(), vaultSpend: jest.fn(), findTransactions: jest.fn() };
+    service = new AiService(store, client, analytics as unknown as AnalyticsRepository);
   });
 
   describe('getStatus', () => {
@@ -155,7 +159,7 @@ describe('AiService', () => {
         status: 'success',
         parsed: { title: 'City Grocers', amount: 450, type: 'expense', tagIds: ['tag-food'], date: '2026-10-12' },
       });
-      const userMessage = JSON.parse(client.chat.mock.calls[0][0].messages[1].content);
+      const userMessage = JSON.parse(client.chat.mock.calls[0][0].messages[1].content as string);
       expect(userMessage).toMatchObject({
         referenceDate: '2026-10-12',
         guidance: 'always groceries',
@@ -164,6 +168,98 @@ describe('AiService', () => {
           { id: 'tag-fun', name: 'FUN' },
         ],
       });
+    });
+  });
+
+  describe('matchTagKeywords', () => {
+    const tagIdSet = new Set(['tag-food', 'tag-fun']);
+    const rules = [
+      { tagId: 'tag-fun', keywords: ['cinema'] },
+      { tagId: 'tag-food', keywords: ['grocer', 'mart'] },
+      { tagId: 'tag-deleted', keywords: ['city'] },
+    ];
+
+    it('returns every owned tag with a keyword in the subject or body, case-insensitively', () => {
+      expect(matchTagKeywords({ subject: 'CINEMA tickets', bodyText: 'BDT 450 at CITY GROCERS' }, rules, tagIdSet)).toEqual(['tag-fun', 'tag-food']);
+    });
+
+    it('returns nothing when no keyword appears', () => {
+      expect(matchTagKeywords({ subject: 'Debit alert', bodyText: 'BDT 450 at PHARMACY' }, rules, tagIdSet)).toEqual([]);
+    });
+  });
+
+  describe('applyTransactionDay', () => {
+    it("books on the fixed day of the next month whatever the email's day", () => {
+      expect(applyTransactionDay('2026-10-01', 25)).toBe('2026-11-25');
+      expect(applyTransactionDay('2026-10-31', 25)).toBe('2026-11-25');
+      expect(applyTransactionDay('2026-12-15', 5)).toBe('2027-01-05');
+    });
+
+    it('clamps a day past the end of a short next month to its last day', () => {
+      expect(applyTransactionDay('2026-01-10', 31)).toBe('2026-02-28');
+    });
+  });
+
+  describe('askWizard', () => {
+    const toolCall = (id: string, name: string, args: object) => ({ id, type: 'function' as const, function: { name, arguments: JSON.stringify(args) } });
+
+    beforeEach(() => {
+      analytics.tagTotals.mockResolvedValue([{ tag: 'FOOD', total: 40, count: 1 }]);
+      analytics.vaultSpend.mockResolvedValue([{ vault: 'Main', monthlyBudget: 100, spent: 40 }]);
+    });
+
+    it('returns needs-ai-setup without calling OpenRouter when no key is saved', async () => {
+      store.getApiKey.mockResolvedValue(null);
+      store.getModel.mockResolvedValue('openai/gpt-4o-mini');
+
+      expect(await service.askWizard('user-1', 'spending_breakdown')).toEqual({ status: 'needs-ai-setup', message: AI_SETUP_MESSAGE });
+      expect(client.complete).not.toHaveBeenCalled();
+    });
+
+    it('runs the requested tools for the user, sends the results back, and returns the trimmed answer', async () => {
+      store.getApiKey.mockResolvedValue('sk-or-secret');
+      store.getModel.mockResolvedValue('openai/gpt-4o-mini');
+      client.complete
+        .mockResolvedValueOnce({ content: null, toolCalls: [toolCall('c1', 'spending_by_tag', { from: '2026-10-01', to: '2026-10-16' }), toolCall('c2', 'vault_budgets', {})] })
+        .mockResolvedValueOnce({ content: '  Thy gold flows to FOOD.  ', toolCalls: [] });
+
+      expect(await service.askWizard('user-1', 'budget_adherence')).toEqual({ status: 'success', answer: 'Thy gold flows to FOOD.' });
+
+      expect(analytics.tagTotals).toHaveBeenCalledWith('user-1', { from: '2026-10-01', to: '2026-10-16' }, 'expense', 8);
+      expect(analytics.vaultSpend).toHaveBeenCalledWith('user-1', expect.objectContaining({ from: expect.stringMatching(/^\d{4}-\d{2}-01$/) }));
+
+      const first = client.complete.mock.calls[0][0];
+      expect({ apiKey: first.apiKey, model: first.model, systemRole: first.messages[0].role, toolChoice: first.toolChoice, maxTokens: first.maxTokens }).toEqual({
+        apiKey: 'sk-or-secret',
+        model: 'openai/gpt-4o-mini',
+        systemRole: 'system',
+        toolChoice: 'auto',
+        maxTokens: 1500,
+      });
+      expect(client.complete.mock.calls[1][0].messages.slice(2)).toEqual([
+        { role: 'assistant', content: null, tool_calls: [expect.objectContaining({ id: 'c1' }), expect.objectContaining({ id: 'c2' })] },
+        { role: 'tool', tool_call_id: 'c1', content: JSON.stringify([{ tag: 'FOOD', total: 40, count: 1 }]) },
+        { role: 'tool', tool_call_id: 'c2', content: JSON.stringify([{ vault: 'Main', monthlyBudget: 100, spent: 40 }]) },
+      ]);
+    });
+
+    it('turns tools off after the last tool round so the model has to answer', async () => {
+      store.getApiKey.mockResolvedValue('sk-or-secret');
+      store.getModel.mockResolvedValue('openai/gpt-4o-mini');
+      client.complete.mockImplementation(async ({ toolChoice }) =>
+        toolChoice === 'none' ? { content: 'Enough scrying.', toolCalls: [] } : { content: null, toolCalls: [toolCall('c', 'spending_by_tag', {})] },
+      );
+
+      expect(await service.askWizard('user-1', 'spending_patterns')).toEqual({ status: 'success', answer: 'Enough scrying.' });
+      expect(client.complete.mock.calls.map(([params]) => params.toolChoice)).toEqual(['auto', 'auto', 'auto', 'auto', 'none']);
+    });
+
+    it('throws when the model returns only whitespace', async () => {
+      store.getApiKey.mockResolvedValue('sk-or-secret');
+      store.getModel.mockResolvedValue('openai/gpt-4o-mini');
+      client.complete.mockResolvedValue({ content: '   ', toolCalls: [] });
+
+      await expect(service.askWizard('user-1', 'spending_patterns')).rejects.toThrow('The wizard could not conjure a response');
     });
   });
 });

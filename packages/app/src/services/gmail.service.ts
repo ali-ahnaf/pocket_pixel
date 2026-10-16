@@ -126,7 +126,14 @@ export class GmailService {
       const watcher = matchWatcher(watchers, message.labelIds ?? [], subject);
       if (!watcher) continue;
 
-      const created = await this.pending.insertIfNotExists(userId, { gmailMessageId: message.id, vaultId: watcher.vaultId, subject: subject || null, guidanceHint: watcher.guidanceHint });
+      const created = await this.pending.insertIfNotExists(userId, {
+        gmailMessageId: message.id,
+        vaultId: watcher.vaultId,
+        subject: subject || null,
+        guidanceHint: watcher.guidanceHint,
+        transactionDay: watcher.transactionDay,
+        tagKeywords: watcher.tagKeywords,
+      });
       if (created) enqueued += 1;
     }
 
