@@ -10,4 +10,6 @@ export interface UpdateUserPreferenceInput {
   showExpense?: boolean;
   pushEnabled?: boolean;
   aiTransactionEntryEnabled?: boolean;
+  /** Day of the month (1-28) the wizard's monthly recap arrives, or null to turn it off. */
+  monthlyRecapDay?: number | null;
 }

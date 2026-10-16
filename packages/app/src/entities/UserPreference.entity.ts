@@ -22,6 +22,14 @@ export class UserPreference extends BaseEntity {
   @Column({ type: 'boolean', default: false })
   aiTransactionEntryEnabled: boolean;
 
+  // Day of the month (1-28) the monthly recap arrives; null turns it off.
+  @Column({ type: 'integer', nullable: true })
+  monthlyRecapDay: number | null;
+
+  // `YYYY-MM` of the last month a recap was delivered for, so each month is recapped once.
+  @Column({ type: 'varchar', nullable: true })
+  lastRecapMonth: string | null;
+
   @OneToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;

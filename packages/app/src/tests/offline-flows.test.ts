@@ -8,6 +8,8 @@ import { analyticsService, authService, debtsService, preferencesService, recurr
 
 // ../services builds AiService, whose store imports expo-secure-store (a native module Jest cannot load).
 jest.mock('../lib/ai/credential-store', () => ({ aiCredentialStore: {} }));
+// MonthlyRecapService's default notifier loads expo-notifications.
+jest.mock('../lib/notifications/recap-notifier', () => ({ recapNotifier: {} }));
 // Same for AuthService's session store. An in-memory stand-in lets restoreSession run for real.
 jest.mock('../lib/auth/session-store', () => {
   let stored: string | null = null;
@@ -151,6 +153,13 @@ describe('offline flows', () => {
     expect(found[0].tags.split(', ').sort()).toEqual(['Bills', 'Food']);
     expect(await tool('find_transactions', { from: '2000-01-01', to: '2000-12-31', search: 'ol', limit: 99 })).toEqual([
       { date: '2000-01-15', title: 'Old', amount: 999, type: 'expense', vault: 'Main Stash', tags: 'Food' },
+    ]);
+    const later = await debtsService.create(wizUserId, { title: 'Owe Sam', amount: 25, type: 'expense' });
+    await debtsService.create(wizUserId, { title: 'Lent Kim', amount: 40, type: 'income', dueDate: '2030-01-01' });
+    await debtsService.remove(wizUserId, (await debtsService.create(wizUserId, { title: 'Settled', amount: 5, type: 'expense' })).id);
+    expect(await tool('open_debts', {})).toEqual([
+      { title: 'Lent Kim', amount: 40, type: 'income', dueDate: '2030-01-01' },
+      { title: later.title, amount: 25, type: 'expense', dueDate: null },
     ]);
     expect(await tool('drop_tables', {})).toEqual({ error: 'Unknown tool drop_tables.' });
     expect(JSON.parse(await runWizardTool(analyticsRepository, wizUserId, 'totals_by_month', 'not json'))).toEqual({ error: 'Arguments were not valid JSON.' });
