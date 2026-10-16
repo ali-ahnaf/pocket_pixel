@@ -84,7 +84,7 @@ export default function StatsScreen() {
 
   const isAllTime = selectedMonthYear === ALL_TIME_PERIOD;
   const isCurrentMonth = selectedMonthYear === currentMonthYear();
-  const vaultId = isAllTime ? 'all' : selectedVaultId;
+  const vaultId = selectedVaultId;
   const stats = useStats(selectedMonthYear, vaultId, selectedLineVaultId);
   const { loading, vaults } = stats;
   const netYield = stats.totalIncome - stats.totalExpenses;
@@ -105,25 +105,22 @@ export default function StatsScreen() {
         </View>
 
         <View style={styles.filters}>
-          {/* Vault filtering needs per-transaction data, which all time does not load. */}
-          {!isAllTime && (
-            <View style={styles.filter}>
-              <Text style={styles.filterLabel}>Source Vault</Text>
-              <Dropdown
-                options={vaultOptions}
-                value={selectedVault}
-                onChange={(v) => setSelectedVaultId(v.id)}
-                keyExtractor={(v) => v.id}
-                accessibilityLabel={`Source vault: ${selectedVault.name}`}
-                renderValue={(v) => (
-                  <IconText icon="Package" style={styles.filterValue}>
-                    {v.name}
-                  </IconText>
-                )}
-                renderOption={(v, isSelected) => <Text style={[styles.filterValue, isSelected && styles.optionSelected]}>{v.name}</Text>}
-              />
-            </View>
-          )}
+          <View style={styles.filter}>
+            <Text style={styles.filterLabel}>Source Vault</Text>
+            <Dropdown
+              options={vaultOptions}
+              value={selectedVault}
+              onChange={(v) => setSelectedVaultId(v.id)}
+              keyExtractor={(v) => v.id}
+              accessibilityLabel={`Source vault: ${selectedVault.name}`}
+              renderValue={(v) => (
+                <IconText icon="Package" style={styles.filterValue}>
+                  {v.name}
+                </IconText>
+              )}
+              renderOption={(v, isSelected) => <Text style={[styles.filterValue, isSelected && styles.optionSelected]}>{v.name}</Text>}
+            />
+          </View>
 
           <View style={styles.filter}>
             <Text style={styles.filterLabel}>Period</Text>
