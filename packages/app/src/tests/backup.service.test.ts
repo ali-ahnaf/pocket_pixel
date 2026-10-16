@@ -65,6 +65,13 @@ describe('BackupService.restore', () => {
     await expect(backupService.restore(userId, backupPath)).resolves.toMatchObject({ expenses: 1 });
   });
 
+  it('exports the device DB to a file that restores back', async () => {
+    const exportUri = `file://${encodeURI(`${dir}/pocket pixel export.db`)}`;
+    await backupService.export(exportUri);
+
+    await expect(backupService.restore(userId, exportUri)).resolves.toMatchObject({ vaults: 1, tags: 1, expenses: 1, transaction_tags: 1 });
+  });
+
   it('rejects a backup with no account for the signed-in email', async () => {
     const otherId = await authService.signUp({ name: 'Cy', email: 'cy@example.com', password: 's3cret-pass' });
     await expect(backupService.restore(otherId, backupPath)).rejects.toThrow(AppError);

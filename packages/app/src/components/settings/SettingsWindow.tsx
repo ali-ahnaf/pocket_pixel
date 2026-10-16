@@ -28,7 +28,7 @@ export function SettingsWindow({ icon, title, children }: SettingsWindowProps) {
 
 /** Shared section layout and text styles for content inside a SettingsWindow. */
 export const settingsStyles = StyleSheet.create({
-  section: { paddingHorizontal: ms(space[6]), paddingVertical: ms(space[6]), gap: ms(space[4]) },
+  section: { padding: ms(space[4]), gap: ms(space[4]) },
   dividerTop: { borderTopWidth: ms(4), borderColor: color.border },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: ms(space[2]) },
   sectionTitle: { fontFamily: font.heading, fontSize: ms(18), lineHeight: ms(24), color: color.primary, textTransform: 'uppercase', letterSpacing: 0.8 },
@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: ms(space[2]),
-    paddingHorizontal: ms(space[6]),
+    paddingHorizontal: ms(space[4]),
     paddingVertical: ms(space[4]),
     borderBottomWidth: ms(4),
     borderColor: color.border,

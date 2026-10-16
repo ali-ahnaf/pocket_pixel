@@ -1,4 +1,4 @@
-import type { GmailLabelDto, TagDto, VaultGmailWatcherDto } from '@expense-tracker/shared';
+import type { GmailLabelDto, TagDto, TagKeywordRuleDto, VaultGmailWatcherDto } from '@expense-tracker/shared';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { ms } from 'react-native-size-matters';
@@ -24,10 +24,26 @@ export interface VaultWatcherCardProps {
 
 const NO_LABEL: GmailLabelDto = { id: '', name: 'Select a label…' };
 
+/** Saved rules as the editor's comma-separated text per tag id. */
+const toKeywordText = (rules: TagKeywordRuleDto[] | null | undefined): Record<string, string> => Object.fromEntries((rules ?? []).map((rule) => [rule.tagId, rule.keywords.join(', ')]));
+
+/** The editor's comma-separated text back into rules, skipping tags left blank. */
+const toKeywordRules = (tags: TagDto[], text: Record<string, string>): TagKeywordRuleDto[] =>
+  tags
+    .map((tag) => ({
+      tagId: tag.id,
+      keywords: (text[tag.id] ?? '')
+        .split(',')
+        .map((keyword) => keyword.trim().toLowerCase())
+        .filter(Boolean),
+    }))
+    .filter((rule) => rule.keywords.length > 0);
+
 /**
  * One card per vault: shows its attached Gmail watcher (label + AI extraction
  * guidance) or an "attach listener" editor with a label dropdown, an optional
- * subject filter, an optional guidance hint, and a dry-run test sheet.
+ * subject filter, an optional guidance hint, optional keyword-to-tag rules, and a
+ * dry-run test sheet.
  */
 export function VaultWatcherCard({ vault, watcher, labels, tags, onChanged, onError }: VaultWatcherCardProps) {
   const userId = useLocalUserId();
@@ -36,20 +52,32 @@ export function VaultWatcherCard({ vault, watcher, labels, tags, onChanged, onEr
   const [gmailLabelId, setGmailLabelId] = useState(watcher?.gmailLabelId ?? '');
   const [subjectFilter, setSubjectFilter] = useState(watcher?.subjectFilter ?? '');
   const [guidanceHint, setGuidanceHint] = useState(watcher?.guidanceHint ?? '');
+  const [transactionDay, setTransactionDay] = useState(watcher?.transactionDay?.toString() ?? '');
+  const [keywordText, setKeywordText] = useState<Record<string, string>>(toKeywordText(watcher?.tagKeywords));
   const [testOpen, setTestOpen] = useState(false);
 
   const startEditing = (): void => {
     setGmailLabelId(watcher?.gmailLabelId ?? '');
     setSubjectFilter(watcher?.subjectFilter ?? '');
     setGuidanceHint(watcher?.guidanceHint ?? '');
+    setTransactionDay(watcher?.transactionDay?.toString() ?? '');
+    setKeywordText(toKeywordText(watcher?.tagKeywords));
     setEditing(true);
   };
 
   const labelName = (id: string): string => labels.find((label) => label.id === id)?.name ?? watcher?.gmailLabelName ?? id;
 
+  const parsedDay = transactionDay.trim() ? Number(transactionDay) : undefined;
+  const tagKeywords = toKeywordRules(tags, keywordText);
+  const tagName = (id: string): string => tags.find((tag) => tag.id === id)?.name ?? 'Deleted tag';
+
   const handleSave = async (): Promise<void> => {
     if (!gmailLabelId) {
       onError('Pick a Gmail label to attach to this vault');
+      return;
+    }
+    if (parsedDay !== undefined && !(Number.isInteger(parsedDay) && parsedDay >= 1 && parsedDay <= 31)) {
+      onError('Transaction day must be a whole number from 1 to 31');
       return;
     }
     setSaving(true);
@@ -59,6 +87,8 @@ export function VaultWatcherCard({ vault, watcher, labels, tags, onChanged, onEr
         gmailLabelName: labels.find((label) => label.id === gmailLabelId)?.name,
         subjectFilter: subjectFilter.trim() || undefined,
         guidanceHint: guidanceHint.trim() || undefined,
+        transactionDay: parsedDay,
+        tagKeywords,
       });
       setEditing(false);
       onChanged();
@@ -106,6 +136,10 @@ export function VaultWatcherCard({ vault, watcher, labels, tags, onChanged, onEr
                 : 'No listener attached. Attach a Gmail label and let AI fill in the transaction.'}
             </Text>
             {watcher?.guidanceHint ? <Text style={styles.guidance}>Guidance: {watcher.guidanceHint}</Text> : null}
+            {watcher?.transactionDay ? <Text style={styles.guidance}>Booked on day {watcher.transactionDay}</Text> : null}
+            {watcher?.tagKeywords?.length ? (
+              <Text style={styles.guidance}>Tag keywords: {watcher.tagKeywords.map((rule) => `${tagName(rule.tagId)} (${rule.keywords.join(', ')})`).join('; ')}</Text>
+            ) : null}
             <Button label={watcher ? 'Edit Listener' : 'Attach Listener'} variant="primary" onPress={startEditing} />
             {watcher && <Button label="Remove" icon="Trash" variant="danger" disabled={saving} onPress={handleRemove} />}
           </>
@@ -144,6 +178,36 @@ export function VaultWatcherCard({ vault, watcher, labels, tags, onChanged, onEr
               <Text style={styles.fieldHint}>AI reads the email and fills in the transaction (amount, title, type, tags). This nudge is appended to its prompt.</Text>
             </View>
 
+            <View style={styles.field}>
+              <Input
+                label="Transaction day (optional)"
+                value={transactionDay}
+                onChangeText={setTransactionDay}
+                placeholder="e.g. 25. Leave blank to use the email's date"
+                keyboardType="number-pad"
+                maxLength={2}
+              />
+              <Text style={styles.fieldHint}>Replaces the email&apos;s date. Transactions are always booked on this day of the month after the email&apos;s month.</Text>
+            </View>
+
+            {tags.length > 0 && (
+              <View style={styles.field}>
+                <Text style={styles.fieldLabel}>Tag keywords (optional)</Text>
+                <Text style={styles.fieldHint}>Comma-separated. If the email subject or body contains a keyword, that tag is applied and AI does not pick tags.</Text>
+                {tags.map((tag) => (
+                  <Input
+                    key={tag.id}
+                    label={tag.name}
+                    value={keywordText[tag.id] ?? ''}
+                    onChangeText={(value) => setKeywordText((current) => ({ ...current, [tag.id]: value }))}
+                    placeholder="e.g. uber, pathao"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                ))}
+              </View>
+            )}
+
             <Button label="Test On A Pasted Email" icon="FlaskConical" variant="secondary" onPress={() => setTestOpen(true)} />
             <Button label={saving ? 'Saving…' : 'Save Listener'} variant="primary" disabled={saving} onPress={handleSave} />
             <Button label="Cancel" variant="ghost" disabled={saving} onPress={() => setEditing(false)} />
@@ -151,7 +215,7 @@ export function VaultWatcherCard({ vault, watcher, labels, tags, onChanged, onEr
         )}
       </View>
 
-      {testOpen && <TestExtractSheet guidanceHint={guidanceHint} tags={tags} onClose={() => setTestOpen(false)} />}
+      {testOpen && <TestExtractSheet guidanceHint={guidanceHint} transactionDay={parsedDay ?? null} tagKeywords={tagKeywords} tags={tags} onClose={() => setTestOpen(false)} />}
     </View>
   );
 }

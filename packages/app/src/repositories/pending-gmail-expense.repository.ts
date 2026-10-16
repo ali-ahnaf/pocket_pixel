@@ -1,3 +1,4 @@
+import type { TagKeywordRuleDto } from '@expense-tracker/shared';
 import { DataSource, Repository } from 'typeorm';
 import { AppDataSource } from '../db/data-source';
 import { PendingGmailExpense } from '../entities/PendingGmailExpense.entity';
@@ -8,6 +9,8 @@ export interface PendingGmailExpenseFields {
   vaultId: string;
   subject: string | null;
   guidanceHint: string | null;
+  transactionDay: number | null;
+  tagKeywords: TagKeywordRuleDto[] | null;
 }
 
 /**

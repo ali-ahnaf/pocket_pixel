@@ -11,11 +11,29 @@ const CREDITS_URL = 'https://openrouter.ai/api/v1/credits';
 const APP_TITLE = 'Pocket Pixel';
 const APP_REFERER = 'https://pocketpixel.app';
 
-export type ChatRole = 'system' | 'user' | 'assistant';
+// Without max_tokens OpenRouter reserves the model's full output limit (65536 on some models) and rejects keys with less credit.
+const DEFAULT_MAX_TOKENS = 1500;
 
-export interface ChatMessage {
-  readonly role: ChatRole;
-  readonly content: string;
+export interface ToolCall {
+  readonly id: string;
+  readonly type: 'function';
+  readonly function: { readonly name: string; readonly arguments: string };
+}
+
+export interface ToolDefinition {
+  readonly type: 'function';
+  readonly function: { readonly name: string; readonly description: string; readonly parameters: Record<string, unknown> };
+}
+
+export type ChatMessage =
+  | { readonly role: 'system' | 'user'; readonly content: string }
+  | { readonly role: 'assistant'; readonly content: string | null; readonly tool_calls?: ToolCall[] }
+  | { readonly role: 'tool'; readonly tool_call_id: string; readonly content: string };
+
+/** One assistant turn: text, tool calls, or both. */
+export interface Completion {
+  readonly content: string | null;
+  readonly toolCalls: ToolCall[];
 }
 
 export interface JsonSchemaResponseFormat {
@@ -32,6 +50,9 @@ export interface ChatParams {
   readonly model: string;
   readonly messages: ChatMessage[];
   readonly responseFormat?: JsonSchemaResponseFormat;
+  readonly tools?: ToolDefinition[];
+  readonly toolChoice?: 'auto' | 'none';
+  readonly maxTokens?: number;
 }
 
 export interface OpenRouterModel {
@@ -51,7 +72,7 @@ export interface OpenRouterUsage {
 }
 
 interface OpenRouterChatCompletionResponse {
-  readonly choices?: { readonly message?: { readonly content?: string | null } }[];
+  readonly choices?: { readonly message?: { readonly content?: string | null; readonly tool_calls?: ToolCall[] } }[];
 }
 
 interface OpenRouterErrorBody {
@@ -91,8 +112,8 @@ async function throwOpenRouterError(response: Response): Promise<never> {
   throw new Error(message);
 }
 
-/** Sends a chat completion and returns the raw message content. Callers `JSON.parse` it when they asked for structured output. */
-export async function chat({ apiKey, model, messages, responseFormat }: ChatParams): Promise<string> {
+/** Sends a chat completion and returns the assistant turn. Used directly for tool calling. */
+export async function complete({ apiKey, model, messages, responseFormat, tools, toolChoice, maxTokens = DEFAULT_MAX_TOKENS }: ChatParams): Promise<Completion> {
   const response = await fetch(CHAT_COMPLETIONS_URL, {
     method: 'POST',
     headers: {
@@ -101,7 +122,13 @@ export async function chat({ apiKey, model, messages, responseFormat }: ChatPara
       'HTTP-Referer': APP_REFERER,
       'X-Title': APP_TITLE,
     },
-    body: JSON.stringify({ model, messages, ...(responseFormat ? { response_format: responseFormat } : {}) }),
+    body: JSON.stringify({
+      model,
+      messages,
+      max_tokens: maxTokens,
+      ...(responseFormat ? { response_format: responseFormat } : {}),
+      ...(tools ? { tools, tool_choice: toolChoice ?? 'auto' } : {}),
+    }),
   });
 
   if (!response.ok) {
@@ -109,7 +136,20 @@ export async function chat({ apiKey, model, messages, responseFormat }: ChatPara
   }
 
   const data: OpenRouterChatCompletionResponse = await response.json();
-  const content = data.choices?.[0]?.message?.content;
+  const message = data.choices?.[0]?.message;
+  const content = message?.content || null;
+  const toolCalls = message?.tool_calls ?? [];
+
+  if (!content && toolCalls.length === 0) {
+    throw new Error('OpenRouter response did not include any message content');
+  }
+
+  return { content, toolCalls };
+}
+
+/** Sends a chat completion and returns the raw message content. Callers `JSON.parse` it when they asked for structured output. */
+export async function chat(params: ChatParams): Promise<string> {
+  const { content } = await complete(params);
 
   if (!content) {
     throw new Error('OpenRouter response did not include any message content');

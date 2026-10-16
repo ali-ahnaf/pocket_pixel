@@ -93,12 +93,12 @@ describe('Gmail on device', () => {
     chat = jest.fn();
 
     const aiStore: AiCredentialStore = { getApiKey: async () => 'sk-or-key', getModel: async () => 'openai/gpt-4o-mini', setApiKey: jest.fn(), setModel: jest.fn() };
-    const client: OpenRouterClient = { chat, listModels: jest.fn(), fetchUsage: jest.fn() };
+    const client: OpenRouterClient = { chat, complete: jest.fn(), listModels: jest.fn(), fetchUsage: jest.fn() };
     const watcherRepo = new VaultGmailWatchersRepository();
     const pendingRepo = new PendingGmailExpenseRepository();
 
     gmail = new GmailService(auth, store, watcherRepo, pendingRepo, request as unknown as typeof fetch);
-    watchers = new VaultWatchersService(watcherRepo, new VaultsRepository());
+    watchers = new VaultWatchersService(watcherRepo, new VaultsRepository(), new TagsRepository());
     pending = new PendingGmailExpenseService(pendingRepo, new TagsRepository(), gmail, new AiService(aiStore, client), new TransactionsService(new TransactionsRepository(), new VaultsRepository()));
   });
 
@@ -183,6 +183,40 @@ describe('Gmail on device', () => {
     expect(created).toMatchObject({ vaultId: debitVault.id, type: 'expense', date: '2026-10-12' });
     expect(Number(created.amount)).toBe(450);
     expect((await pending.list(userId)).some((i) => i.id === item.id)).toBe(false);
+  });
+
+  it("books on the watcher's transaction day of the month after the email", async () => {
+    await connectAndBaseline();
+    await watchers.upsert(userId, debitVault.id, { gmailLabelId: 'Label_1', subjectFilter: 'purchase', transactionDay: 10 });
+    mailbox = [{ id: 'm-late', labelIds: ['Label_1'], subject: 'Card purchase', html: '<p>Spent 450 at CAFE TWO</p>' }];
+    await gmail.sync(userId);
+    const item = (await pending.list(userId)).find((i) => i.gmailMessageId === 'm-late');
+    if (!item) throw new Error('expected a pending item');
+
+    chat.mockResolvedValue(JSON.stringify({ matched: true, title: 'Cafe Two', amount: 450, type: 'expense', tagIds: [], date: '2026-10-12' }));
+    expect(await pending.parse(userId, item.id, await pending.getEmail(userId, item.id))).toMatchObject({ status: 'success', parsed: { date: '2026-11-10' } });
+  });
+
+  it("tags by the watcher's keywords instead of the AI's pick", async () => {
+    await connectAndBaseline();
+    await watchers.upsert(userId, debitVault.id, {
+      gmailLabelId: 'Label_1',
+      subjectFilter: 'purchase',
+      tagKeywords: [
+        { tagId: foodTag.id, keywords: [' Cafe ', '', 'CAFE'] },
+        { tagId: 'not-my-tag', keywords: ['cafe'] },
+      ],
+    });
+    expect((await watchers.listForUser(userId)).find((w) => w.vaultId === debitVault.id)?.tagKeywords).toEqual([{ tagId: foodTag.id, keywords: ['cafe'] }]);
+
+    mailbox = [{ id: 'm-kw', labelIds: ['Label_1'], subject: 'Card purchase', html: '<p>Spent 120 at BEAN CAFE</p>' }];
+    await gmail.sync(userId);
+    const item = (await pending.list(userId)).find((i) => i.gmailMessageId === 'm-kw');
+    if (!item) throw new Error('expected a pending item');
+
+    chat.mockResolvedValue(JSON.stringify({ matched: true, title: 'Bean Cafe', amount: 120, type: 'expense', tagIds: [], date: '2026-10-12' }));
+    expect(await pending.parse(userId, item.id, await pending.getEmail(userId, item.id))).toMatchObject({ status: 'success', parsed: { tagIds: [foodTag.id] } });
+    expect(JSON.parse(chat.mock.calls[0][0].messages[1].content as string).availableTags).toEqual([]);
   });
 
   it('keeps the item when the AI says the email is not a transaction', async () => {

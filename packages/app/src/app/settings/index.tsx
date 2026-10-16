@@ -1,6 +1,8 @@
 // STUB: push notifications toggle (local state only). No local data layer for this in packages/app yet, so it uses hardcoded stub data.
 import { getDocumentAsync } from 'expo-document-picker';
+import { File, Paths } from 'expo-file-system';
 import { useRouter } from 'expo-router';
+import { shareAsync } from 'expo-sharing';
 import { type ReactNode, useState } from 'react';
 import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -34,6 +36,19 @@ export default function SettingsScreen() {
   const { showIncome, showExpense, aiTransactionEntryEnabled, setShowIncome, setShowExpense, setAiTransactionEntryEnabled } = useDisplaySettings();
   const [pushSubscribed, setPushSubscribed] = useState(false);
   const userId = useLocalUserId();
+
+  const exportData = async (): Promise<void> => {
+    // VACUUM INTO refuses to overwrite, so the previous export in the cache is removed first.
+    const file = new File(Paths.cache, `pocket_pixel-${new Date().toISOString().slice(0, 10)}.db`);
+    try {
+      if (file.exists) file.delete();
+      await backupService.export(file.uri);
+      await shareAsync(file.uri, { mimeType: 'application/x-sqlite3', dialogTitle: 'Export data' });
+    } catch (err: unknown) {
+      logger.error('Data export failed', { err });
+      Alert.alert('Export failed', err instanceof Error ? err.message : 'Something went wrong');
+    }
+  };
 
   const restoreBackup = async (): Promise<void> => {
     // The backup is a SQLite file with no fixed extension or MIME type, so any file can be picked.
@@ -95,6 +110,7 @@ export default function SettingsScreen() {
       </Section>
 
       <Section title="Data">
+        <SettingLink label="Export Data" description="Save a copy of your SQLite database" icon="Package" onPress={exportData} />
         <SettingLink label="Restore Backup" description="Replace your data with a SQLite backup file" icon="Folder" onPress={restoreBackup} />
       </Section>
 

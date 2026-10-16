@@ -1,3 +1,4 @@
+import type { TagKeywordRuleDto } from '@expense-tracker/shared';
 import { Entity, PrimaryGeneratedColumn, Column, Index, ManyToOne, JoinColumn } from 'typeorm';
 import { User } from './User.entity';
 import { Vault } from './Vault.entity';
@@ -40,6 +41,14 @@ export class VaultGmailWatcher extends BaseEntity {
   /** Optional free-text nudge appended to the AI extraction prompt. */
   @Column({ type: 'text', nullable: true })
   guidanceHint: string | null;
+
+  /** Optional fixed day of month (1-31) the transaction is booked on instead of the email's date. */
+  @Column({ type: 'integer', nullable: true })
+  transactionDay: number | null;
+
+  /** Optional keyword-to-tag rules applied before the AI tag pick. Stored as JSON text. */
+  @Column({ type: 'simple-json', nullable: true })
+  tagKeywords: TagKeywordRuleDto[] | null;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })

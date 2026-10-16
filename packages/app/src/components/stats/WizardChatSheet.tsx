@@ -1,11 +1,12 @@
-// STUB: wizard answers (OpenRouter AI with the user's encrypted API key). No local data layer for this in packages/app yet, so it uses hardcoded stub data.
 import { WIZARD_PROMPT_KEYS, type WizardPromptKey } from '@expense-tracker/shared';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { ms } from 'react-native-size-matters';
 import { BottomSheetModal } from '../BottomSheetModal';
 import { IconText } from '../IconText';
 import { PixelIcon, PixelIconName } from '../PixelIcon';
+import { useLocalUserId } from '../../hooks/DatabaseProvider';
+import { aiService, logger } from '../../services';
 import { color, font, shadow, space, text } from '../../theme';
 
 interface ChatMessage {
@@ -24,37 +25,31 @@ const PROMPTS: Record<WizardPromptKey, { icon: PixelIconName; label: string }> =
   spending_patterns: { icon: 'Calendar', label: 'What patterns do you see, wizard?' },
 };
 
-const STUB_ANSWERS: Record<WizardPromptKey, string> = {
-  spending_breakdown: 'My crystal ball is still being forged for this realm. Once it is ready, I shall show thee which tags and vaults drink the most gold.',
-  budget_adherence: 'The budget runes cannot yet be read on this device. Soon I shall weigh thy spending against each vault budget.',
-  saving_opportunities: 'Patience, adventurer. When my spellbook arrives here, I shall point out the coin thou couldst keep.',
-  spending_patterns: 'The patterns are hidden from me for now. In time I shall reveal the days and habits where thy gold slips away.',
-};
-
 // Ported from packages/ui/src/components/wizard/WizardChatSheet.tsx. Mount to open; onClose runs after the slide-down.
 export function WizardChatSheet({ onClose }: { onClose: () => void }) {
   const { height } = useWindowDimensions();
   const [messages, setMessages] = useState<ChatMessage[]>([{ id: 0, role: 'wizard', text: GREETING }]);
+  const userId = useLocalUserId();
   const [isLoading, setIsLoading] = useState(false);
   const nextId = useRef(1);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
-  useEffect(
-    () => () => {
-      if (timer.current) clearTimeout(timer.current);
-    },
-    [],
-  );
+  const addWizardMessage = (text: string): void => setMessages((prev) => [...prev, { id: nextId.current++, role: 'wizard', text }]);
 
-  const askWizard = (promptKey: WizardPromptKey): void => {
+  const askWizard = async (promptKey: WizardPromptKey): Promise<void> => {
     if (isLoading) return;
     setMessages((prev) => [...prev, { id: nextId.current++, role: 'user', text: PROMPTS[promptKey].label }]);
     setIsLoading(true);
-    timer.current = setTimeout(() => {
-      setMessages((prev) => [...prev, { id: nextId.current++, role: 'wizard', text: STUB_ANSWERS[promptKey] }]);
+
+    try {
+      const outcome = await aiService.askWizard(userId, promptKey);
+      addWizardMessage(outcome.status === 'success' ? outcome.answer : outcome.message);
+    } catch (err) {
+      logger.error('Wizard chat failed', { err, promptKey });
+      addWizardMessage(err instanceof Error ? err.message : 'The wizard could not conjure a response. Please try again.');
+    } finally {
       setIsLoading(false);
-    }, 800);
+    }
   };
 
   return (

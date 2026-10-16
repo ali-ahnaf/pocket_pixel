@@ -63,7 +63,7 @@ export class PendingGmailExpenseService {
     if (!row) throw new AppError('Pending expense not found', 404);
 
     const tags = await this.tags.findManyForUser(userId);
-    const outcome = await this.ai.extractTransactionFromEmail(email, tags, row.guidanceHint);
+    const outcome = await this.ai.extractTransactionFromEmail(email, tags, row.guidanceHint, row.transactionDay, row.tagKeywords);
     if (outcome.status !== 'success') return outcome;
 
     const { title, amount, type, date, tagIds } = outcome.parsed;
