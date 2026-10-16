@@ -2,7 +2,7 @@
 
 How the production deploy to the Hostinger VPS works — required secrets, bundle contract, PM2, migrations, and what breaks it.
 
-Deploy is fully automated on **push to `main`** via `.github/workflows/ci-cd.yml` (jobs: test → build → deploy → release). No manual deploy path exists.
+Deploy is fully automated on **push to `main`** via `.github/workflows/ci-cd.yml` (jobs: test → build → deploy → release → apk). No manual deploy path exists.
 
 ## Required GitHub secrets
 
@@ -15,6 +15,7 @@ Deploy is fully automated on **push to `main`** via `.github/workflows/ci-cd.yml
 | `HOSTINGER_VPS_SSH_KEY` | Private SSH key (deploy job strips `\r`)                                                                                                                             |
 | `API_ENV`               | **Entire content** of the API `.env` — written verbatim to `packages/api/.env` on the VPS every deploy                                                               |
 | `VAPID_PUBLIC_KEY`      | Web Push VAPID public key — inlined into the UI build as `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (see the `Build UI` step). Not secret, but must match the API's private key. |
+| `EXPO_TOKEN`            | Expo access token (expo.dev, Access tokens). The `apk` job uses it to build the Android APK on EAS and attach it to the release.                                     |
 
 Adding a new env var to the API means updating the `API_ENV` secret too, or prod silently runs without it.
 
