@@ -2,7 +2,7 @@ import type { ParsedEmailDto, ParsedTransaction, TagDto, TagKeywordRuleDto, Vaul
 import { aiCredentialStore, type AiCredentialStore } from '../lib/ai/credential-store';
 import { chat, complete, fetchUsage, listModels, type JsonSchemaResponseFormat, type OpenRouterModel, type OpenRouterUsage } from '../lib/ai/openrouter';
 import { extractTransactionFromEmail, type ExtractorEmailInput } from '../lib/ai/gmail-extractor';
-import { getWizardResponse, runWizardTool } from '../lib/ai/wizard';
+import { getWizardResponse, recapTask, runWizardTool, TASKS } from '../lib/ai/wizard';
 import { analyticsRepository } from '../repositories';
 import type { AnalyticsRepository } from '../repositories/analytics.repository';
 
@@ -188,14 +188,23 @@ prompt: ${prompt.trim()}`;
    * analytics tools (see lib/ai/wizard.ts). Throws on network/OpenRouter failures;
    * the caller shows `err.message`.
    */
-  async askWizard(userId: string, promptKey: WizardPromptKey): Promise<WizardOutcome> {
+  askWizard(userId: string, promptKey: WizardPromptKey): Promise<WizardOutcome> {
+    return this.runWizard(userId, TASKS[promptKey]);
+  }
+
+  /** The wizard's recap of `month` (`YYYY-MM`): top spending tags, change from the month before, and open debts. Same tools as the chat. */
+  monthlyRecap(userId: string, month: string): Promise<WizardOutcome> {
+    return this.runWizard(userId, recapTask(month));
+  }
+
+  private async runWizard(userId: string, task: string): Promise<WizardOutcome> {
     const [apiKey, model] = await Promise.all([this.store.getApiKey(), this.store.getModel()]);
     if (!apiKey || !model) {
       return { status: 'needs-ai-setup', message: AI_SETUP_MESSAGE };
     }
 
     const runTool = (name: string, args: string): Promise<string> => runWizardTool(this.analytics, userId, name, args);
-    const answer = await getWizardResponse(this.client.complete, runTool, promptKey, apiKey, model);
+    const answer = await getWizardResponse(this.client.complete, runTool, task, apiKey, model);
     return { status: 'success', answer };
   }
 }

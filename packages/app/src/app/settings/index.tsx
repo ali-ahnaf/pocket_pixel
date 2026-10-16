@@ -8,16 +8,23 @@ import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ms } from 'react-native-size-matters';
 import { BackButton } from '../../components/BackButton';
+import { Dropdown } from '../../components/Dropdown';
 import { SettingLink } from '../../components/settings/SettingLink';
 import { SettingToggle } from '../../components/settings/SettingToggle';
 import { useLocalUserId } from '../../hooks/DatabaseProvider';
 import { useDisplaySettings } from '../../hooks/useDisplaySettings';
+import { setRecapTaskEnabled } from '../../lib/notifications/monthly-recap-task';
+import { recapNotifier } from '../../lib/notifications/recap-notifier';
 import { backupService, logger } from '../../services';
 import { color, font, shadow, gutter, space, text } from '../../theme';
 import { PixelIcon } from '../../components/PixelIcon';
 
 const REPO_URL = 'https://github.com/ali-ahnaf/pocket_pixel';
 const NEW_ISSUE_URL = 'https://github.com/ali-ahnaf/pocket_pixel/issues/new';
+
+// Capped at 28 so every month has the day. null turns the recap off.
+const RECAP_DAYS: (number | null)[] = [null, ...Array.from({ length: 28 }, (_, i) => i + 1)];
+const recapDayLabel = (day: number | null): string => (day ? `Day ${day} of each month` : 'Off');
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -33,9 +40,24 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { showIncome, showExpense, aiTransactionEntryEnabled, setShowIncome, setShowExpense, setAiTransactionEntryEnabled } = useDisplaySettings();
+  const { showIncome, showExpense, aiTransactionEntryEnabled, monthlyRecapDay, setShowIncome, setShowExpense, setAiTransactionEntryEnabled, setMonthlyRecapDay } = useDisplaySettings();
   const [pushSubscribed, setPushSubscribed] = useState(false);
   const userId = useLocalUserId();
+
+  // The recap arrives as a notification, so a day can only be set once notifications are allowed.
+  const changeRecapDay = async (day: number | null): Promise<void> => {
+    try {
+      if (day !== null && !(await recapNotifier.requestPermission())) {
+        Alert.alert('Notifications are off', 'Allow notifications for Pocket Pixel in your phone settings to get the monthly recap.');
+        return;
+      }
+      await setRecapTaskEnabled(day !== null);
+      setMonthlyRecapDay(day);
+    } catch (err: unknown) {
+      logger.error('Monthly recap setup failed', { err });
+      Alert.alert('Could not schedule the recap', err instanceof Error ? err.message : 'Something went wrong');
+    }
+  };
 
   const exportData = async (): Promise<void> => {
     // VACUUM INTO refuses to overwrite, so the previous export in the cache is removed first.
@@ -104,6 +126,22 @@ export default function SettingsScreen() {
         />
       </Section>
 
+      <Section title="Monthly Recap">
+        <Text style={styles.note}>
+          Aldric sends a notification summing up last month: your top guilds, the change from the month before, and your debts. Your phone decides the exact time, so it can arrive a few hours into the
+          day. Needs AI setup.
+        </Text>
+        <Dropdown
+          options={RECAP_DAYS}
+          value={monthlyRecapDay}
+          onChange={changeRecapDay}
+          keyExtractor={(day) => day ?? 0}
+          renderValue={(day) => <Text style={styles.dropdownText}>{recapDayLabel(day)}</Text>}
+          renderOption={(day) => <Text style={styles.dropdownText}>{recapDayLabel(day)}</Text>}
+          accessibilityLabel="Monthly recap day"
+        />
+      </Section>
+
       <Section title="Account">
         <SettingToggle label="Push Notifications" description="Get notified when a Gmail watcher logs a transaction" icon="Bell" checked={pushSubscribed} onChange={setPushSubscribed} />
         <SettingLink label="Change Password" description="Update your secret passphrase" icon="Key" onPress={() => router.push('/change-password')} />
@@ -149,4 +187,6 @@ const styles = StyleSheet.create({
     borderColor: color.border,
     paddingBottom: ms(space[2]),
   },
+  note: { fontFamily: font.body, fontSize: ms(12), lineHeight: ms(16), color: color.onSurfaceVariant },
+  dropdownText: { fontFamily: font.body, fontSize: ms(text.bodySm.fontSize), lineHeight: ms(text.bodySm.lineHeight), color: color.onSurface },
 });

@@ -79,6 +79,18 @@ describe('PreferencesService', () => {
       expect(preferences.save).toHaveBeenCalledTimes(1);
     });
 
+    it('sets and clears the monthly recap day', async () => {
+      const pref = buildPreference({ monthlyRecapDay: 5 });
+      preferences.findByUserId.mockResolvedValue(pref);
+      preferences.save.mockImplementation((p) => Promise.resolve(p));
+
+      await service.update('user-1', { showIncome: true });
+      expect(pref.monthlyRecapDay).toBe(5);
+
+      await service.update('user-1', { monthlyRecapDay: null });
+      expect(pref.monthlyRecapDay).toBeNull();
+    });
+
     it('creates a row first when the user has no preferences yet', async () => {
       preferences.findByUserId.mockResolvedValue(null);
       preferences.save.mockImplementation((p) => Promise.resolve(p));
@@ -89,5 +101,14 @@ describe('PreferencesService', () => {
       expect(preferences.createEntity).toHaveBeenCalledTimes(1);
       expect(result.showExpense).toBe(true);
     });
+  });
+
+  it('markRecapDelivered saves the delivered month', async () => {
+    const pref = buildPreference();
+    preferences.findByUserId.mockResolvedValue(pref);
+
+    await service.markRecapDelivered('user-1', '2026-09');
+
+    expect(preferences.save).toHaveBeenCalledWith(expect.objectContaining({ lastRecapMonth: '2026-09' }));
   });
 });

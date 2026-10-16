@@ -17,7 +17,7 @@
         "backgroundColor": "#141315"
       }
     },
-    "plugins": ["expo-router", "expo-font", "expo-sqlite", "expo-secure-store"],
+    "plugins": ["expo-router", "expo-font", "expo-sqlite", "expo-secure-store", "expo-notifications", "expo-background-task"],
     "scheme": "expense-tracker",
     "platforms": ["ios", "android"],
     "backgroundColor": "#141315",

@@ -11,6 +11,8 @@ const { tmpdir } = jest.requireActual<{ tmpdir(): string }>('os');
 
 // Same native-module stand-ins as offline-flows.test.ts.
 jest.mock('../lib/ai/credential-store', () => ({ aiCredentialStore: {} }));
+// MonthlyRecapService's default notifier loads expo-notifications.
+jest.mock('../lib/notifications/recap-notifier', () => ({ recapNotifier: {} }));
 jest.mock('../lib/auth/session-store', () => {
   let stored: string | null = null;
   return { sessionStore: { get: async () => stored, set: async (id: string) => void (stored = id), clear: async () => void (stored = null) } };

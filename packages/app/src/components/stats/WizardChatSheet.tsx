@@ -26,9 +26,10 @@ const PROMPTS: Record<WizardPromptKey, { icon: PixelIconName; label: string }> =
 };
 
 // Ported from packages/ui/src/components/wizard/WizardChatSheet.tsx. Mount to open; onClose runs after the slide-down.
-export function WizardChatSheet({ onClose }: { onClose: () => void }) {
+// `intro` replaces the greeting, e.g. with the monthly recap.
+export function WizardChatSheet({ onClose, intro = GREETING }: { onClose: () => void; intro?: string }) {
   const { height } = useWindowDimensions();
-  const [messages, setMessages] = useState<ChatMessage[]>([{ id: 0, role: 'wizard', text: GREETING }]);
+  const [messages, setMessages] = useState<ChatMessage[]>([{ id: 0, role: 'wizard', text: intro }]);
   const userId = useLocalUserId();
   const [isLoading, setIsLoading] = useState(false);
   const nextId = useRef(1);
