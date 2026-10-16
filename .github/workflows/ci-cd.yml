@@ -172,18 +172,59 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Create tag and release
+        id: tag
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           DATE="$(date -u +%Y.%m.%d)"
           TAG="v${DATE}-${{ github.run_number }}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           gh release create "$TAG" \
             --target "${{ github.sha }}" \
             --title "Release ${DATE} (#${{ github.run_number }})" \
             --generate-notes
+
+  apk:
+    name: Build Android APK and attach to release
+    needs: release
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set up EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      # Builds on EAS cloud (free tier queue can take 10-30 min), not on this runner.
+      - name: Build APK on EAS
+        working-directory: packages/app
+        run: |
+          URL=$(eas build --platform android --profile preview --non-interactive --wait --json | jq -r '.[0].artifacts.buildUrl')
+          curl -fL "$URL" -o pocket-pixel.apk
+
+      - name: Attach APK to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ needs.release.outputs.tag }}" packages/app/pocket-pixel.apk
