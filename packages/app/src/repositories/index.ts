@@ -9,6 +9,7 @@ import { PreferencesRepository } from './preferences.repository';
 import { VaultGmailWatchersRepository } from './vault-gmail-watchers.repository';
 import { PendingGmailExpenseRepository } from './pending-gmail-expense.repository';
 import { BackupRepository } from './backup.repository';
+import { AdventuresRepository } from './adventures.repository';
 
 export const transactionsRepository = new TransactionsRepository();
 export const usersRepository = new UsersRepository();
@@ -21,6 +22,7 @@ export const preferencesRepository = new PreferencesRepository();
 export const vaultGmailWatchersRepository = new VaultGmailWatchersRepository();
 export const pendingGmailExpenseRepository = new PendingGmailExpenseRepository();
 export const backupRepository = new BackupRepository();
+export const adventuresRepository = new AdventuresRepository();
 
 export {
   TransactionsRepository,
@@ -34,4 +36,5 @@ export {
   VaultGmailWatchersRepository,
   PendingGmailExpenseRepository,
   BackupRepository,
+  AdventuresRepository,
 };
