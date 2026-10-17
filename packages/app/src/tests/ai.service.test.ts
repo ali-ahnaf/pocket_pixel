@@ -7,6 +7,8 @@ import { AI_SETUP_MESSAGE, AiService, type OpenRouterClient } from '../services/
 
 // Keeps expo-secure-store (a native module) out of the Jest run; the service gets an in-memory store below.
 jest.mock('../lib/ai/credential-store', () => ({ aiCredentialStore: {} }));
+// AiService's wizard defaults read the service singletons, which load native modules; these tests never call the add tools.
+jest.mock('../services', () => ({}));
 
 const tags = [
   { id: 'tag-food', name: 'FOOD' },
@@ -272,6 +274,31 @@ describe('AiService', () => {
 
       expect(await service.askWizardQuestion('user-1', '  How much did I spend on food?  ')).toEqual({ status: 'success', answer: 'Thy coffers are full.' });
       expect(client.complete.mock.calls[0][0].messages[1]).toEqual({ role: 'user', content: 'How much did I spend on food?' });
+    });
+
+    it('sends earlier chat turns before the question so follow-ups keep their context', async () => {
+      store.getApiKey.mockResolvedValue('sk-or-secret');
+      store.getModel.mockResolvedValue('openai/gpt-4o-mini');
+      client.complete.mockResolvedValue({ content: 'Less than before.', toolCalls: [] });
+      const history = [
+        { role: 'user' as const, content: 'How much on food this month?' },
+        { role: 'assistant' as const, content: '40 gold.' },
+      ];
+
+      await service.askWizardQuestion('user-1', 'And last month?', history);
+      expect(client.complete.mock.calls[0][0].messages.slice(1)).toEqual([...history, { role: 'user', content: 'And last month?' }]);
+    });
+
+    it('offers the add tools only for typed questions, never for preset prompts', async () => {
+      store.getApiKey.mockResolvedValue('sk-or-secret');
+      store.getModel.mockResolvedValue('openai/gpt-4o-mini');
+      client.complete.mockResolvedValue({ content: 'Done.', toolCalls: [] });
+      const toolNames = (call: number): string[] => (client.complete.mock.calls[call][0].tools ?? []).map((tool) => tool.function.name);
+
+      await service.askWizard('user-1', 'spending_breakdown');
+      await service.askWizardQuestion('user-1', 'Log 5 gold for coffee');
+      expect(toolNames(0)).not.toContain('add_transaction');
+      expect(toolNames(1)).toEqual(expect.arrayContaining(['add_transaction', 'add_adventure_item']));
     });
   });
 

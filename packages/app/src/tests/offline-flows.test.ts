@@ -4,7 +4,7 @@ import { User } from '../entities/User.entity';
 import { AppError } from '../errors/app-error';
 import { runWizardTool } from '../lib/ai/wizard';
 import { analyticsRepository } from '../repositories';
-import { analyticsService, authService, debtsService, preferencesService, recurringService, tagsService, transactionsService, vaultsService } from '../services';
+import { adventuresService, analyticsService, authService, debtsService, preferencesService, recurringService, tagsService, transactionsService, vaultsService } from '../services';
 
 // ../services builds AiService, whose store imports expo-secure-store (a native module Jest cannot load).
 jest.mock('../lib/ai/credential-store', () => ({ aiCredentialStore: {} }));
@@ -163,8 +163,55 @@ describe('offline flows', () => {
       { title: 'Lent Kim', amount: 40, type: 'income', dueDate: '2030-01-01' },
       { title: later.title, amount: 25, type: 'expense', dueDate: null },
     ]);
+    expect(await tool('vault_balances', {})).toEqual([
+      { vault: 'Fun', description: expect.any(String), isDefault: 0, monthlyBudget: 50, income: 0, expense: 30, balance: -30 },
+      { vault: 'Main Stash', description: expect.any(String), isDefault: 1, monthlyBudget: null, income: 100, expense: 1019, balance: -919 },
+    ]);
+    await recurringService.create(wizUserId, { title: 'Netflix', amount: 15, type: 'expense', interval: 'monthly', startDate: '2099-01-01', tagIds: [bills.id], vaultId: fun.id });
+    expect(await tool('recurring_transactions', {})).toEqual([
+      { title: 'Netflix', amount: 15, type: 'expense', interval: 'monthly', startDate: '2099-01-01', endDate: '2099-12-31', vault: 'Fun', tags: 'Bills' },
+    ]);
+    const trip = await adventuresService.create(wizUserId, { name: 'Japan', fund: 2000 });
+    await adventuresService.addItem(wizUserId, trip.id, { name: 'Flights', plannedCost: 800 });
+    await adventuresService.create(wizUserId, { name: 'Camping' });
+    expect(await tool('adventures', {})).toEqual([
+      { adventure: 'Camping', fund: null, startDate: null, endDate: null, completedAt: null, item: null, plannedCost: null, actualCost: null, isBought: null },
+      { adventure: 'Japan', fund: 2000, startDate: null, endDate: null, completedAt: null, item: 'Flights', plannedCost: 800, actualCost: null, isBought: 0 },
+    ]);
     expect(await tool('drop_tables', {})).toEqual({ error: 'Unknown tool drop_tables.' });
     expect(JSON.parse(await runWizardTool(analyticsRepository, wizUserId, 'totals_by_month', 'not json'))).toEqual({ error: 'Arguments were not valid JSON.' });
+  });
+
+  it('lets the wizard add transactions and adventure items by name, refusing unknown names', async () => {
+    const wizUserId = await authService.signUp({ name: 'Scribe', email: 'scribe@example.com', password: 's3cret-pass' });
+    const [main] = await vaultsService.list(wizUserId);
+    const fun = await vaultsService.create(wizUserId, { name: 'Fun' });
+    await tagsService.create(wizUserId, { name: 'Food' });
+    const actions = { tags: tagsService, vaults: vaultsService, transactions: transactionsService, adventures: adventuresService };
+    const tool = async (name: string, args: object, withActions = true): Promise<unknown> =>
+      JSON.parse(await runWizardTool(analyticsRepository, wizUserId, name, JSON.stringify(args), withActions ? actions : undefined));
+
+    expect(await tool('add_transaction', { title: 'Coffee', amount: 5, type: 'expense', tags: ['food'] })).toEqual({
+      added: { title: 'Coffee', amount: 5, type: 'expense', date: expect.any(String), vault: main.name, tags: ['Food'] },
+    });
+    await tool('add_transaction', { title: 'Salary', amount: 900, type: 'income', vault: 'fun', date: '2001-02-03' });
+    expect(await tool('add_transaction', { title: 'X', amount: 1, type: 'expense', vault: 'Nope' })).toEqual({ error: expect.stringContaining('No vault named Nope') });
+    expect(await tool('add_transaction', { title: 'X', amount: 1, type: 'expense', tags: ['Nope'] })).toEqual({ error: expect.stringContaining('Unknown tags: Nope') });
+    expect(await tool('add_transaction', { title: 'X', amount: -1, type: 'expense' })).toEqual({ error: expect.any(String) });
+    expect(await tool('add_transaction', { title: 'X', amount: 1, type: 'expense' }, false)).toEqual({ error: 'Unknown tool add_transaction.' });
+    const added = await transactionsService.list(wizUserId, { period: 'all' });
+    expect(added.map((tx) => [tx.title, tx.amount, tx.vaultId, tx.tags.map((tag) => tag.name)]).sort()).toEqual([
+      ['Coffee', 5, main.id, ['Food']],
+      ['Salary', 900, fun.id, []],
+    ]);
+    expect(added.find((tx) => tx.title === 'Salary')?.date).toBe('2001-02-03');
+
+    const trip = await adventuresService.create(wizUserId, { name: 'Japan' });
+    expect(await tool('add_adventure_item', { adventure: 'japan', name: 'Rail pass', planned_cost: 300 })).toEqual({ added: { adventure: 'Japan', name: 'Rail pass', plannedCost: 300 } });
+    expect((await adventuresService.listItems(wizUserId, trip.id)).map((item) => [item.name, item.plannedCost])).toEqual([['Rail pass', 300]]);
+    expect(await tool('add_adventure_item', { adventure: 'Mars', name: 'Rocket', planned_cost: 1 })).toEqual({ error: expect.stringContaining('No adventure named Mars') });
+    await adventuresService.complete(wizUserId, trip.id);
+    expect(await tool('add_adventure_item', { adventure: 'Japan', name: 'Sushi', planned_cost: 50 })).toEqual({ error: expect.stringContaining('is complete') });
   });
 
   it('keeps recurring templates out of monthly and yearly analytics, and groups tag analytics by tag', async () => {

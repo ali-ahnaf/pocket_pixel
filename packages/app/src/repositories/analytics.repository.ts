@@ -3,6 +3,8 @@ import { AppDataSource } from '../db/data-source';
 import { Expense, TransactionType } from '../entities/Expense.entity';
 import { Vault } from '../entities/Vault.entity';
 import { Debt } from '../entities/Debt.entity';
+import { Adventure } from '../entities/Adventure.entity';
+import { AdventureItem } from '../entities/AdventureItem.entity';
 
 export interface AnalyticsRow {
   type: string;
@@ -159,6 +161,83 @@ export class AnalyticsRepository {
       .orderBy('d.dueDate IS NULL')
       .addOrderBy('d.dueDate', 'ASC')
       .limit(limit)
+      .getRawMany();
+  }
+
+  /** Every vault with its all-time income, expense and balance (income minus expense). */
+  vaultBalances(userId: string): Promise<{ vault: string; description: string; isDefault: number; monthlyBudget: number | null; income: number; expense: number; balance: number }[]> {
+    return this.dataSource
+      .getRepository(Vault)
+      .createQueryBuilder('v')
+      .leftJoin(Expense, 'e', 'e.vaultId = v.id AND e.interval IS NULL AND e.deletedAt IS NULL')
+      .select('v.name', 'vault')
+      .addSelect('v.description', 'description')
+      .addSelect('v.isDefault', 'isDefault')
+      .addSelect('v.monthlyBudget', 'monthlyBudget')
+      .addSelect("ROUND(COALESCE(SUM(CASE WHEN e.type = 'income' THEN e.amount END), 0), 2)", 'income')
+      .addSelect("ROUND(COALESCE(SUM(CASE WHEN e.type = 'expense' THEN e.amount END), 0), 2)", 'expense')
+      .addSelect("ROUND(COALESCE(SUM(CASE WHEN e.type = 'income' THEN e.amount ELSE -e.amount END), 0), 2)", 'balance')
+      .where('v.userId = :userId', { userId })
+      .groupBy('v.id')
+      .orderBy('v.name', 'ASC')
+      .getRawMany();
+  }
+
+  /** Recurring templates (`interval` set) with their vault and comma-joined tag names. */
+  recurringTemplates(
+    userId: string,
+  ): Promise<{ title: string | null; amount: number; type: string; interval: string; startDate: string | null; endDate: string | null; vault: string | null; tags: string | null }[]> {
+    return this.repo
+      .createQueryBuilder('e')
+      .leftJoin('e.vault', 'v')
+      .leftJoin('e.transactionTags', 'tt')
+      .leftJoin('tt.tag', 't')
+      .select('e.title', 'title')
+      .addSelect('e.amount', 'amount')
+      .addSelect('e.type', 'type')
+      .addSelect('e.interval', 'interval')
+      .addSelect('e.startDate', 'startDate')
+      .addSelect('e.endDate', 'endDate')
+      .addSelect('v.name', 'vault')
+      .addSelect("GROUP_CONCAT(t.name, ', ')", 'tags')
+      .where('e.userId = :userId AND e.interval IS NOT NULL', { userId })
+      .groupBy('e.id')
+      .orderBy('e.amount', 'DESC')
+      .getRawMany();
+  }
+
+  /** Adventures (planned trips or events with a fund) and their items, one row per item. An adventure with no items comes back once with a null item. */
+  adventureItems(
+    userId: string,
+  ): Promise<
+    {
+      adventure: string;
+      fund: number | null;
+      startDate: string | null;
+      endDate: string | null;
+      completedAt: string | null;
+      item: string | null;
+      plannedCost: number | null;
+      actualCost: number | null;
+      isBought: number | null;
+    }[]
+  > {
+    return this.dataSource
+      .getRepository(Adventure)
+      .createQueryBuilder('a')
+      .leftJoin(AdventureItem, 'i', 'i.adventureId = a.id AND i.deletedAt IS NULL')
+      .select('a.name', 'adventure')
+      .addSelect('a.fund', 'fund')
+      .addSelect('a.startDate', 'startDate')
+      .addSelect('a.endDate', 'endDate')
+      .addSelect('a.completedAt', 'completedAt')
+      .addSelect('i.name', 'item')
+      .addSelect('i.plannedCost', 'plannedCost')
+      .addSelect('i.actualCost', 'actualCost')
+      .addSelect('i.isBought', 'isBought')
+      .where('a.userId = :userId', { userId })
+      .orderBy('a.name', 'ASC')
+      .addOrderBy('i.sortOrder', 'ASC')
       .getRawMany();
   }
 

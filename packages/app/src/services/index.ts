@@ -25,6 +25,8 @@ export const debtsService = new DebtsService();
 export const analyticsService = new AnalyticsService();
 export const recurringService = new RecurringService();
 export const preferencesService = new PreferencesService();
+// Built before aiService, whose wizard defaults read it.
+export const adventuresService = new AdventuresService();
 export const aiService = new AiService();
 export const authService = new AuthService();
 export const gmailService = new GmailService();
@@ -34,7 +36,6 @@ export const pendingGmailExpenseService = new PendingGmailExpenseService();
 export const backupService = new BackupService();
 // Built after aiService and preferencesService, which its defaults read.
 export const monthlyRecapService = new MonthlyRecapService();
-export const adventuresService = new AdventuresService();
 
 export {
   Logger,
