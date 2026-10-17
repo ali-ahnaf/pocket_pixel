@@ -62,7 +62,9 @@ export function WizardChatSheet({ onClose, intro = GREETING }: { onClose: () => 
     const trimmed = question.trim();
     if (!trimmed || isLoading) return;
     setQuestion('');
-    askWizard(trimmed, () => aiService.askWizardQuestion(userId, trimmed));
+    // Error replies are sent too; they are short and tell the model why the last turn has no answer.
+    const history = messages.map((msg) => ({ role: msg.role === 'wizard' ? ('assistant' as const) : ('user' as const), content: msg.text }));
+    askWizard(trimmed, () => aiService.askWizardQuestion(userId, trimmed, history));
   };
 
   return (

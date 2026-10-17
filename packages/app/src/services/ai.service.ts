@@ -2,9 +2,10 @@ import type { ParsedEmailDto, ParsedTransaction, TagDto, TagKeywordRuleDto, Vaul
 import { aiCredentialStore, type AiCredentialStore } from '../lib/ai/credential-store';
 import { chat, complete, fetchUsage, listModels, type JsonSchemaResponseFormat, type OpenRouterModel, type OpenRouterUsage } from '../lib/ai/openrouter';
 import { extractTransactionFromEmail, type ExtractorEmailInput } from '../lib/ai/gmail-extractor';
-import { getWizardResponse, recapTask, runWizardTool, TASKS } from '../lib/ai/wizard';
+import { getWizardResponse, recapTask, runWizardTool, TASKS, WIZARD_TOOLS, WIZARD_WRITE_TOOLS, type WizardActions, type WizardTurn } from '../lib/ai/wizard';
 import { analyticsRepository } from '../repositories';
 import type { AnalyticsRepository } from '../repositories/analytics.repository';
+import { adventuresService, tagsService, transactionsService, vaultsService } from '.';
 
 /** The OpenRouter calls AiService makes, injectable so tests do not hit the network. */
 export interface OpenRouterClient {
@@ -54,6 +55,7 @@ export class AiService {
     private readonly store: AiCredentialStore = aiCredentialStore,
     private readonly client: OpenRouterClient = { chat, complete, listModels, fetchUsage },
     private readonly analytics: AnalyticsRepository = analyticsRepository,
+    private readonly actions: WizardActions = { tags: tagsService, vaults: vaultsService, transactions: transactionsService, adventures: adventuresService },
   ) {}
 
   async getStatus(): Promise<AiStatus> {
@@ -192,9 +194,12 @@ prompt: ${prompt.trim()}`;
     return this.runWizard(userId, TASKS[promptKey]);
   }
 
-  /** Same as `askWizard`, for a question the user typed. */
-  askWizardQuestion(userId: string, question: string): Promise<WizardOutcome> {
-    return this.runWizard(userId, question.trim());
+  /**
+   * Same as `askWizard`, for a question the user typed. `history` is the chat so far, oldest first,
+   * so follow-up questions keep their context. Only typed questions can add transactions and adventure items.
+   */
+  askWizardQuestion(userId: string, question: string, history: WizardTurn[] = []): Promise<WizardOutcome> {
+    return this.runWizard(userId, question.trim(), history, this.actions);
   }
 
   /** The wizard's recap of `month` (`YYYY-MM`): top spending tags, change from the month before, and open debts. Same tools as the chat. */
@@ -202,14 +207,15 @@ prompt: ${prompt.trim()}`;
     return this.runWizard(userId, recapTask(month));
   }
 
-  private async runWizard(userId: string, task: string): Promise<WizardOutcome> {
+  private async runWizard(userId: string, task: string, history: WizardTurn[] = [], actions?: WizardActions): Promise<WizardOutcome> {
     const [apiKey, model] = await Promise.all([this.store.getApiKey(), this.store.getModel()]);
     if (!apiKey || !model) {
       return { status: 'needs-ai-setup', message: AI_SETUP_MESSAGE };
     }
 
-    const runTool = (name: string, args: string): Promise<string> => runWizardTool(this.analytics, userId, name, args);
-    const answer = await getWizardResponse(this.client.complete, runTool, task, apiKey, model);
+    const runTool = (name: string, args: string): Promise<string> => runWizardTool(this.analytics, userId, name, args, actions);
+    const tools = actions ? [...WIZARD_TOOLS, ...WIZARD_WRITE_TOOLS] : WIZARD_TOOLS;
+    const answer = await getWizardResponse(this.client.complete, runTool, task, apiKey, model, history, tools);
     return { status: 'success', answer };
   }
 }
