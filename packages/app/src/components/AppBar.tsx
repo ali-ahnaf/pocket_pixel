@@ -15,7 +15,7 @@ const MENU: { label: string; icon: PixelIconName; href: Href }[] = [
   { label: 'Tabular view', icon: 'ChartColumn', href: '/views/table' },
   { label: 'Settings', icon: 'Settings', href: '/settings' },
   { label: 'OpenRouter AI', icon: 'Sparkles', href: '/settings/ai' },
-  { label: 'Gmail Integration', icon: 'Mail', href: '/settings/google-oauth' },
+  { label: 'Gmail', icon: 'Mail', href: '/settings/google-oauth' },
 ];
 
 // Ported from packages/ui/src/components/AppBar.tsx and Sidebar.tsx.
