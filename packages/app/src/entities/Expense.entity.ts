@@ -43,6 +43,10 @@ export class Expense extends BaseEntity {
   @Column({ type: 'varchar', nullable: true })
   sourceRecurringId: string | null;
 
+  /** True for the expense and income legs of a vault-to-vault transfer. */
+  @Column({ type: 'boolean', default: false })
+  isTransfer: boolean;
+
   @ManyToOne(() => User, (user) => user.expenses, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;

@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     borderColor: color.border,
   },
   triggerPressed: { backgroundColor: color.surfaceLow, transform: [{ translateY: 2 }] },
-  row: { flexDirection: 'row', alignItems: 'center', gap: ms(space[3]) },
+  row: { flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: ms(space[3]) },
   list: { maxHeight: ms(360), borderWidth: ms(4), borderColor: color.border },
   option: {
     height: ms(56),

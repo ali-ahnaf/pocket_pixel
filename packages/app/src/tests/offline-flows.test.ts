@@ -87,9 +87,9 @@ describe('offline flows', () => {
 
     const after = await transactionsService.list(userId, { month, year });
     const added = after.filter((tx) => !before.some((b) => b.id === tx.id));
-    expect(added.map((tx) => [tx.type, tx.vaultId, tx.amount]).sort()).toEqual([
-      ['expense', main.id, 40],
-      ['income', savings.id, 40],
+    expect(added.map((tx) => [tx.type, tx.vaultId, tx.amount, tx.isTransfer]).sort()).toEqual([
+      ['expense', main.id, 40, true],
+      ['income', savings.id, 40, true],
     ]);
     await expect(transactionsService.createTransferTransaction(userId, { amount: 1, vaultId: main.id, targetVaultId: main.id })).rejects.toMatchObject({ constructor: AppError, statusCode: 400 });
   });

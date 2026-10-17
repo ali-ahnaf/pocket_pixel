@@ -40,6 +40,8 @@ export interface TransactionDto {
   vaultId: string | null;
   vault: { id: string; name: string; icon: string | null } | null;
   tags: TagDto[];
+  /** True for either leg of a vault-to-vault transfer. Only set by the offline app. */
+  isTransfer?: boolean;
   /**
    * @deprecated The backing `expenses.isCommitted` column was dropped: Gmail
    * expenses now go through the `pending_gmail_expenses` review queue and are
