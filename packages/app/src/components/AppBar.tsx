@@ -13,6 +13,7 @@ import { SidebarModal } from './SidebarModal';
 
 const MENU: { label: string; icon: PixelIconName; href: Href }[] = [
   { label: 'Tabular view', icon: 'ChartColumn', href: '/views/table' },
+  { label: 'Adventures', icon: 'Compass', href: '/adventures' },
   { label: 'Settings', icon: 'Settings', href: '/settings' },
   { label: 'OpenRouter AI', icon: 'Sparkles', href: '/settings/ai' },
   { label: 'Gmail', icon: 'Mail', href: '/settings/google-oauth' },
