@@ -8,7 +8,6 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { IconText } from '../../components/IconText';
 import { PixelIcon } from '../../components/PixelIcon';
-import { Dropdown } from '../../components/Dropdown';
 import { ProgressBar } from '../../components/ProgressBar';
 import { PeriodPicker } from '../../components/stats/PeriodPicker';
 import { ALL_TIME_PERIOD, currentMonthYear, useStats } from '../../components/stats/useStats';
@@ -76,21 +75,40 @@ function Sparkline({ values }: { values: number[] }) {
   );
 }
 
+interface ChipOption {
+  id: string;
+  name: string;
+}
+
+function VaultChips({ options, isActive, onPress }: { options: ChipOption[]; isActive: (id: string) => boolean; onPress: (id: string) => void }) {
+  return (
+    <View style={styles.tabs}>
+      {options.map((v) => {
+        const active = isActive(v.id);
+        return (
+          <Pressable key={v.id} accessibilityRole="button" accessibilityState={{ selected: active }} hitSlop={6} onPress={() => onPress(v.id)} style={[styles.tab, active && styles.tabActive]}>
+            <Text style={[styles.tabText, active && styles.tabTextActive]}>{v.name}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 export default function StatsScreen() {
   const [selectedMonthYear, setSelectedMonthYear] = useState(currentMonthYear);
-  const [selectedVaultId, setSelectedVaultId] = useState('all');
+  // Empty means every vault.
+  const [selectedVaultIds, setSelectedVaultIds] = useState<string[]>([]);
   const [selectedLineVaultId, setSelectedLineVaultId] = useState('all');
   const [wizardOpen, setWizardOpen] = useState(false);
 
   const isAllTime = selectedMonthYear === ALL_TIME_PERIOD;
   const isCurrentMonth = selectedMonthYear === currentMonthYear();
-  const vaultId = selectedVaultId;
-  const stats = useStats(selectedMonthYear, vaultId, selectedLineVaultId);
+  const stats = useStats(selectedMonthYear, selectedVaultIds, selectedLineVaultId);
   const { loading, vaults } = stats;
   const netYield = stats.totalIncome - stats.totalExpenses;
 
-  const vaultOptions = [{ id: 'all', name: 'All Vaults' }, ...vaults.map((v) => ({ id: v.id, name: v.name }))];
-  const selectedVault = vaultOptions.find((v) => v.id === vaultId) ?? vaultOptions[0];
+  const toggleVault = (id: string): void => setSelectedVaultIds((ids) => (id === 'all' ? [] : ids.includes(id) ? ids.filter((v) => v !== id) : [...ids, id]));
   const canExport = !loading && stats.transactions.length > 0;
 
   return (
@@ -106,19 +124,11 @@ export default function StatsScreen() {
 
         <View style={styles.filters}>
           <View style={styles.filter}>
-            <Text style={styles.filterLabel}>Source Vault</Text>
-            <Dropdown
-              options={vaultOptions}
-              value={selectedVault}
-              onChange={(v) => setSelectedVaultId(v.id)}
-              keyExtractor={(v) => v.id}
-              accessibilityLabel={`Source vault: ${selectedVault.name}`}
-              renderValue={(v) => (
-                <IconText icon="Package" style={styles.filterValue}>
-                  {v.name}
-                </IconText>
-              )}
-              renderOption={(v, isSelected) => <Text style={[styles.filterValue, isSelected && styles.optionSelected]}>{v.name}</Text>}
+            <Text style={styles.filterLabel}>Source Vaults</Text>
+            <VaultChips
+              options={[{ id: 'all', name: 'All Vaults' }, ...vaults]}
+              isActive={(id) => (id === 'all' ? selectedVaultIds.length === 0 : selectedVaultIds.includes(id))}
+              onPress={toggleVault}
             />
           </View>
 
@@ -220,8 +230,6 @@ export default function StatsScreen() {
           </View>
           {loading ? (
             <Skeleton height={56} />
-          ) : isAllTime ? (
-            <Empty label={ALL_TIME_NOTE} />
           ) : stats.vaultSavings.length === 0 ? (
             <Empty label="No vaults found." />
           ) : (
@@ -239,7 +247,7 @@ export default function StatsScreen() {
                     {formatCoins(savings)}
                   </Text>
                 </View>
-                {vault.monthlyBudget != null && (
+                {!isAllTime && vault.monthlyBudget != null && (
                   <View style={styles.budget}>
                     <ProgressBar value={progress} variant={isOver ? 'error' : 'primary'} label={`${formatCoins(spent)} / ${formatCoins(budget)}`} />
                     {isOver && <Text style={styles.overBudget}>Over budget by {formatCoins(spent - budget)}</Text>}
@@ -257,23 +265,7 @@ export default function StatsScreen() {
             </IconText>
             <Text style={styles.subtitle}>Expense burn per {isAllTime ? 'month' : 'day'}, by vault.</Text>
           </View>
-          <View style={styles.tabs}>
-            {[{ id: 'all', name: 'All' }, ...vaults].map((v) => {
-              const active = selectedLineVaultId === v.id;
-              return (
-                <Pressable
-                  key={v.id}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  hitSlop={6}
-                  onPress={() => setSelectedLineVaultId(v.id)}
-                  style={[styles.tab, active && styles.tabActive]}
-                >
-                  <Text style={[styles.tabText, active && styles.tabTextActive]}>{v.name}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <VaultChips options={[{ id: 'all', name: 'All' }, ...vaults]} isActive={(id) => selectedLineVaultId === id} onPress={setSelectedLineVaultId} />
           {loading ? (
             <Skeleton height={112} />
           ) : isAllTime ? (
@@ -330,8 +322,6 @@ const styles = StyleSheet.create({
   filters: { gap: ms(space[3]) },
   filter: { gap: ms(space[1]) },
   filterLabel: { fontFamily: font.mono, fontSize: ms(10), color: color.outline, textTransform: 'uppercase', marginLeft: ms(space[1]) },
-  filterValue: { ...bodySm, color: color.onSurface },
-  optionSelected: { color: color.primary },
   periodRow: { flexDirection: 'row', alignItems: 'center', gap: ms(space[2]) },
   exportButton: {
     width: ms(48),

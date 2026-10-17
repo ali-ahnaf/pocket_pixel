@@ -40,15 +40,15 @@ export class AnalyticsRepository {
   /**
    * Base query shared by every aggregation: scope to the owning user. App copy
    * also drops recurring templates (`interval` set, `date` NULL); the API's
-   * yearly() leaks them as a NULL-year group. `vaultId` narrows to one vault.
+   * yearly() leaks them as a NULL-year group. `vaultIds` narrows to those vaults; empty or omitted means every vault.
    */
-  private baseQuery(userId: string, vaultId?: string): SelectQueryBuilder<Expense> {
+  private baseQuery(userId: string, vaultIds: string[] = []): SelectQueryBuilder<Expense> {
     const query = this.repo.createQueryBuilder('e').where('e.userId = :userId', { userId }).andWhere('e.interval IS NULL');
-    return vaultId ? query.andWhere('e.vaultId = :vaultId', { vaultId }) : query;
+    return vaultIds.length > 0 ? query.andWhere('e.vaultId IN (:...vaultIds)', { vaultIds }) : query;
   }
 
-  monthlyByYear(userId: string, year: number, vaultId?: string): Promise<AnalyticsRow[]> {
-    return this.baseQuery(userId, vaultId)
+  monthlyByYear(userId: string, year: number, vaultIds?: string[]): Promise<AnalyticsRow[]> {
+    return this.baseQuery(userId, vaultIds)
       .select("strftime('%m', e.date)", 'month')
       .addSelect('e.type', 'type')
       .addSelect('SUM(e.amount)', 'total')
@@ -60,8 +60,8 @@ export class AnalyticsRepository {
       .getRawMany();
   }
 
-  yearly(userId: string, vaultId?: string): Promise<AnalyticsRow[]> {
-    return this.baseQuery(userId, vaultId)
+  yearly(userId: string, vaultIds?: string[]): Promise<AnalyticsRow[]> {
+    return this.baseQuery(userId, vaultIds)
       .select("strftime('%Y', e.date)", 'year')
       .addSelect('e.type', 'type')
       .addSelect('SUM(e.amount)', 'total')
@@ -72,9 +72,22 @@ export class AnalyticsRepository {
       .getRawMany();
   }
 
+  /** All-time income and expense totals per vault. Transactions without a vault are left out. */
+  byVault(userId: string, vaultIds?: string[]): Promise<AnalyticsRow[]> {
+    return this.baseQuery(userId, vaultIds)
+      .select('e.vaultId', 'vaultId')
+      .addSelect('e.type', 'type')
+      .addSelect('SUM(e.amount)', 'total')
+      .addSelect('COUNT(*)', 'count')
+      .andWhere('e.vaultId IS NOT NULL')
+      .groupBy('e.vaultId')
+      .addGroupBy('e.type')
+      .getRawMany();
+  }
+
   /** App copy: joins through transaction_tags. The API version reads a non-existent `e.tag` column and fails. */
-  tagsByYear(userId: string, year: number, vaultId?: string): Promise<AnalyticsRow[]> {
-    return this.baseQuery(userId, vaultId)
+  tagsByYear(userId: string, year: number, vaultIds?: string[]): Promise<AnalyticsRow[]> {
+    return this.baseQuery(userId, vaultIds)
       .innerJoin('e.transactionTags', 'tt')
       .innerJoin('tt.tag', 't')
       .select('t.id', 'tagId')

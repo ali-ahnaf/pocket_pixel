@@ -9,6 +9,19 @@ import { VaultGmailWatchersRepository } from '../repositories/vault-gmail-watche
 import { pendingGmailExpenseRepository, vaultGmailWatchersRepository } from '../repositories';
 import { logger } from '.';
 
+export interface GmailSyncResult {
+  readonly enqueued: number;
+  readonly syncedAt: number | null;
+}
+
+/** A recent message on a watched label, for the manual "parse this email" list. */
+export interface GmailRecentMessage {
+  readonly id: string;
+  readonly subject: string | null;
+  /** ISO time Gmail received the message, null when Gmail omits it. */
+  readonly receivedAt: string | null;
+}
+
 /** Base for all `users.me` Gmail REST calls. */
 export const GMAIL_API_BASE = 'https://gmail.googleapis.com/gmail/v1/users/me';
 
@@ -31,7 +44,7 @@ const RECONNECT_MESSAGE = 'Gmail connection expired, please reconnect';
  * so the service is unit-testable without the network.
  */
 export class GmailService {
-  private readonly runningSyncs = new Map<string, Promise<void>>();
+  private readonly runningSyncs = new Map<string, Promise<GmailSyncResult>>();
 
   constructor(
     private readonly auth: GoogleAuth = googleAuth,
@@ -87,8 +100,40 @@ export class GmailService {
     return (await response.json()) as GmailMessage;
   }
 
-  /** Polls Gmail for new matching mail. Calls made while a sync for the user is running share it. */
-  sync(userId: string): Promise<void> {
+  /** The newest `limit` messages on `labelId`, newest first, regardless of the sync baseline. */
+  async listRecentMessages(userId: string, labelId: string, limit = 10): Promise<GmailRecentMessage[]> {
+    const params = new URLSearchParams({ labelIds: labelId, maxResults: String(limit) });
+    const response = await this.authorizedFetch(userId, `${GMAIL_API_BASE}/messages?${params.toString()}`);
+    if (!response.ok) throw new AppError(`Gmail messages.list failed: HTTP ${response.status}`, 502);
+
+    const data = (await response.json()) as { messages?: { id?: string }[] };
+    const ids = (data.messages ?? []).flatMap((message) => (message.id ? [message.id] : []));
+    const messages = await Promise.all(ids.map((id) => this.fetchMessage(userId, id, 'metadata')));
+    return messages
+      .filter((message): message is GmailMessage => message !== null)
+      .map((message) => ({
+        id: message.id,
+        subject: readHeader(message.payload, 'Subject') ?? null,
+        receivedAt: message.internalDate ? new Date(Number(message.internalDate)).toISOString() : null,
+      }));
+  }
+
+  /**
+   * The listener whose settings parse a message the user picked from `listRecentMessages`. The user chose
+   * the message, so when no listener's subject filter matches, the label's first listener is used.
+   */
+  async findWatcherForMessage(userId: string, labelId: string, subject: string): Promise<VaultGmailWatcher> {
+    const watchers = await this.watchers.findManyForUser(userId);
+    const watcher = matchWatcher(watchers, [labelId], subject) ?? watchers.find((w) => w.gmailLabelId === labelId);
+    if (!watcher) throw new AppError('No listener watches this label', 400);
+    return watcher;
+  }
+
+  /**
+   * Polls Gmail for new matching mail. Calls made while a sync for the user is running share it.
+   * Resolves with how many emails were queued and the saved sync time (null when Gmail is not connected).
+   */
+  sync(userId: string): Promise<GmailSyncResult> {
     const running = this.runningSyncs.get(userId);
     if (running) return running;
 
@@ -97,9 +142,9 @@ export class GmailService {
     return run;
   }
 
-  private async runSync(userId: string): Promise<void> {
+  private async runSync(userId: string): Promise<GmailSyncResult> {
     const connection = await this.connections.get(userId);
-    if (!connection || connection.reconnectRequired) return;
+    if (!connection || connection.reconnectRequired) return { enqueued: 0, syncedAt: connection?.syncedAt ?? null };
 
     const startedAt = Date.now();
     const watchers = await this.watchers.findManyForUser(userId);
@@ -108,7 +153,7 @@ export class GmailService {
     // (or one with nothing to watch) just sets the baseline.
     if (watchers.length === 0 || connection.syncedAt === null) {
       await this.connections.set(userId, { ...connection, syncedAt: startedAt });
-      return;
+      return { enqueued: 0, syncedAt: startedAt };
     }
 
     const afterSeconds = Math.floor((connection.syncedAt - SYNC_OVERLAP_MS) / 1000);
@@ -139,6 +184,7 @@ export class GmailService {
 
     await this.connections.set(userId, { ...connection, syncedAt: startedAt });
     logger.info('Gmail sync finished', { userId, scanned: messageIds.size, enqueued });
+    return { enqueued, syncedAt: startedAt };
   }
 
   /** Every message id on `labelId` received after `afterSeconds` (epoch seconds), following all pages. */

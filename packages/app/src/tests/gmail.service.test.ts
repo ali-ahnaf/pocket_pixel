@@ -145,8 +145,12 @@ describe('Gmail on device', () => {
     ];
     const syncedAt = connections.get(userId)?.syncedAt ?? 0;
 
-    await gmail.sync(userId);
-    await gmail.sync(userId);
+    const first = await gmail.sync(userId);
+    const second = await gmail.sync(userId);
+
+    expect(first.enqueued).toBe(2);
+    expect(second.enqueued).toBe(0);
+    expect(second.syncedAt).toBe(connections.get(userId)?.syncedAt);
 
     const listCall = request.mock.calls.map(([url]) => url).find((url) => url.includes('/messages?'));
     expect(new URL(listCall ?? '').searchParams.get('q')).toBe(`after:${Math.floor((syncedAt - 10 * 60 * 1000) / 1000)}`);
@@ -182,6 +186,42 @@ describe('Gmail on device', () => {
     await watchers.remove(userId, debit.id ?? '');
     expect((await watchers.listForUser(userId)).map(({ id, subjectFilter }) => ({ id, subjectFilter }))).toEqual([{ id: card.id, subjectFilter: 'card' }]);
     await expect(watchers.upsert(userId, catchAllVault.id, { gmailLabelId: 'Label_2' }, card.id)).rejects.toMatchObject({ constructor: AppError, statusCode: 404 });
+  });
+
+  it('lists recent mail on a label and parses a picked email outside the queue, even after it was dismissed', async () => {
+    await connectAndBaseline();
+    await watchers.upsert(userId, debitVault.id, { gmailLabelId: 'Label_1', subjectFilter: 'debit', guidanceHint: 'card' });
+    mailbox = [
+      { id: 'm-pick', labelIds: ['Label_1'], subject: 'Debit alert', html: '<p>Spent 75 at CAFE PICK</p>' },
+      { id: 'm-unfiltered', labelIds: ['Label_1'], subject: 'Old statement', html: '<p>Spent 5</p>' },
+      { id: 'm-elsewhere', labelIds: ['Label_2'], subject: 'Other', html: '<p>Hi</p>' },
+    ];
+    await gmail.sync(userId);
+    const queued = (await pending.list(userId)).find((i) => i.gmailMessageId === 'm-pick');
+    await pending.resolve(userId, queued?.id ?? '');
+
+    const recent = await gmail.listRecentMessages(userId, 'Label_1');
+    expect(recent).toEqual([
+      { id: 'm-pick', subject: 'Debit alert', receivedAt: null },
+      { id: 'm-unfiltered', subject: 'Old statement', receivedAt: null },
+    ]);
+    const listCall = request.mock.calls.map(([url]) => url).find((url) => url.includes('maxResults'));
+    expect(new URL(listCall ?? '').searchParams.get('maxResults')).toBe('10');
+
+    const email = await pending.getMessageEmail(userId, 'm-pick');
+    chat.mockResolvedValue(JSON.stringify({ matched: true, title: 'Cafe Pick', amount: 75, type: 'expense', tagIds: [], date: '2026-10-12' }));
+
+    // Review mode saves nothing.
+    expect(await pending.parseMessage(userId, 'Label_1', email, false)).toMatchObject({ outcome: { status: 'success' }, vaultId: debitVault.id });
+    expect(await AppDataSource.getRepository(Expense).findOneBy({ userId, title: 'Cafe Pick' })).toBeNull();
+
+    await pending.parseMessage(userId, 'Label_1', email, true);
+    expect(await AppDataSource.getRepository(Expense).findOneByOrFail({ userId, title: 'Cafe Pick' })).toMatchObject({ vaultId: debitVault.id });
+    expect((await pending.list(userId)).some((i) => i.gmailMessageId === 'm-pick')).toBe(false);
+
+    // No subject filter matches, so the label's first listener is used.
+    expect(await pending.parseMessage(userId, 'Label_1', await pending.getMessageEmail(userId, 'm-unfiltered'), false)).toMatchObject({ vaultId: debitVault.id });
+    await expect(pending.parseMessage(userId, 'Label_2', await pending.getMessageEmail(userId, 'm-elsewhere'), true)).rejects.toMatchObject({ statusCode: 400 });
   });
 
   it('never re-enqueues a dismissed email', async () => {
