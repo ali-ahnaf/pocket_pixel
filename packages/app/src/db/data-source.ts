@@ -20,6 +20,7 @@ import { AddMonthlyRecap1792195200000 } from '../migrations/1792195200000-AddMon
 import { AllowManyWatchersPerVault1792281600000 } from '../migrations/1792281600000-AllowManyWatchersPerVault';
 import { AddRequireAiParseApproval1792368000000 } from '../migrations/1792368000000-AddRequireAiParseApproval';
 import { AddAdventures1792454400000 } from '../migrations/1792454400000-AddAdventures';
+import { AddTransferFlag1792540800000 } from '../migrations/1792540800000-AddTransferFlag';
 import { getRandomValues } from 'expo-crypto';
 
 // TypeORM generates uuid primary keys with `uuid`, which needs crypto.getRandomValues. Hermes does not provide it.
@@ -39,6 +40,7 @@ export const AppDataSource = new DataSource({
     AllowManyWatchersPerVault1792281600000,
     AddRequireAiParseApproval1792368000000,
     AddAdventures1792454400000,
+    AddTransferFlag1792540800000,
   ],
   migrationsRun: true,
   synchronize: false,

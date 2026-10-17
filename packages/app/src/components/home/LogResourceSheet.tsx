@@ -49,6 +49,9 @@ export function LogResourceSheet({ vaults, tags, selectedMonth, selectedYear, pr
   const [title, setTitle] = useState(prefill?.title ?? '');
   const [selectedTags, setSelectedTags] = useState<TagDto[]>(prefill ? tags.filter((tag) => prefill.tagIds.includes(tag.id)) : []);
   const [selectedVaultId, setSelectedVaultId] = useState<string | null>(prefill?.vaultId ?? (vaults.find((v) => v.isDefault) ?? vaults[0])?.id ?? null);
+  const [isTransfer, setIsTransfer] = useState(false);
+  const [targetVaultId, setTargetVaultId] = useState<string | null>(vaults.find((v) => v.id !== selectedVaultId)?.id ?? null);
+  const canTransfer = !!selectedVaultId && !!targetVaultId && selectedVaultId !== targetVaultId;
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const sendPrompt = async (): Promise<void> => {
@@ -70,6 +73,7 @@ export function LogResourceSheet({ vaults, tags, selectedMonth, selectedYear, pr
       setTitle(parsed.title);
       setAmount(String(parsed.amount));
       setIsExpense(parsed.type === 'expense');
+      setIsTransfer(false);
       setSelectedTags(tags.filter((tag) => parsed.tagIds.includes(tag.id)));
       setSelectedVaultId(parsed.vaultId ?? null);
       setManualEntryOverride(true);
@@ -83,19 +87,24 @@ export function LogResourceSheet({ vaults, tags, selectedMonth, selectedYear, pr
   };
 
   const submit = async (close: () => void): Promise<void> => {
-    if (!amount || isSubmitting) return;
+    if (!amount || isSubmitting || (isTransfer && !canTransfer)) return;
     setIsSubmitting(true);
     const now = new Date();
     const isCurrentMonth = selectedMonth === now.getMonth() && selectedYear === now.getFullYear();
+    const input = {
+      amount: parseFloat(amount),
+      type: isExpense ? ('expense' as const) : ('income' as const),
+      tagIds: selectedTags.map((t) => t.id),
+      title: title || undefined,
+      vaultId: selectedVaultId,
+      date: prefill?.date ?? (isCurrentMonth ? undefined : `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-01`),
+    };
     try {
-      await transactionsService.create(userId, {
-        amount: parseFloat(amount),
-        type: isExpense ? 'expense' : 'income',
-        tagIds: selectedTags.map((t) => t.id),
-        title: title || undefined,
-        vaultId: selectedVaultId,
-        date: prefill?.date ?? (isCurrentMonth ? undefined : `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-01`),
-      });
+      if (isTransfer && targetVaultId) {
+        await transactionsService.createTransferTransaction(userId, { ...input, targetVaultId });
+      } else {
+        await transactionsService.create(userId, input);
+      }
       onSuccess();
       close();
     } catch (err) {
@@ -166,10 +175,39 @@ export function LogResourceSheet({ vaults, tags, selectedMonth, selectedYear, pr
                 <View style={styles.row}>
                   <AmountInput value={amount} onChangeText={setAmount} />
                 </View>
-                <TransactionTypeToggle isExpense={isExpense} onChange={setIsExpense} />
-                {vaults.length > 0 && <VaultSelect vaults={vaults} value={selectedVaultId} onChange={setSelectedVaultId} />}
+                <TransactionTypeToggle
+                  isExpense={isExpense}
+                  onChange={(value) => {
+                    setIsExpense(value);
+                    setIsTransfer(false);
+                  }}
+                  isTransfer={isTransfer}
+                  onSelectTransfer={vaults.length > 1 ? () => setIsTransfer(true) : undefined}
+                />
+                {isTransfer ? (
+                  <View style={styles.transferRow}>
+                    <View style={styles.transferSide}>
+                      <Text style={styles.caps}>FROM</Text>
+                      <VaultSelect vaults={vaults} value={selectedVaultId} onChange={setSelectedVaultId} />
+                    </View>
+                    <View style={styles.transferSide}>
+                      <Text style={styles.caps}>TO</Text>
+                      <VaultSelect vaults={vaults} value={targetVaultId} onChange={setTargetVaultId} />
+                    </View>
+                  </View>
+                ) : (
+                  vaults.length > 0 && <VaultSelect vaults={vaults} value={selectedVaultId} onChange={setSelectedVaultId} />
+                )}
+                {isTransfer && selectedVaultId === targetVaultId && <Text style={styles.resultText}>Pick two different vaults.</Text>}
                 <TagPicker tags={tags} selected={selectedTags} onChange={setSelectedTags} uppercase />
-                <Button label={isSubmitting ? 'RECORDING...' : 'RECORD'} icon="Package" size="lg" disabled={!amount || isSubmitting} onPress={() => submit(close)} style={styles.record} />
+                <Button
+                  label={isSubmitting ? 'RECORDING...' : 'RECORD'}
+                  icon="Package"
+                  size="lg"
+                  disabled={!amount || isSubmitting || (isTransfer && !canTransfer)}
+                  onPress={() => submit(close)}
+                  style={styles.record}
+                />
               </>
             )}
 
@@ -217,5 +255,8 @@ const styles = StyleSheet.create({
   switchOff: { backgroundColor: color.surfaceHighest, justifyContent: 'flex-start' },
   switchKnob: { width: ms(16), height: ms(16), backgroundColor: color.border },
   titleInput: { height: ms(64) },
+  transferRow: { flexDirection: 'row', gap: ms(space[3]) },
+  transferSide: { flex: 1, minWidth: 0, gap: ms(space[1]) },
+  caps: { fontFamily: font.mono, fontSize: ms(text.labelCaps.fontSize), color: color.outline },
   record: { marginTop: ms(space[5]), minHeight: ms(80) },
 });
