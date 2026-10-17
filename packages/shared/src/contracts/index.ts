@@ -13,3 +13,4 @@ export * from './vault-watchers';
 export * from './push-subscriptions';
 export * from './ai-credentials';
 export * from './pending-expenses';
+export * from './adventures';

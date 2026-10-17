@@ -3,7 +3,7 @@ import { AppDataSource } from '../db/data-source';
 import { initDatabase } from '../db/init';
 import { AppError } from '../errors/app-error';
 import { InitialSchema1791849600000 } from '../migrations/1791849600000-InitialSchema';
-import { authService, backupService, tagsService, transactionsService, vaultsService } from '../services';
+import { adventuresService, authService, backupService, tagsService, transactionsService, vaultsService } from '../services';
 
 // The app's tsconfig has no Node types, so the few fs/os calls are typed by hand.
 const { mkdtempSync, rmSync } = jest.requireActual<{ mkdtempSync(prefix: string): string; rmSync(path: string, options: { recursive: boolean; force: boolean }): void }>('fs');
@@ -56,7 +56,7 @@ describe('BackupService.restore', () => {
   it("replaces the signed-in user's data with the matching backup user's rows", async () => {
     const counts = await backupService.restore(userId, `file://${encodeURI(backupPath)}`);
 
-    expect(counts).toMatchObject({ vaults: 1, tags: 1, expenses: 1, transaction_tags: 1, vault_gmail_watchers: 0 });
+    expect(counts).toMatchObject({ vaults: 1, tags: 1, expenses: 1, transaction_tags: 1, vault_gmail_watchers: 0, adventures: 0, adventure_items: 0 });
     // The local Main Stash is gone, replaced by the backup's vault, re-owned by the local user.
     expect((await vaultsService.list(userId)).map((v) => v.name)).toEqual(['Wallet']);
     expect((await tagsService.list(userId)).map((t) => t.name)).toEqual(['Food']);
@@ -74,6 +74,20 @@ describe('BackupService.restore', () => {
     await backupService.export(exportUri);
 
     await expect(backupService.restore(userId, exportUri)).resolves.toMatchObject({ vaults: 1, tags: 1, expenses: 1, transaction_tags: 1 });
+  });
+
+  it('restores adventures and their items from an export of the device DB', async () => {
+    const { id } = await adventuresService.create(userId, { name: 'Misty Peaks', fund: 100 });
+    await adventuresService.addItem(userId, id, { name: 'Boots', plannedCost: 80 });
+    const exportUri = `file://${encodeURI(`${dir}/adventures export.db`)}`;
+    await backupService.export(exportUri);
+    await adventuresService.remove(userId, id);
+    expect(await adventuresService.list(userId)).toHaveLength(0);
+
+    await expect(backupService.restore(userId, exportUri)).resolves.toMatchObject({ adventures: 1, adventure_items: 1 });
+
+    expect(await adventuresService.list(userId)).toEqual([expect.objectContaining({ id, userId, name: 'Misty Peaks', fund: 100, plannedTotal: 80, itemCount: 1 })]);
+    expect(await adventuresService.listItems(userId, id)).toEqual([expect.objectContaining({ name: 'Boots', plannedCost: 80 })]);
   });
 
   it('rejects a backup with no account for the signed-in email', async () => {

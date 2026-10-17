@@ -30,6 +30,8 @@ function RootStack() {
         <Stack.Screen name="settings/attributions" />
         <Stack.Screen name="settings/google-oauth" />
         <Stack.Screen name="views/table" />
+        <Stack.Screen name="adventures/index" />
+        <Stack.Screen name="adventures/[id]" />
         <Stack.Screen name="auth/google/callback" />
       </Stack.Protected>
     </Stack>

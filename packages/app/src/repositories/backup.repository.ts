@@ -2,7 +2,19 @@ import { DataSource, QueryRunner } from 'typeorm';
 import { AppDataSource } from '../db/data-source';
 
 /** Tables copied from a backup, parents first so foreign keys resolve. Deletes run in reverse. */
-const RESTORED_TABLES = ['vaults', 'tags', 'expenses', 'transaction_tags', 'recurring_occurrence_skips', 'debts', 'user_preferences', 'vault_gmail_watchers', 'pending_gmail_expenses'] as const;
+const RESTORED_TABLES = [
+  'vaults',
+  'tags',
+  'expenses',
+  'transaction_tags',
+  'recurring_occurrence_skips',
+  'debts',
+  'user_preferences',
+  'vault_gmail_watchers',
+  'pending_gmail_expenses',
+  'adventures',
+  'adventure_items',
+] as const;
 type RestoredTable = (typeof RESTORED_TABLES)[number];
 
 export type RestoreCounts = Record<RestoredTable, number>;
