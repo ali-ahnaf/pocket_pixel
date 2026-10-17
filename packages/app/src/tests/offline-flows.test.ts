@@ -205,7 +205,7 @@ describe('offline flows', () => {
     expect(tags).toEqual(expect.arrayContaining([expect.objectContaining({ tagId: travel.id, tag: 'Travel', type: 'expense' })]));
   });
 
-  it('scopes yearly, monthly and tag analytics to one vault when a vault id is given', async () => {
+  it('scopes yearly, monthly and tag analytics to the given vaults', async () => {
     const vaultUserId = await authService.signUp({ name: 'Vee', email: 'vee@example.com', password: 's3cret-pass' });
     const [main] = await vaultsService.list(vaultUserId);
     const side = await vaultsService.create(vaultUserId, { name: 'Side' });
@@ -215,9 +215,12 @@ describe('offline flows', () => {
 
     const totalOf = (rows: { total: string }[]): number => rows.reduce((sum, r) => sum + Number(r.total), 0);
     expect(totalOf(await analyticsService.yearly(vaultUserId))).toBe(35);
-    expect(totalOf(await analyticsService.yearly(vaultUserId, side.id))).toBe(25);
-    expect(totalOf(await analyticsService.monthly(vaultUserId, year, side.id))).toBe(25);
-    expect(totalOf(await analyticsService.tags(vaultUserId, year, main.id))).toBe(10);
+    expect(totalOf(await analyticsService.yearly(vaultUserId, [side.id]))).toBe(25);
+    expect(totalOf(await analyticsService.yearly(vaultUserId, [main.id, side.id]))).toBe(35);
+    expect(totalOf(await analyticsService.monthly(vaultUserId, year, [side.id]))).toBe(25);
+    expect(totalOf(await analyticsService.tags(vaultUserId, year, [main.id]))).toBe(10);
+    expect(await analyticsService.vaults(vaultUserId, [side.id])).toEqual([expect.objectContaining({ vaultId: side.id, type: 'expense', total: 25 })]);
+    expect(totalOf(await analyticsService.vaults(vaultUserId))).toBe(35);
   });
 
   describe('Recurring', () => {

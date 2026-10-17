@@ -1,6 +1,7 @@
 import { PendingExpenseEmailDto, PendingGmailExpenseDto } from '@expense-tracker/shared';
 import { AppError } from '../errors/app-error';
 import type { PendingGmailExpense } from '../entities/PendingGmailExpense.entity';
+import type { VaultGmailWatcher } from '../entities/VaultGmailWatcher.entity';
 import { extractMessageContent } from '../lib/gmail/message';
 import { PendingGmailExpenseRepository } from '../repositories/pending-gmail-expense.repository';
 import { TagsRepository } from '../repositories/tags.repository';
@@ -42,8 +43,17 @@ export class PendingGmailExpenseService {
     const row = await this.pending.findByIdForUser(userId, id);
     if (!row) throw new AppError('Pending expense not found', 404);
 
-    const message = await this.gmail.fetchMessage(userId, row.gmailMessageId, 'full');
-    if (!message) throw new AppError('This email is no longer in Gmail. Dismiss it.', 404);
+    return this.fetchEmail(userId, row.gmailMessageId, 'This email is no longer in Gmail. Dismiss it.');
+  }
+
+  /** Fetches any Gmail message for display, outside the queue. Persists nothing. */
+  getMessageEmail(userId: string, gmailMessageId: string): Promise<PendingExpenseEmailDto> {
+    return this.fetchEmail(userId, gmailMessageId, 'This email is no longer in Gmail.');
+  }
+
+  private async fetchEmail(userId: string, gmailMessageId: string, missingMessage: string): Promise<PendingExpenseEmailDto> {
+    const message = await this.gmail.fetchMessage(userId, gmailMessageId, 'full');
+    if (!message) throw new AppError(missingMessage, 404);
 
     const content = extractMessageContent(message);
     return {
@@ -78,13 +88,32 @@ export class PendingGmailExpenseService {
     return outcome;
   }
 
+  /**
+   * Parses an email the user picked from a watched label, outside the queue, so it works even when the
+   * email was parsed or dismissed before. Uses the label listener's settings and vault. With `create`
+   * false nothing is saved, so the result can be approved in the log form first.
+   */
+  async parseMessage(userId: string, labelId: string, email: PendingExpenseEmailDto, create: boolean): Promise<{ outcome: EmailExtractOutcome; vaultId: string }> {
+    const watcher = await this.gmail.findWatcherForMessage(userId, labelId, email.subject);
+    const outcome = await this.extractFor(userId, watcher, email);
+    if (outcome.status === 'success' && create) {
+      const { title, amount, type, date, tagIds } = outcome.parsed;
+      await this.transactions.create(userId, { title, amount, type, date, tagIds, vaultId: watcher.vaultId });
+    }
+    return { outcome, vaultId: watcher.vaultId };
+  }
+
   private async findRow(userId: string, id: string): Promise<PendingGmailExpense> {
     const row = await this.pending.findByIdForUser(userId, id);
     if (!row) throw new AppError('Pending expense not found', 404);
     return row;
   }
 
-  private async extractFor(userId: string, row: PendingGmailExpense, email: PendingExpenseEmailDto): Promise<EmailExtractOutcome> {
+  private async extractFor(
+    userId: string,
+    row: Pick<PendingGmailExpense | VaultGmailWatcher, 'guidanceHint' | 'transactionDay' | 'tagKeywords'>,
+    email: PendingExpenseEmailDto,
+  ): Promise<EmailExtractOutcome> {
     const tags = await this.tags.findManyForUser(userId);
     return this.ai.extractTransactionFromEmail(email, tags, row.guidanceHint, row.transactionDay, row.tagKeywords);
   }

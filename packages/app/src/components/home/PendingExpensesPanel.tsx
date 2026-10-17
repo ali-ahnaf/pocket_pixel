@@ -6,7 +6,9 @@ import { ms } from 'react-native-size-matters';
 import { useLocalUserId } from '../../hooks/DatabaseProvider';
 import { gmailService, logger, pendingGmailExpenseService } from '../../services';
 import { color, font, space, text } from '../../theme';
+import { formatTime } from '../../lib/formatters';
 import { Badge } from '../Badge';
+import { showToast } from '../Toast';
 import { Card } from '../Card';
 import { GmailReconnectBanner } from './GmailReconnectBanner';
 import { LogResourceSheet } from './LogResourceSheet';
@@ -36,30 +38,42 @@ export function PendingExpensesPanel({ vaults, tags, selectedMonth, selectedYear
   const [reviewing, setReviewing] = useState<{ item: PendingGmailExpenseDto; parsed: ParsedEmailDto } | null>(null);
 
   // Shows the local queue at once, then syncs in the background and shows anything new. A failed sync keeps the app usable.
-  const refresh = useCallback(() => {
-    let active = true;
-    const show = () =>
-      Promise.all([pendingGmailExpenseService.list(userId), gmailService.getStatus(userId)]).then(([list, status]) => {
-        if (!active) return;
-        setItems(list);
-        setReconnectRequired(status.reconnectRequired);
-      });
+  // `announce` (pull to refresh) toasts the result: emails fetched and the saved sync time.
+  const refresh = useCallback(
+    (announce = false) => {
+      let active = true;
+      const show = () =>
+        Promise.all([pendingGmailExpenseService.list(userId), gmailService.getStatus(userId)]).then(([list, status]) => {
+          if (!active) return;
+          setItems(list);
+          setReconnectRequired(status.reconnectRequired);
+        });
 
-    show()
-      .then(() => gmailService.sync(userId))
-      .catch((err) => logger.warn('Gmail sync failed', { err }))
-      .then(show)
-      .catch((err) => logger.error('Load pending expenses failed', { err }));
-    return () => {
-      active = false;
-    };
-  }, [userId]);
+      show()
+        .then(() => gmailService.sync(userId))
+        .then(
+          ({ enqueued, syncedAt }) => {
+            if (announce && syncedAt !== null) showToast(`Fetched ${enqueued} email${enqueued === 1 ? '' : 's'}. Last fetch ${formatTime(new Date(syncedAt).toISOString())}`);
+          },
+          (err) => {
+            logger.warn('Gmail sync failed', { err });
+            if (announce) showToast('Gmail fetch failed');
+          },
+        )
+        .then(show)
+        .catch((err) => logger.error('Load pending expenses failed', { err }));
+      return () => {
+        active = false;
+      };
+    },
+    [userId],
+  );
 
-  useFocusEffect(refresh);
+  useFocusEffect(useCallback(() => refresh(), [refresh]));
 
   // 0 is the initial value; the focus effect already covers the first load.
   useEffect(() => {
-    if (refreshKey > 0) return refresh();
+    if (refreshKey > 0) return refresh(true);
   }, [refresh, refreshKey]);
 
   useEffect(() => {

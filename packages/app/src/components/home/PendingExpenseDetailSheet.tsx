@@ -1,6 +1,6 @@
 import type { ParsedEmailDto, PendingExpenseEmailDto, PendingGmailExpenseDto } from '@expense-tracker/shared';
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { ms } from 'react-native-size-matters';
 import { useLocalUserId } from '../../hooks/DatabaseProvider';
 import { useDisplaySettings } from '../../hooks/useDisplaySettings';
@@ -10,6 +10,7 @@ import { color, font, space, text } from '../../theme';
 import { AiSetupLink } from '../AiSetupLink';
 import { BottomSheetModal } from '../BottomSheetModal';
 import { Button } from '../Button';
+import { EmailPreview } from '../EmailPreview';
 import { SheetHeader } from '../SheetHeader';
 import { showToast } from '../Toast';
 
@@ -103,27 +104,7 @@ export function PendingExpenseDetailSheet({ item, onResolved, onParsedForReview,
             </View>
           )}
 
-          {email && (
-            <View style={styles.email}>
-              <View style={styles.metaRow}>
-                <Text style={styles.metaKey}>From</Text>
-                <Text style={styles.metaValue} numberOfLines={1}>
-                  {email.from}
-                </Text>
-              </View>
-              <View style={styles.metaRow}>
-                <Text style={styles.metaKey}>Subject</Text>
-                <Text style={styles.metaValue} numberOfLines={1}>
-                  {email.subject}
-                </Text>
-              </View>
-              <ScrollView style={styles.bodyScroll}>
-                <Text style={styles.body} selectable>
-                  {email.bodyText}
-                </Text>
-              </ScrollView>
-            </View>
-          )}
+          {email && <EmailPreview email={email} />}
 
           {parseError && (
             <View style={styles.errorBox}>
@@ -169,12 +150,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: ms(space[3]),
     paddingVertical: ms(space[2]),
   },
-  email: { borderWidth: ms(4), borderColor: color.border, backgroundColor: color.surfaceLowest, padding: ms(space[3]), gap: ms(space[1]) },
-  metaRow: { flexDirection: 'row', gap: ms(space[3]) },
-  metaKey: { width: ms(56), fontFamily: font.body, fontSize: ms(12), color: color.onSurfaceVariant },
-  metaValue: { flex: 1, fontFamily: font.body, fontSize: ms(12), color: color.onSurface },
-  bodyScroll: { maxHeight: ms(160), marginTop: ms(space[1]), paddingTop: ms(space[2]), borderTopWidth: ms(2), borderStyle: 'dashed', borderColor: color.outline },
-  body: { fontFamily: font.mono, fontSize: ms(12), lineHeight: ms(19), color: color.onSurface },
   errorBox: { borderWidth: ms(4), borderColor: color.border, backgroundColor: color.surface, padding: ms(space[3]), gap: ms(space[2]) },
   error: { fontFamily: font.mono, fontSize: ms(text.labelCaps.fontSize), color: color.error, textTransform: 'uppercase' },
   status: { fontFamily: font.mono, fontSize: ms(11), color: color.onSurfaceVariant, textTransform: 'uppercase' },

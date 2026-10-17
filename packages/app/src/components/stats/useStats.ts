@@ -17,6 +17,8 @@ interface AllTimeTotals {
   netByMonth: Record<string, number>;
   /** Expense total per tag name, from SQL aggregates. Untagged expenses are not included. */
   tagTotals: Record<string, number>;
+  /** Income and expense per vault id, from SQL aggregates. */
+  vaultTotals: Record<string, { income: number; expense: number }>;
 }
 
 export interface Allocation {
@@ -38,7 +40,7 @@ export interface VaultSaving {
 export interface StatsData {
   loading: boolean;
   vaults: VaultDto[];
-  /** The selected month's transactions, filtered by the selected vault. Empty for all time. */
+  /** The selected month's transactions, filtered by the selected vaults. Empty for all time. */
   transactions: TransactionDto[];
   totalIncome: number;
   totalExpenses: number;
@@ -75,13 +77,18 @@ function monthRange(keys: string[]): string[] {
   return range;
 }
 
-/** `vaultId` undefined means every vault. */
-async function loadAllTime(userId: string, vaultId?: string): Promise<AllTimeTotals> {
-  const yearly = await analyticsService.yearly(userId, vaultId);
+/** Empty `vaultIds` means every vault. */
+async function loadAllTime(userId: string, vaultIds: string[]): Promise<AllTimeTotals> {
+  const [yearly, byVault] = await Promise.all([analyticsService.yearly(userId, vaultIds), analyticsService.vaults(userId, vaultIds)]);
   const years = [...new Set(yearly.map((r) => Number(r.year)))].filter(Boolean);
-  const perYear = await Promise.all(years.map((y) => Promise.all([y, analyticsService.monthly(userId, y, vaultId), analyticsService.tags(userId, y, vaultId)])));
+  const perYear = await Promise.all(years.map((y) => Promise.all([y, analyticsService.monthly(userId, y, vaultIds), analyticsService.tags(userId, y, vaultIds)])));
 
-  const totals: AllTimeTotals = { income: 0, expense: 0, netByMonth: {}, tagTotals: {} };
+  const totals: AllTimeTotals = { income: 0, expense: 0, netByMonth: {}, tagTotals: {}, vaultTotals: {} };
+  byVault.forEach((r) => {
+    const entry = (totals.vaultTotals[r.vaultId] ??= { income: 0, expense: 0 });
+    if (r.type === 'income') entry.income += toNumber(r.total);
+    if (r.type === 'expense') entry.expense += toNumber(r.total);
+  });
   yearly.forEach((r) => {
     if (r.type === 'income') totals.income += toNumber(r.total);
     if (r.type === 'expense') totals.expense += toNumber(r.total);
@@ -103,14 +110,15 @@ async function loadAllTime(userId: string, vaultId?: string): Promise<AllTimeTot
 
 /**
  * Stats for one month or all time. A month loads that month's transactions and derives the sections in JS (bounded to one
- * month). All time uses SQL aggregates only (filtered by vault in SQL), so the per-vault sections (vault savings, expense
- * chart, top drains) are unavailable there. ponytail: add a per-vault aggregate to the analytics repository to fill them.
+ * month). All time uses SQL aggregates only (filtered by vaults in SQL); the expense chart and top drains are unavailable
+ * there. ponytail: add per-vault monthly and top-N aggregates to the analytics repository to fill them.
  */
-export function useStats(period: string, vaultId: string, lineVaultId: string): StatsData {
+/** Empty `vaultIds` means every vault. */
+export function useStats(period: string, vaultIds: string[], lineVaultId: string): StatsData {
   const userId = useLocalUserId();
   const isAllTime = period === ALL_TIME_PERIOD;
-  // A month filters by vault in memory, so only all time reloads when the vault changes.
-  const allTimeVaultId = isAllTime && vaultId !== 'all' ? vaultId : undefined;
+  // A month filters by vault in memory, so only all time reloads when the selection changes. A string key keeps the effect stable across renders.
+  const allTimeVaultKey = isAllTime ? [...vaultIds].sort().join(',') : '';
   const [loading, setLoading] = useState(true);
   const [vaults, setVaults] = useState<VaultDto[]>([]);
   const [monthTxs, setMonthTxs] = useState<TransactionDto[]>([]);
@@ -121,7 +129,11 @@ export function useStats(period: string, vaultId: string, lineVaultId: string): 
       let cancelled = false;
       const [year, month] = period.split('-').map(Number);
       // loading stays false on later reloads, so refocusing the tab does not flash skeletons over data.
-      Promise.all([vaultsService.list(userId), isAllTime ? Promise.resolve([]) : transactionsService.list(userId, { month, year }), isAllTime ? loadAllTime(userId, allTimeVaultId) : null])
+      Promise.all([
+        vaultsService.list(userId),
+        isAllTime ? Promise.resolve([]) : transactionsService.list(userId, { month, year }),
+        isAllTime ? loadAllTime(userId, allTimeVaultKey ? allTimeVaultKey.split(',') : []) : null,
+      ])
         .then(([vaultList, txs, totals]) => {
           if (cancelled) return;
           setVaults(vaultList);
@@ -133,16 +145,22 @@ export function useStats(period: string, vaultId: string, lineVaultId: string): 
       return () => {
         cancelled = true;
       };
-    }, [userId, period, isAllTime, allTimeVaultId]),
+    }, [userId, period, isAllTime, allTimeVaultKey]),
   );
 
   return useMemo<StatsData>(() => {
-    const transactions = vaultId === 'all' ? monthTxs : monthTxs.filter((t) => t.vaultId === vaultId);
+    const transactions = vaultIds.length === 0 ? monthTxs : monthTxs.filter((t) => t.vaultId != null && vaultIds.includes(t.vaultId));
     const expenses = transactions.filter((t) => t.type === 'expense');
     const sumOf = (txs: TransactionDto[]): number => txs.reduce((s, t) => s + t.amount, 0);
 
     if (isAllTime) {
-      const totals = allTime ?? { income: 0, expense: 0, netByMonth: {}, tagTotals: {} };
+      const totals = allTime ?? { income: 0, expense: 0, netByMonth: {}, tagTotals: {}, vaultTotals: {} };
+      // Budgets are monthly, so all time shows savings only, for the selected vaults.
+      const selectedVaults = vaultIds.length === 0 ? vaults : vaults.filter((v) => vaultIds.includes(v.id));
+      const vaultSavings = selectedVaults.map((vault) => {
+        const { income, expense } = totals.vaultTotals[vault.id] ?? { income: 0, expense: 0 };
+        return { vault, income, spent: expense, savings: income - expense, budget: 0, progress: 0, isOver: false };
+      });
       const months = monthRange(Object.keys(totals.netByMonth));
       return {
         loading,
@@ -157,7 +175,7 @@ export function useStats(period: string, vaultId: string, lineVaultId: string): 
                 .sort((a, b) => b[1] - a[1])
                 .map(([label, amount]) => ({ label, amount, percent: Math.round((amount / totals.expense) * 100) }))
             : [],
-        vaultSavings: [],
+        vaultSavings,
         chartLabels: [],
         chartSeries: [],
         topDrains: [],
@@ -236,5 +254,5 @@ export function useStats(period: string, vaultId: string, lineVaultId: string): 
       chartSeries,
       topDrains: [...expenses].sort((a, b) => b.amount - a.amount).slice(0, 3),
     };
-  }, [loading, vaults, monthTxs, allTime, isAllTime, period, vaultId, lineVaultId]);
+  }, [loading, vaults, monthTxs, allTime, isAllTime, period, vaultIds, lineVaultId]);
 }

@@ -1,23 +1,19 @@
-import type { GmailLabelDto, OAuthCredentialsStatusDto, TagDto, VaultGmailWatcherDto } from '@expense-tracker/shared';
+import type { GmailLabelDto, OAuthCredentialsStatusDto, TagDto, VaultDto, VaultGmailWatcherDto } from '@expense-tracker/shared';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ms } from 'react-native-size-matters';
 import { BackButton } from '../../components/BackButton';
 import { Button } from '../../components/Button';
 import { SettingsWindow, settingsStyles } from '../../components/settings/SettingsWindow';
+import { RecentEmailsSection } from '../../components/settings/RecentEmailsSection';
 import { StatusNote } from '../../components/settings/StatusNote';
 import { VaultWatcherCard } from '../../components/settings/VaultWatcherCard';
 import { useLocalUserId } from '../../hooks/DatabaseProvider';
 import { gmailService, logger, tagsService, vaultsService, vaultWatchersService } from '../../services';
 import { color, gutter, space } from '../../theme';
 import { PixelIcon } from '../../components/PixelIcon';
-
-interface VaultOption {
-  id: string;
-  name: string;
-}
 
 const errorMessage = (err: unknown): string => (err instanceof Error ? err.message : 'Something went wrong');
 
@@ -33,7 +29,7 @@ export default function GoogleOAuthSettingsScreen() {
 
   const [labels, setLabels] = useState<GmailLabelDto[]>([]);
   const [tags, setTags] = useState<TagDto[]>([]);
-  const [vaults, setVaults] = useState<VaultOption[]>([]);
+  const [vaults, setVaults] = useState<VaultDto[]>([]);
   const [watchers, setWatchers] = useState<VaultGmailWatcherDto[]>([]);
   const [watchLoading, setWatchLoading] = useState(true);
 
@@ -52,7 +48,7 @@ export default function GoogleOAuthSettingsScreen() {
         tagsService.list(userId),
       ]);
       setLabels(labelList);
-      setVaults(vaultList.map((v) => ({ id: v.id, name: v.name })));
+      setVaults(vaultList);
       setWatchers(watcherList);
       setTags(tagList);
     } finally {
@@ -84,6 +80,7 @@ export default function GoogleOAuthSettingsScreen() {
   };
 
   const connected = status?.connected ?? false;
+  const watchedLabels = useMemo(() => labels.filter((label) => watchers.some((w) => w.gmailLabelId === label.id)), [labels, watchers]);
 
   return (
     <ScrollView
@@ -135,6 +132,8 @@ export default function GoogleOAuthSettingsScreen() {
             )}
           </View>
         )}
+
+        {connected && !watchLoading && <RecentEmailsSection labels={watchedLabels} vaults={vaults} tags={tags} onError={setError} />}
       </SettingsWindow>
     </ScrollView>
   );
