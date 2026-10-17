@@ -1,24 +1,50 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { ms } from 'react-native-size-matters';
-import { color, font, shadow, space, text } from '../theme';
+import { color, shadow, space } from '../theme';
 import { PixelIcon } from './PixelIcon';
 
 export interface TransactionTypeToggleProps {
   isExpense: boolean;
   onChange: (isExpense: boolean) => void;
+  /** Shows a third Transfer option. When set, `isTransfer` overrides the Expense / Income selection. */
+  onSelectTransfer?: () => void;
+  isTransfer?: boolean;
 }
 
-export function TransactionTypeToggle({ isExpense, onChange }: TransactionTypeToggleProps) {
+export function TransactionTypeToggle({ isExpense, onChange, onSelectTransfer, isTransfer = false }: TransactionTypeToggleProps) {
+  const expense = isExpense && !isTransfer;
+  const income = !isExpense && !isTransfer;
   return (
     <View style={styles.container} accessibilityRole="radiogroup">
-      <Pressable accessibilityRole="radio" accessibilityState={{ checked: isExpense }} onPress={() => onChange(true)} style={[styles.option, isExpense ? styles.expenseActive : styles.inactive]}>
+      <Pressable
+        accessibilityRole="radio"
+        accessibilityLabel="Expense"
+        accessibilityState={{ checked: expense }}
+        onPress={() => onChange(true)}
+        style={[styles.option, expense ? styles.expenseActive : styles.inactive]}
+      >
         <PixelIcon name="ArrowDownRight" size={ms(18)} />
-        <Text style={[styles.label, isExpense ? styles.expenseLabel : styles.inactiveLabel]}>Expense</Text>
       </Pressable>
-      <Pressable accessibilityRole="radio" accessibilityState={{ checked: !isExpense }} onPress={() => onChange(false)} style={[styles.option, !isExpense ? styles.incomeActive : styles.inactive]}>
+      <Pressable
+        accessibilityRole="radio"
+        accessibilityLabel="Income"
+        accessibilityState={{ checked: income }}
+        onPress={() => onChange(false)}
+        style={[styles.option, income ? styles.incomeActive : styles.inactive]}
+      >
         <PixelIcon name="ArrowUpRight" size={ms(18)} />
-        <Text style={[styles.label, !isExpense ? styles.incomeLabel : styles.inactiveLabel]}>Income</Text>
       </Pressable>
+      {onSelectTransfer && (
+        <Pressable
+          accessibilityRole="radio"
+          accessibilityLabel="Transfer"
+          accessibilityState={{ checked: isTransfer }}
+          onPress={onSelectTransfer}
+          style={[styles.option, isTransfer ? styles.transferActive : styles.inactive]}
+        >
+          <PixelIcon name="ArrowLeftRight" size={ms(18)} />
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -28,9 +54,6 @@ const styles = StyleSheet.create({
   option: { flex: 1, minHeight: ms(48), flexDirection: 'row', gap: ms(space[1]), alignItems: 'center', justifyContent: 'center', paddingHorizontal: ms(space[4]) },
   expenseActive: { backgroundColor: color.errorContainer, borderWidth: ms(4), borderColor: color.border, boxShadow: shadow.toggleActive },
   incomeActive: { backgroundColor: color.primaryContainer, borderWidth: ms(4), borderColor: color.border, boxShadow: shadow.toggleActive },
+  transferActive: { backgroundColor: color.tertiaryContainer, borderWidth: ms(4), borderColor: color.border, boxShadow: shadow.toggleActive },
   inactive: { backgroundColor: color.surfaceLow },
-  label: { fontFamily: font.bodyBold, fontSize: ms(text.bodyLg.fontSize) },
-  expenseLabel: { color: color.onErrorContainer },
-  incomeLabel: { color: color.onPrimaryContainer },
-  inactiveLabel: { color: color.outline },
 });

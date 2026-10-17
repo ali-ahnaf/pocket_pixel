@@ -29,7 +29,9 @@ export function VaultSelect({ vaults, value, onChange, allowNone = false }: Vaul
       renderValue={(v) => (
         <>
           {v ? <PixelIcon name={toPixelIcon(v.icon || 'Briefcase')} size={ms(20)} /> : null}
-          <Text style={styles.value}>{v?.name ?? (allowNone ? 'No vault' : 'Select vault')}</Text>
+          <Text style={styles.value} numberOfLines={1}>
+            {v?.name ?? (allowNone ? 'No vault' : 'Select vault')}
+          </Text>
         </>
       )}
       renderOption={(v, isSelected) => (
@@ -46,7 +48,7 @@ export function VaultSelect({ vaults, value, onChange, allowNone = false }: Vaul
 }
 
 const styles = StyleSheet.create({
-  value: { fontFamily: font.bodyBold, fontSize: ms(text.bodyLg.fontSize), color: color.primary },
+  value: { flexShrink: 1, fontFamily: font.bodyBold, fontSize: ms(text.bodyLg.fontSize), color: color.primary },
   optionRow: { flexDirection: 'row', alignItems: 'center', gap: ms(12) },
   option: { fontFamily: font.body, fontSize: ms(text.bodyLg.fontSize), color: color.onSurface, textTransform: 'uppercase' },
   optionSelected: { fontFamily: font.bodyBold, color: color.primary },

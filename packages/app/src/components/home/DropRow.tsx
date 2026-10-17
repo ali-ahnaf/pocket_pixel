@@ -5,6 +5,7 @@ import { ms } from 'react-native-size-matters';
 import { formatCurrency, formatDate, formatTime } from '../../lib/formatters';
 import { toPixelIcon } from '../../lib/iconMapper';
 import { color, font, shadow, space, text } from '../../theme';
+import { Badge } from '../Badge';
 import { PixelIcon } from '../PixelIcon';
 import { TagChips, VaultChip } from './TagChips';
 
@@ -51,6 +52,7 @@ export const TransactionRow = memo(function TransactionRow({ tx, onPress }: { tx
       <DropBody drop={tx} />
       <View style={styles.side}>
         <Text style={[styles.amount, tx.type === 'income' ? styles.income : styles.expense]}>{amountText(tx)}</Text>
+        {tx.isTransfer ? <Badge label="Transfer" variant="tertiary" style={styles.badge} /> : null}
         <Text style={styles.meta}>{formatDate(tx.date)}</Text>
         <Text style={styles.meta}>{formatTime(tx.updatedAt)}</Text>
       </View>
@@ -117,6 +119,7 @@ const styles = StyleSheet.create({
   category: { fontFamily: font.body, fontSize: ms(text.bodySm.fontSize), lineHeight: ms(text.bodySm.lineHeight), color: color.onSurfaceVariant },
   ghostText: { opacity: 0.7 },
   side: { alignItems: 'flex-end', gap: ms(space[1]) },
+  badge: { alignSelf: 'flex-end', paddingVertical: 0 },
   amount: { fontFamily: font.mono, fontSize: ms(text.labelCaps.fontSize), lineHeight: ms(16) },
   income: { color: color.primary },
   expense: { color: color.error },

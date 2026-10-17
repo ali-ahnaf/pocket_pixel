@@ -37,6 +37,7 @@ export class TransactionsService {
       vaultId: tx.vaultId,
       vault: tx.vault ? { id: tx.vault.id, name: tx.vault.name, icon: tx.vault.icon } : null,
       tags: tx.transactionTags?.map((tt) => tt.tag) ?? [],
+      isTransfer: tx.isTransfer,
       isCommitted: true,
       createdAt: tx.createdAt.toISOString(),
       updatedAt: tx.updatedAt.toISOString(),
@@ -87,6 +88,7 @@ export class TransactionsService {
       vaultId: vaultId,
       date: transactionDate,
       title: title || 'Transfer Out',
+      isTransfer: true,
     });
     const incomeTx = this.transactions.createEntity({
       userId,
@@ -95,6 +97,7 @@ export class TransactionsService {
       vaultId: targetVaultId,
       date: transactionDate,
       title: title || 'Transfer In',
+      isTransfer: true,
     });
 
     const savedExpense = await this.transactions.save(expenseTx);
