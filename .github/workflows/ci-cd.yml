@@ -77,97 +77,9 @@ jobs:
           NEXT_TELEMETRY_DISABLED: 1
           NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
 
-      - name: Stage deploy bundle
-        run: |
-          mkdir -p bundle/packages/shared bundle/packages/api bundle/packages/ui
-          cp package.json package-lock.json ecosystem.config.js bundle/
-          cp packages/shared/package.json bundle/packages/shared/
-          cp -r packages/shared/dist bundle/packages/shared/dist
-          cp packages/api/package.json bundle/packages/api/
-          cp -r packages/api/dist bundle/packages/api/dist
-          cp packages/ui/package.json bundle/packages/ui/
-          cp -r packages/ui/out bundle/packages/ui/out
-
-      - name: Upload deploy bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: deploy-bundle
-          path: bundle/
-          include-hidden-files: true
-          retention-days: 1
-
-  deploy:
-    name: Deploy to Hostinger VPS
-    environment: production
-    needs: [build, test]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    env:
-      VPS_HOST: ${{ secrets.HOSTINGER_VPS_HOST }}
-      VPS_PORT: ${{ secrets.HOSTINGER_VPS_PORT }}
-      VPS_USER: ${{ secrets.HOSTINGER_VPS_USER }}
-      VPS_APP_DIR: ${{ secrets.HOSTINGER_VPS_APP_DIR }}
-
-    steps:
-      - name: Download deploy bundle
-        uses: actions/download-artifact@v4
-        with:
-          name: deploy-bundle
-          path: bundle
-
-      - name: Configure SSH
-        run: |
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "${{ secrets.HOSTINGER_VPS_SSH_KEY }}" | tr -d '\r' > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H -p "${VPS_PORT:-22}" "$VPS_HOST" > ~/.ssh/known_hosts
-          chmod 644 ~/.ssh/known_hosts
-          cat > ~/.ssh/config <<EOF
-          Host deploy-target
-            HostName $VPS_HOST
-            User $VPS_USER
-            Port ${VPS_PORT:-22}
-            IdentityFile ~/.ssh/deploy_key
-            IdentitiesOnly yes
-            PreferredAuthentications publickey
-            BatchMode yes
-            StrictHostKeyChecking yes
-          EOF
-          chmod 600 ~/.ssh/config
-
-      - name: Verify SSH access
-        run: ssh deploy-target "mkdir -p '$VPS_APP_DIR'"
-
-      - name: Sync build output to VPS
-        run: |
-          rsync -az --delete \
-            --exclude 'node_modules/' \
-            --exclude '.env' \
-            --exclude '.env.*' \
-            --exclude '*.sqlite' \
-            bundle/ "deploy-target:$VPS_APP_DIR/"
-
-      - name: Write API .env on VPS
-        env:
-          API_ENV: ${{ secrets.API_ENV }}
-        run: |
-          printf '%s' "$API_ENV" | ssh deploy-target "cat > '$VPS_APP_DIR/packages/api/.env'"
-
-      - name: Run remote deploy commands
-        run: |
-          ssh deploy-target <<EOF
-          set -eu
-          cd "$VPS_APP_DIR"
-          npm ci --omit=dev --workspace=packages/api --workspace=packages/shared --include-workspace-root
-          npm run migration:run-prod --workspace=packages/api
-          pm2 startOrRestart ecosystem.config.js --only pocket-pixel --env production --silent > /dev/null
-          pm2 save --silent > /dev/null
-          echo "pocket-pixel restarted and process list saved"
-          EOF
-
   release:
     name: Tag and release
-    needs: deploy
+    needs: [build, test]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
