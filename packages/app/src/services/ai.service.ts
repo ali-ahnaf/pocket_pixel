@@ -35,14 +35,6 @@ interface ModelTransaction {
   vault: string | null;
 }
 
-// Only these models are offered in settings. Matched by substring in either direction so a dated suffix on OpenRouter's side does not drop a model.
-const CURATED_MODEL_IDS = ['openai/gpt-4o', 'openai/gpt-4o-mini', 'openai/gpt-5-mini', 'anthropic/claude-3.5-sonnet', 'google/gemini-2.0-flash'];
-
-const isCuratedModel = (modelId: string): boolean => {
-  const lowerId = modelId.toLowerCase();
-  return CURATED_MODEL_IDS.some((curatedId) => lowerId.includes(curatedId) || curatedId.includes(lowerId));
-};
-
 export const AI_SETUP_MESSAGE = 'Set up your OpenRouter API key and pick a model in Settings before parsing prompts.';
 
 /**
@@ -71,9 +63,8 @@ export class AiService {
     return this.store.setModel(model);
   }
 
-  async listCuratedModels(): Promise<OpenRouterModel[]> {
-    const models = await this.client.listModels();
-    return models.filter((model) => isCuratedModel(model.id));
+  listModels(): Promise<OpenRouterModel[]> {
+    return this.client.listModels();
   }
 
   /** Spend for the saved key, or null when no key is saved. */

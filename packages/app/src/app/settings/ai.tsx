@@ -42,7 +42,7 @@ export default function AiSettingsScreen() {
   }, []);
 
   useEffect(() => {
-    aiService.listCuratedModels().then(
+    aiService.listModels().then(
       (result) => {
         setModels(result);
         setModelsLoading(false);

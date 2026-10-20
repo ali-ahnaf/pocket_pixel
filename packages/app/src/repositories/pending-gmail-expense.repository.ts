@@ -11,6 +11,7 @@ export interface PendingGmailExpenseFields {
   guidanceHint: string | null;
   transactionDay: number | null;
   tagKeywords: TagKeywordRuleDto[] | null;
+  receivedAt: string | null;
 }
 
 /**

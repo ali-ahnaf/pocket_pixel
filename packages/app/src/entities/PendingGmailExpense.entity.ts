@@ -43,6 +43,10 @@ export class PendingGmailExpense extends BaseEntity {
   @Column({ type: 'integer', nullable: true })
   transactionDay: number | null;
 
+  /** ISO time Gmail received the email. Nullable: rows enqueued before it was captured have none. */
+  @Column({ type: 'varchar', nullable: true })
+  receivedAt: string | null;
+
   @Column({ type: 'simple-json', nullable: true })
   tagKeywords: TagKeywordRuleDto[] | null;
 

@@ -100,7 +100,7 @@ export function EditTransactionSheet({ transaction, vaults, tags, onSuccess, onC
               ) : (
                 <View style={styles.confirmRow}>
                   <Button label="CANCEL" variant="ghost" onPress={() => setShowDeleteConfirm(false)} style={styles.flex} />
-                  <Button label={isDeleting ? 'DELETING...' : 'CONFIRM DELETE'} variant="danger" disabled={isDeleting} onPress={() => remove(close)} style={styles.flex} />
+                  <Button label={isDeleting ? 'DELETING...' : 'CONFIRM'} variant="danger" disabled={isDeleting} onPress={() => remove(close)} style={styles.flex} />
                 </View>
               )}
             </View>

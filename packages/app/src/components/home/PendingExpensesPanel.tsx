@@ -6,7 +6,7 @@ import { ms } from 'react-native-size-matters';
 import { useLocalUserId } from '../../hooks/DatabaseProvider';
 import { gmailService, logger, pendingGmailExpenseService } from '../../services';
 import { color, font, space, text } from '../../theme';
-import { formatTime } from '../../lib/formatters';
+import { formatDate, formatTime, toIsoDate } from '../../lib/formatters';
 import { Badge } from '../Badge';
 import { showToast } from '../Toast';
 import { Card } from '../Card';
@@ -15,6 +15,9 @@ import { LogResourceSheet } from './LogResourceSheet';
 import { PendingExpenseDetailSheet } from './PendingExpenseDetailSheet';
 import { PixelIcon } from '../PixelIcon';
 import { IconText } from '../IconText';
+import { TagChips } from './TagChips';
+import { toPixelIcon } from '../../lib/iconMapper';
+import { LoadingBar } from '../LoadingBar';
 
 export interface PendingExpensesPanelProps {
   /** Feed the log form opened to review an AI-parsed email. */
@@ -30,10 +33,12 @@ export interface PendingExpensesPanelProps {
 
 // Port of packages/ui/src/components/pending-expenses/PendingExpensesPanel.tsx. Hidden while the queue is empty.
 // The phone gets no Gmail push, so this panel also polls Gmail: on focus, whenever the app returns to the foreground, and on the dashboard's pull to refresh.
+// While a sync runs it shows a loading bar as its last element, which the dashboard places right above the status card.
 export function PendingExpensesPanel({ vaults, tags, selectedMonth, selectedYear, onTransactionCreated, refreshKey }: PendingExpensesPanelProps) {
   const userId = useLocalUserId();
   const [items, setItems] = useState<PendingGmailExpenseDto[]>([]);
   const [reconnectRequired, setReconnectRequired] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [selected, setSelected] = useState<PendingGmailExpenseDto | null>(null);
   const [reviewing, setReviewing] = useState<{ item: PendingGmailExpenseDto; parsed: ParsedEmailDto } | null>(null);
 
@@ -50,7 +55,10 @@ export function PendingExpensesPanel({ vaults, tags, selectedMonth, selectedYear
         });
 
       show()
-        .then(() => gmailService.sync(userId))
+        .then(() => {
+          setSyncing(true);
+          return gmailService.sync(userId);
+        })
         .then(
           ({ enqueued, syncedAt }) => {
             if (announce && syncedAt !== null) showToast(`Fetched ${enqueued} email${enqueued === 1 ? '' : 's'}. Last fetch ${formatTime(new Date(syncedAt).toISOString())}`);
@@ -61,7 +69,8 @@ export function PendingExpensesPanel({ vaults, tags, selectedMonth, selectedYear
           },
         )
         .then(show)
-        .catch((err) => logger.error('Load pending expenses failed', { err }));
+        .catch((err) => logger.error('Load pending expenses failed', { err }))
+        .finally(() => setSyncing(false));
       return () => {
         active = false;
       };
@@ -96,6 +105,17 @@ export function PendingExpensesPanel({ vaults, tags, selectedMonth, selectedYear
     );
   };
 
+  // Same soft delete as the detail sheet's Dismiss button, without opening the sheet.
+  const handleDismiss = (id: string): void => {
+    pendingGmailExpenseService.resolve(userId, id).then(
+      () => handleResolved(id, false),
+      (err) => {
+        logger.error('Dismiss pending expense failed', { err });
+        showToast('Dismiss failed');
+      },
+    );
+  };
+
   return (
     <>
       {reconnectRequired && <GmailReconnectBanner />}
@@ -108,22 +128,38 @@ export function PendingExpensesPanel({ vaults, tags, selectedMonth, selectedYear
             </IconText>
             <Badge label={String(items.length)} variant="secondary" />
           </View>
-          {items.map((item) => (
-            <Pressable key={item.id} accessibilityRole="button" onPress={() => setSelected(item)} style={({ pressed }) => [styles.item, pressed && styles.pressed]}>
-              <View style={styles.itemBody}>
-                <Text style={styles.subject} numberOfLines={1}>
-                  {item.subject ?? 'No subject'}
-                </Text>
-                <Badge label={item.vaultName} variant="secondary" />
-                {item.guidanceHint ? (
-                  <Text style={styles.hint} numberOfLines={1}>
-                    {item.guidanceHint}
+          {items.map((item) => {
+            const vault = vaults.find((v) => v.id === item.vaultId);
+            return (
+              <Pressable key={item.id} accessibilityRole="button" onPress={() => setSelected(item)} style={({ pressed }) => [styles.item, pressed && styles.pressed]}>
+                <View style={styles.itemBody}>
+                  <Text style={styles.subject} numberOfLines={1}>
+                    {item.subject ?? 'No subject'}
                   </Text>
-                ) : null}
-              </View>
-              <PixelIcon name="ChevronRight" size={ms(20)} />
-            </Pressable>
-          ))}
+                  <View style={styles.badges}>
+                    <Badge label={item.vaultName} variant="secondary" icon={toPixelIcon(vault?.icon || 'Briefcase')} style={vaultTint(vault?.backgroundColor)} />
+                    {item.receivedAt ? <Badge label={formatDate(toIsoDate(new Date(item.receivedAt)))} icon="Calendar" /> : null}
+                  </View>
+                  <TagChips tags={tags.filter((tag) => item.tagIds?.includes(tag.id))} />
+                  {item.guidanceHint ? (
+                    <Text style={styles.hint} numberOfLines={1}>
+                      {item.guidanceHint}
+                    </Text>
+                  ) : null}
+                </View>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Dismiss"
+                  hitSlop={8}
+                  onPress={() => handleDismiss(item.id)}
+                  style={({ pressed }) => [styles.dismiss, pressed && styles.dismissPressed]}
+                >
+                  <PixelIcon name="X" size={ms(16)} />
+                </Pressable>
+                <PixelIcon name="ChevronRight" size={ms(20)} />
+              </Pressable>
+            );
+          })}
         </Card>
       )}
 
@@ -143,9 +179,14 @@ export function PendingExpensesPanel({ vaults, tags, selectedMonth, selectedYear
           onClose={() => setReviewing(null)}
         />
       ) : null}
+
+      {syncing && <LoadingBar accessibilityLabel="Fetching emails" />}
     </>
   );
 }
+
+// Same tint treatment as TagPicker suggestions, so each vault reads in its own color.
+const vaultTint = (hex: string | null | undefined) => (hex ? { backgroundColor: `${hex}33`, borderColor: hex } : undefined);
 
 const styles = StyleSheet.create({
   card: { padding: ms(space[4]), gap: ms(space[2]), backgroundColor: color.surface, borderColor: color.secondary },
@@ -164,6 +205,9 @@ const styles = StyleSheet.create({
   },
   pressed: { transform: [{ translateY: 2 }] },
   itemBody: { flex: 1, gap: ms(space[1]) },
+  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: ms(space[1]) },
   subject: { fontFamily: font.bodyBold, fontSize: ms(text.bodySm.fontSize), color: color.onSurface },
+  dismiss: { width: ms(36), height: ms(36), alignItems: 'center', justifyContent: 'center', backgroundColor: color.surfaceHighest, borderWidth: ms(4), borderColor: color.border },
+  dismissPressed: { backgroundColor: color.errorContainer, transform: [{ translateY: 2 }] },
   hint: { fontFamily: font.body, fontSize: ms(11), color: color.onSurfaceVariant },
 });

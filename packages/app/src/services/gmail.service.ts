@@ -178,6 +178,7 @@ export class GmailService {
         guidanceHint: watcher.guidanceHint,
         transactionDay: watcher.transactionDay,
         tagKeywords: watcher.tagKeywords,
+        receivedAt: message.internalDate ? new Date(Number(message.internalDate)).toISOString() : null,
       });
       if (created) enqueued += 1;
     }

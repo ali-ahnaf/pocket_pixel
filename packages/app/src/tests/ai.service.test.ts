@@ -54,15 +54,6 @@ describe('AiService', () => {
     expect(store.setApiKey).toHaveBeenCalledWith('sk-or-abc');
   });
 
-  it('listCuratedModels drops models outside the curated list', async () => {
-    client.listModels.mockResolvedValue([
-      { id: 'openai/gpt-4o-mini', name: 'GPT-4o-mini' },
-      { id: 'meta/llama-3', name: 'Llama 3' },
-    ]);
-
-    expect(await service.listCuratedModels()).toEqual([{ id: 'openai/gpt-4o-mini', name: 'GPT-4o-mini' }]);
-  });
-
   describe('getUsage', () => {
     it('returns null without calling OpenRouter when no key is saved', async () => {
       store.getApiKey.mockResolvedValue(null);

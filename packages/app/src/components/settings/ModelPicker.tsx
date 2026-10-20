@@ -13,7 +13,7 @@ export interface OpenRouterModel {
 }
 
 export interface ModelPickerProps {
-  /** Already the curated list; the web filters OpenRouter's live list down to it first. */
+  /** Every OpenRouter model. The first DEFAULT_VISIBLE show until the user searches. */
   models: readonly OpenRouterModel[];
   loading: boolean;
   error: string | null;
@@ -22,12 +22,14 @@ export interface ModelPickerProps {
   onSelect: (modelId: string) => void;
 }
 
+const DEFAULT_VISIBLE = 10;
+
 export function ModelPicker({ models, loading, error, selectedModel, saving, onSelect }: ModelPickerProps) {
   const [search, setSearch] = useState('');
 
   const visibleModels = useMemo(() => {
     const query = search.trim().toLowerCase();
-    if (!query) return models;
+    if (!query) return models.slice(0, DEFAULT_VISIBLE);
     return models.filter((model) => model.id.toLowerCase().includes(query) || model.name.toLowerCase().includes(query));
   }, [models, search]);
 
@@ -36,10 +38,10 @@ export function ModelPicker({ models, loading, error, selectedModel, saving, onS
 
   return (
     <View style={styles.wrapper}>
-      <Input placeholder="Search curated models…" value={search} onChangeText={setSearch} autoComplete="off" autoCapitalize="none" autoCorrect={false} accessibilityLabel="Search curated models" />
+      <Input placeholder="Search models…" value={search} onChangeText={setSearch} autoComplete="off" autoCapitalize="none" autoCorrect={false} accessibilityLabel="Search models" />
 
       {visibleModels.length === 0 ? (
-        <Text style={styles.hint}>No curated models match your search.</Text>
+        <Text style={styles.hint}>No models match your search.</Text>
       ) : (
         <View style={styles.list}>
           {visibleModels.map((model) => {

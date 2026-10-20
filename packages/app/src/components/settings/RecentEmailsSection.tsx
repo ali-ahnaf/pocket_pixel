@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ms } from 'react-native-size-matters';
 import { useLocalUserId } from '../../hooks/DatabaseProvider';
-import { formatDate } from '../../lib/formatters';
+import { formatDate, toIsoDate } from '../../lib/formatters';
 import { gmailService, logger } from '../../services';
 import type { GmailRecentMessage } from '../../services/gmail.service';
 import { color, font, space, text } from '../../theme';
@@ -96,7 +96,7 @@ export function RecentEmailsSection({ labels, vaults, tags, onError }: RecentEma
                 <Text style={styles.subject} numberOfLines={1}>
                   {message.subject ?? 'No subject'}
                 </Text>
-                {message.receivedAt ? <Text style={styles.date}>{formatDate(message.receivedAt)}</Text> : null}
+                {message.receivedAt ? <Text style={styles.date}>{formatDate(toIsoDate(new Date(message.receivedAt)))}</Text> : null}
               </View>
               <PixelIcon name="ChevronRight" size={ms(20)} />
             </Pressable>

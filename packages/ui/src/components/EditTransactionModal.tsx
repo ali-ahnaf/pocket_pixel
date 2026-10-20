@@ -361,7 +361,7 @@ export function EditTransactionModal({ isOpen, onClose, onSuccess, userId, trans
                   className="flex-1 h-12 border-4 border-black bg-error text-on-error font-label-caps flex items-center justify-center gap-2 active:translate-y-0.5 disabled:opacity-50"
                 >
                   <Trash2 size={16} />
-                  {isDeleting ? 'DELETING...' : 'CONFIRM DELETE'}
+                  {isDeleting ? 'DELETING...' : 'CONFIRM'}
                 </button>
               </div>
             )}

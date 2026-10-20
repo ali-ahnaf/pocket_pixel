@@ -1,6 +1,7 @@
 import { StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { ms } from 'react-native-size-matters';
 import { color, font, space, text } from '../theme';
+import { PixelIcon, PixelIconName } from './PixelIcon';
 
 export type BadgeVariant = 'primary' | 'secondary' | 'tertiary' | 'error' | 'outline';
 
@@ -8,11 +9,13 @@ export interface BadgeProps {
   label: string;
   variant?: BadgeVariant;
   style?: StyleProp<ViewStyle>;
+  icon?: PixelIconName;
 }
 
-export function Badge({ label, variant = 'outline', style }: BadgeProps) {
+export function Badge({ label, variant = 'outline', style, icon }: BadgeProps) {
   return (
     <View style={[styles.badge, variantStyles[variant], style]}>
+      {icon ? <PixelIcon name={icon} size={ms(14)} /> : null}
       <Text style={[styles.label, labelStyles[variant]]}>{label}</Text>
     </View>
   );
@@ -21,6 +24,9 @@ export function Badge({ label, variant = 'outline', style }: BadgeProps) {
 const styles = StyleSheet.create({
   badge: {
     alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: ms(space[1]),
     borderWidth: ms(2),
     borderColor: color.border,
     paddingHorizontal: ms(space[2]),

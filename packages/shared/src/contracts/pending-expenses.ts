@@ -11,6 +11,10 @@ export interface PendingGmailExpenseDto {
   vaultName: string;
   subject: string | null;
   guidanceHint: string | null;
+  /** ISO time the email arrived, falling back to when it was queued. Only the offline app fills it. */
+  receivedAt?: string;
+  /** Tags named in the listener's keyword rules. Only the offline app fills it. */
+  tagIds?: string[];
 }
 
 /** Returned only by the on-demand re-fetch endpoint; never persisted. */

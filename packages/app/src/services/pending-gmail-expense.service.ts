@@ -35,6 +35,8 @@ export class PendingGmailExpenseService {
       vaultName: row.vault?.name ?? 'Unknown vault',
       subject: row.subject ?? null,
       guidanceHint: row.guidanceHint,
+      receivedAt: row.receivedAt ?? row.createdAt.toISOString(),
+      tagIds: [...new Set((row.tagKeywords ?? []).map((rule) => rule.tagId))],
     }));
   }
 

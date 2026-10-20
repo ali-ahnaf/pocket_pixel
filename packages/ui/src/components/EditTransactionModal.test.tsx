@@ -145,13 +145,13 @@ describe('EditTransactionModal', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /delete transaction/i }));
 
-    expect(screen.getByRole('button', { name: /confirm delete/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^confirm$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
 
     expect(screen.getByRole('button', { name: /delete transaction/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /confirm delete/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^confirm$/i })).not.toBeInTheDocument();
     expect(mockedDeleteTransaction).not.toHaveBeenCalled();
   });
 
@@ -165,7 +165,7 @@ describe('EditTransactionModal', () => {
     await screen.findByRole('heading', { name: /edit transaction/i });
 
     fireEvent.click(screen.getByRole('button', { name: /delete transaction/i }));
-    fireEvent.click(screen.getByRole('button', { name: /confirm delete/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^confirm$/i }));
 
     await waitFor(() => {
       expect(mockedDeleteTransaction).toHaveBeenCalledWith('user-1', 'txn-1');

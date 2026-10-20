@@ -67,7 +67,7 @@ describe('Gmail on device', () => {
       { name: 'From', value: 'alerts@bank.example' },
       { name: 'Date', value: 'Mon, 12 Oct 2026 09:30:00 +0600' },
     ];
-    if (searchParams.get('format') === 'metadata') return json({ id: message.id, labelIds: message.labelIds, payload: { headers: headers.slice(0, 1) } });
+    if (searchParams.get('format') === 'metadata') return json({ id: message.id, labelIds: message.labelIds, internalDate: '1791768600000', payload: { headers: headers.slice(0, 1) } });
     return json({ id: message.id, labelIds: message.labelIds, payload: { mimeType: 'multipart/alternative', headers, parts: [{ mimeType: 'text/html', body: { data: base64Url(message.html) } }] } });
   };
 
@@ -136,7 +136,7 @@ describe('Gmail on device', () => {
 
   it('routes new mail to vaults by label and subject, once per message', async () => {
     await connectAndBaseline();
-    await watchers.upsert(userId, catchAllVault.id, { gmailLabelId: 'Label_1', guidanceHint: 'groceries' });
+    await watchers.upsert(userId, catchAllVault.id, { gmailLabelId: 'Label_1', guidanceHint: 'groceries', tagKeywords: [{ tagId: foodTag.id, keywords: ['cafe'] }] });
     await watchers.upsert(userId, debitVault.id, { gmailLabelId: 'Label_1', subjectFilter: 'debit', guidanceHint: '  ' });
     mailbox = [
       { id: 'm-debit', labelIds: ['Label_1'], subject: 'Card DEBIT Alert', html: '<p>BDT 450</p>' },
@@ -159,6 +159,10 @@ describe('Gmail on device', () => {
     expect(items.map(({ gmailMessageId, vaultName, subject, guidanceHint }) => ({ gmailMessageId, vaultName, subject, guidanceHint }))).toEqual([
       { gmailMessageId: 'm-debit', vaultName: 'Card', subject: 'Card DEBIT Alert', guidanceHint: null },
       { gmailMessageId: 'm-other', vaultName: 'Main', subject: 'Statement ready', guidanceHint: 'groceries' },
+    ]);
+    expect(items.map(({ receivedAt, tagIds }) => ({ receivedAt, tagIds }))).toEqual([
+      { receivedAt: '2026-10-12T01:30:00.000Z', tagIds: [] },
+      { receivedAt: '2026-10-12T01:30:00.000Z', tagIds: [foodTag.id] },
     ]);
   });
 
@@ -202,8 +206,8 @@ describe('Gmail on device', () => {
 
     const recent = await gmail.listRecentMessages(userId, 'Label_1');
     expect(recent).toEqual([
-      { id: 'm-pick', subject: 'Debit alert', receivedAt: null },
-      { id: 'm-unfiltered', subject: 'Old statement', receivedAt: null },
+      { id: 'm-pick', subject: 'Debit alert', receivedAt: '2026-10-12T01:30:00.000Z' },
+      { id: 'm-unfiltered', subject: 'Old statement', receivedAt: '2026-10-12T01:30:00.000Z' },
     ]);
     const listCall = request.mock.calls.map(([url]) => url).find((url) => url.includes('maxResults'));
     expect(new URL(listCall ?? '').searchParams.get('maxResults')).toBe('10');

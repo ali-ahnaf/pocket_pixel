@@ -17,6 +17,8 @@ import { SheetFooterDecor } from './SheetChrome';
 import { TagPicker } from './TagPicker';
 import { VaultSelect } from './VaultSelect';
 import { IconText } from '../IconText';
+import { PixelDatePicker } from '../PixelDatePicker';
+import { toIsoDate } from '../../lib/formatters';
 
 export interface LogResourceSheetProps {
   vaults: VaultDto[];
@@ -53,6 +55,12 @@ export function LogResourceSheet({ vaults, tags, selectedMonth, selectedYear, pr
   const [targetVaultId, setTargetVaultId] = useState<string | null>(vaults.find((v) => v.id !== selectedVaultId)?.id ?? null);
   const canTransfer = !!selectedVaultId && !!targetVaultId && selectedVaultId !== targetVaultId;
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [date, setDate] = useState(() => {
+    if (prefill) return prefill.date;
+    const now = new Date();
+    const isCurrentMonth = selectedMonth === now.getMonth() && selectedYear === now.getFullYear();
+    return isCurrentMonth ? toIsoDate(now) : `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-01`;
+  });
 
   const sendPrompt = async (): Promise<void> => {
     if (!promptText.trim() || isPrompting) return;
@@ -89,15 +97,13 @@ export function LogResourceSheet({ vaults, tags, selectedMonth, selectedYear, pr
   const submit = async (close: () => void): Promise<void> => {
     if (!amount || isSubmitting || (isTransfer && !canTransfer)) return;
     setIsSubmitting(true);
-    const now = new Date();
-    const isCurrentMonth = selectedMonth === now.getMonth() && selectedYear === now.getFullYear();
     const input = {
       amount: parseFloat(amount),
       type: isExpense ? ('expense' as const) : ('income' as const),
       tagIds: selectedTags.map((t) => t.id),
       title: title || undefined,
       vaultId: selectedVaultId,
-      date: prefill?.date ?? (isCurrentMonth ? undefined : `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-01`),
+      date: date || undefined,
     };
     try {
       if (isTransfer && targetVaultId) {
@@ -175,15 +181,23 @@ export function LogResourceSheet({ vaults, tags, selectedMonth, selectedYear, pr
                 <View style={styles.row}>
                   <AmountInput value={amount} onChangeText={setAmount} />
                 </View>
-                <TransactionTypeToggle
-                  isExpense={isExpense}
-                  onChange={(value) => {
-                    setIsExpense(value);
-                    setIsTransfer(false);
-                  }}
-                  isTransfer={isTransfer}
-                  onSelectTransfer={vaults.length > 1 ? () => setIsTransfer(true) : undefined}
-                />
+                <View style={styles.group}>
+                  <View style={styles.typeRow}>
+                    <View style={styles.flex}>
+                      <TransactionTypeToggle
+                        isExpense={isExpense}
+                        onChange={(value) => {
+                          setIsExpense(value);
+                          setIsTransfer(false);
+                        }}
+                        isTransfer={isTransfer}
+                        onSelectTransfer={vaults.length > 1 ? () => setIsTransfer(true) : undefined}
+                      />
+                    </View>
+                    <PixelDatePicker value={date} onChange={setDate} />
+                  </View>
+                  {date ? <Text style={styles.dateText}>{new Date(`${date}T00:00:00`).toLocaleDateString('en-GB')}</Text> : null}
+                </View>
                 {isTransfer ? (
                   <View style={styles.transferRow}>
                     <View style={styles.transferSide}>
@@ -223,6 +237,9 @@ const styles = StyleSheet.create({
   content: { gap: ms(space[5]), paddingBottom: ms(space[3]) },
   group: { gap: ms(space[3]) },
   row: { flexDirection: 'row' },
+  typeRow: { flexDirection: 'row', alignItems: 'center', gap: ms(space[2]) },
+  flex: { flex: 1 },
+  dateText: { fontFamily: font.mono, fontSize: ms(12), color: color.outline, paddingLeft: ms(space[1]) },
   prompt: {
     height: ms(128),
     padding: ms(space[4]),
