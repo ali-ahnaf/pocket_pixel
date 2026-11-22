@@ -408,9 +408,9 @@ Open an issue with:
   </tr>
   <tr>
     <td align="center">
-      <a href="https://github.com/nazifa-r">
-        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/172752707&w=100&h=100&fit=cover" width="100" alt="nazifa-r"/><br/>
-        <sub><b>nazifa-r</b></sub>
+      <a href="https://github.com/nazifa-14">
+        <img src="https://images.weserv.nl/?url=avatars.githubusercontent.com/u/359052888&w=100&h=100&fit=cover" width="100" alt="nazifa-14"/><br/>
+        <sub><b>nazifa-14</b></sub>
       </a><br/>
       <img src="https://img.shields.io/badge/LVL_2-KNIGHT-C0C0C0?style=for-the-badge&labelColor=1a1a1a" alt="Knight"/>
     </td>
