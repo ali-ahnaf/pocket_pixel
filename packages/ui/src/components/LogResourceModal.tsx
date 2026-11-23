@@ -1,13 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { X, Coins, ChevronDown, Plus, Package, Sparkles, Send, SlidersHorizontal } from 'lucide-react';
+import { X, Coins, ChevronDown, Plus, Package, Sparkles,
+  Send, SlidersHorizontal, Mic, MicOff } from 'lucide-react';
 import { iconMapper } from '../lib/iconMapper';
 import { profileApi } from '../lib/api';
 import { TransactionTypeToggle } from './TransactionTypeToggle';
 import { useDekSession } from '../hooks/useDekSession';
 import { useDisplaySettings } from '../hooks/useDisplaySettings';
+import { useSpeechToText } from '../hooks/useSpeechToText';
 import { decryptKey } from '../lib/crypto/ai-key';
 import { chat, type JsonSchemaResponseFormat } from '../lib/ai/openrouter';
 import type { TagDto, VaultDto, ParsedTransaction } from '@expense-tracker/shared';
@@ -41,11 +43,25 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
   const { dek, loading: dekLoading } = useDekSession();
   const { aiTransactionEntryEnabled, loaded: preferencesLoaded } = useDisplaySettings();
 
+  const speechBaseTextRef = useRef('');
+
   // `null` means "follow the preference": AI entry on opens on the prompt, manual
   // entry on opens on the form. The user's toggle (or a successful parse) pins it.
   const [manualEntryOverride, setManualEntryOverride] = useState<boolean | null>(null);
   const manualEntry = aiTransactionEntryEnabled ? (manualEntryOverride ?? false) : true;
   const [promptText, setPromptText] = useState('');
+  const updatePromptFromSpeech = useCallback((transcript: string) => {
+    if (!transcript) return;
+    const baseText = speechBaseTextRef.current;
+    setPromptText(baseText ? `${baseText} ${transcript}` : transcript);
+  }, []);
+  const {
+    isSupported: speechRecognitionSupported,
+    isListening,
+    start: startSpeechRecognition,
+    stop: stopSpeechRecognition,
+    error: speechError,
+  } = useSpeechToText({ lang: 'en-US', onTranscript: updatePromptFromSpeech });
   const [isPrompting, setIsPrompting] = useState(false);
   const [promptResult, setPromptResult] = useState<string | null>(null);
   const [promptNeedsAiSetup, setPromptNeedsAiSetup] = useState(false);
@@ -56,6 +72,103 @@ export function LogResourceModal({ isOpen, onClose, onSuccess, userId, selectedM
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isVisible, setIsVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Audio is kept only in browser memory; it is never uploaded or persisted.
+  const [isRecordingAudio, setIsRecordingAudio] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioStreamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const audioUrlRef = useRef<string | null>(null);
+  const isOpenRef = useRef(isOpen);
+  isOpenRef.current = isOpen;
+
+  const toggleSpeechRecognition = () => {
+    if (isListening) {
+      stopSpeechRecognition();
+      return;
+    }
+    speechBaseTextRef.current = promptText.trim();
+    startSpeechRecognition();
+  };
+
+  const releaseAudioResources = () => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state === 'recording') recorder.stop();
+    audioStreamRef.current?.getTracks().forEach((track) => track.stop());
+    audioStreamRef.current = null;
+    mediaRecorderRef.current = null;
+    if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
+    audioUrlRef.current = null;
+    setAudioUrl(null);
+    setIsRecordingAudio(false);
+  };
+
+  const startAudioRecording = async () => {
+    try {
+      if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+        alert('Audio recording is not supported in this browser.');
+        return;
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioStreamRef.current = stream;
+      audioChunksRef.current = [];
+
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
+      };
+      recorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+        stream.getTracks().forEach((track) => track.stop());
+        if (audioStreamRef.current === stream) audioStreamRef.current = null;
+        if (mediaRecorderRef.current === recorder) mediaRecorderRef.current = null;
+
+        if (isOpenRef.current && blob.size > 0) {
+          if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
+          const nextUrl = URL.createObjectURL(blob);
+          audioUrlRef.current = nextUrl;
+          setAudioUrl(nextUrl);
+        }
+        setIsRecordingAudio(false);
+      };
+
+      recorder.start();
+      setIsRecordingAudio(true);
+    } catch (error) {
+      console.error('Microphone recording failed:', error);
+      audioStreamRef.current?.getTracks().forEach((track) => track.stop());
+      audioStreamRef.current = null;
+      mediaRecorderRef.current = null;
+      setIsRecordingAudio(false);
+      alert('Could not access the microphone. Please check your browser permissions.');
+    }
+  };
+
+  const stopAudioRecording = () => {
+    if (mediaRecorderRef.current?.state === 'recording') {
+      mediaRecorderRef.current.stop();
+    }
+  };
+
+  useEffect(() => {
+    if (!isOpen) {
+      releaseAudioResources();
+      stopSpeechRecognition();
+    }
+  }, [isOpen]);
+
+
+  useEffect(() => () => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state === 'recording') recorder.stop();
+    audioStreamRef.current?.getTracks().forEach((track) => track.stop());
+    if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
+  }, []);
 
   // Tag state
   const [availableTags, setAvailableTags] = useState<TagDto[]>([]);
@@ -173,9 +286,9 @@ prompt: ${promptText.trim()}`;
 
     const tagIds = Array.isArray(candidate.tags)
       ? candidate.tags
-          .filter((name): name is string => typeof name === 'string')
-          .map((name) => tagIdsByName.get(name.toLowerCase()))
-          .filter((id): id is string => typeof id === 'string')
+        .filter((name): name is string => typeof name === 'string')
+        .map((name) => tagIdsByName.get(name.toLowerCase()))
+        .filter((id): id is string => typeof id === 'string')
       : [];
 
     const vaultId = typeof candidate.vault === 'string' ? (vaultIdsByName.get(candidate.vault.toLowerCase()) ?? null) : null;
@@ -312,12 +425,40 @@ prompt: ${promptText.trim()}`;
         <main className="px-4 space-y-5 pb-3 overflow-y-auto">
           {preferencesLoaded && !manualEntry && (
             <div className="space-y-3">
-              <textarea
-                className="w-full h-32 p-4 bg-surface-container-lowest border-4 border-black shadow-[inset_4px_4px_0px_rgba(0,0,0,0.6),_inset_-2px_-2px_0px_rgba(255,255,255,0.05)] font-body-lg text-on-surface focus:outline-none placeholder:text-surface-variant resize-none"
-                placeholder="Describe your transaction... e.g. Spent 24 on groceries at the market"
-                value={promptText}
-                onChange={(e) => setPromptText(e.target.value)}
-              />
+              <div className="flex items-stretch gap-2">
+  <textarea
+    className="min-w-0 flex-1 h-32 p-4 bg-surface-container-lowest border-4 border-black shadow-[inset_4px_4px_0px_rgba(0,0,0,0.6),_inset_-2px_-2px_0px_rgba(255,255,255,0.05)] font-body-lg text-on-surface focus:outline-none placeholder:text-surface-variant resize-none"
+    placeholder="Describe your transaction... e.g. Spent 24 on groceries at the market"
+    value={promptText}
+    onChange={(e) => setPromptText(e.target.value)}
+  />
+
+                {speechRecognitionSupported && <button
+                  type="button"
+                  onClick={toggleSpeechRecognition}
+                  aria-label={isListening ? 'Stop voice input' : 'Start voice input'}
+                  aria-pressed={isListening}
+                  className={`w-14 shrink-0 border-4 border-black flex items-center justify-center transition-colors ${
+                    isListening
+                      ? 'bg-error text-white animate-pulse'
+                      : 'bg-surface-container-highest text-on-surface'
+                  }`}
+                >
+                  {isListening ? <MicOff size={24} /> : <Mic size={24} />}
+                </button>}
+              </div>
+
+              {isListening && (
+                <p className="text-sm text-error animate-pulse" role="status">
+                  ● Listening... Speak to add text to your prompt.
+                </p>
+              )}
+              {speechError && (
+                <p className="text-sm text-error" role="alert">{speechError}</p>
+              )}
+
+
+
               <button
                 onClick={handleSendPrompt}
                 disabled={!promptText.trim() || isPrompting}
